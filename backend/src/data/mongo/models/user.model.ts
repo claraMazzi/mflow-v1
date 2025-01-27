@@ -27,6 +27,6 @@ const userSchema = new Schema({
     enum: ["VERIFICADOR", "MODELADOR", "ADMIN"],
     default: ["MODELADOR"],
   },
-});
+}, { timestamps: true });
 
 export const UserModel = model('User', userSchema);

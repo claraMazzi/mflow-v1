@@ -18,6 +18,10 @@ export class Authroutes {
     // Definir las rutas
     router.post("/login", controller.loginUser);
     router.post("/register", controller.registerUser);
+    router.post("/password-recover", controller.passwordRecoverRequest);
+    router.get("/password-recover/:token", controller.validateRecoverRequest);
+    router.put("/password-recover", controller.passwordRecoverUpdate);
+
 
     router.get("/validate-email/:token", controller.validateEmail);
 

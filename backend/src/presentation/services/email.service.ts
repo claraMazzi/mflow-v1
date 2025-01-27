@@ -33,7 +33,7 @@ export class EmailService {
 
   async sendEmail(options: SendMailOptions): Promise<boolean> {
     const { to, subject, htmlBody, attachements = [] } = options;
-    if (!this.sendEmail) return false;
+    if (!this.sendEmail) return true;
     try {
       const sentInformation = await this.transporter.sendMail({
         to: to,

@@ -5,6 +5,7 @@ import {
   LoginUserDto,
   RegisterUserDto,
   UserEntity,
+  RecoverPasswordDto,
 } from "../../domain";
 import { EmailService } from "./email.service";
 
@@ -15,8 +16,6 @@ export class AuthService {
   ) {}
 
   async registerUser(registerUserDto: RegisterUserDto) {
-    //aca hacemos todo el proceso para registrar un usuario
-
     //1. verificar que no exista ese correo en la BD
     const existUser = await UserModel.findOne({ email: registerUserDto.email });
     if (existUser) throw CustomError.badRequest("Email already exists");
@@ -88,16 +87,17 @@ export class AuthService {
       throw CustomError.internalServer("Error sending validation email");
   };
 
-  public validateEmail = async (token:string) =>{
+  public validateEmail = async (token: string) => {
     const payload = await jwtAdapter.validateToken(token);
-    if (!payload) throw CustomError.unauthorized('Invalid token');
-    const { email} = payload as {email: string};
+    if (!payload) throw CustomError.unauthorized("Invalid token");
 
-    if(!email) throw CustomError.internalServer('Email not in token');
+    const { email } = payload as { email: string };
+
+    if (!email) throw CustomError.internalServer("Email not in token");
 
     const user = await UserModel.findOne({ email });
 
-    if(!user) throw CustomError.internalServer('Email does not exists');
+    if (!user) throw CustomError.internalServer("Email does not exists");
 
     try {
       user.emailValidated = true;
@@ -105,9 +105,86 @@ export class AuthService {
       user.save();
 
       return true;
-      
     } catch (error) {
-      throw CustomError.internalServer('Validating email failed');
+      throw CustomError.internalServer("Validating email failed");
     }
-  }
+  };
+
+  public validatePasswordRecoverRequest = async (token: string) => {
+    const payload = await jwtAdapter.validateToken(token);
+    if (!payload) throw CustomError.unauthorized("Invalid token");
+
+    const { email, exp } = payload as { email?: string; exp?: number };
+
+    if (!email) throw CustomError.internalServer("Email not in token");
+
+    if (exp && Date.now() >= exp * 1000) {
+      throw CustomError.unauthorized("Token has expired");
+    }
+
+    const user = await UserModel.findOne({ email });
+
+    if (!user)
+      throw CustomError.internalServer("Email does not exist in the system");
+
+    return true;
+  };
+
+  private sendPasswordRecoveryLink = async (email: string) => {
+    const token = await jwtAdapter.generateToken({ email });
+
+    if (!token) throw CustomError.internalServer("Error getting token");
+    //link de retorno
+    const link = `${this.webServiceUrl}/auth/password-recover/${token}`;
+
+    const html = `<h1>Reset your password</h1>
+    <p> Click on the following <a href=${link}>link</a> to reset your password</p>`;
+
+    const options = {
+      to: email,
+      subject: "MFLOW - Reset your password",
+      htmlBody: html,
+    };
+
+    const isSent = await this.emailService.sendEmail(options);
+    if (!isSent)
+      throw CustomError.internalServer("Error sending password reset email");
+  };
+
+  public passwordRecover = async (email: string) => {
+    const existUser = await UserModel.findOne({ email: email });
+    if (!existUser) throw CustomError.badRequest("Email doesn't exists");
+    await this.sendPasswordRecoveryLink(email);
+  };
+
+  public passwordRecoverUpdate = async (recoverDto: RecoverPasswordDto) => {
+    //1. verificar que no exista ese correo en la BD
+    const user = await UserModel.findOne({ email: recoverDto.email });
+
+    console.log(user, recoverDto.email);
+    if (!user) throw CustomError.badRequest("User doesn't exists");
+
+    const passwordMatch = bcryptAdapter.compare(
+      recoverDto.oldPassword,
+      user.password
+    );
+    if (!passwordMatch)
+      throw CustomError.badRequest("Old password doesn't match");
+
+    if (recoverDto.oldPassword.trim() === recoverDto.newPassword.trim())
+      throw CustomError.badRequest(
+        "New password cant be the same as old password"
+      );
+    try {
+      //Encriptar la contraseña
+      user.password = bcryptAdapter.hash(recoverDto.newPassword);
+      await user.save();
+
+      const { password, ...userEntity } = UserEntity.fromObject(user);
+
+      return { user: userEntity };
+    } catch (error) {
+      throw CustomError.internalServer(`${error}`);
+    }
+  };
 }

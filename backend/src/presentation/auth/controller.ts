@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { CustomError, LoginUserDto, RegisterUserDto } from "../../domain";
+import { CustomError, LoginUserDto, RegisterUserDto, RecoverPasswordDto} from "../../domain";
 import { AuthService } from "../services/auth.service";
 
 export class AuthController {
@@ -24,6 +24,7 @@ export class AuthController {
       .then((user) => res.json(user))
       .catch((error) => this.handleError(error, res));
   };
+
   loginUser = (req: Request, res: Response) => {
     const [error, loginDto] = LoginUserDto.create(req.body);
 
@@ -34,10 +35,46 @@ export class AuthController {
       .then((user) => res.json(user))
       .catch((error) => this.handleError(error, res));
   };
+
   validateEmail = (req: Request, res: Response) => {
     const { token } = req.params;
-    this.authService.validateEmail(token)
-    .then( () => res.json("Email validated"))
-    .catch((error)=> this.handleError(error, res));
+    this.authService
+      .validateEmail(token)
+      .then(() => res.json("Email validated"))
+      .catch((error) => this.handleError(error, res));
+  };
+
+  passwordRecoverRequest = (req: Request, res: Response) => {
+    const { email} = req.body;
+    this.authService
+      .passwordRecover(email)
+      .then(() => res.json("Recovery email sent succesfully"))
+      .catch((error) => this.handleError(error, res));
+  };
+
+  validateRecoverRequest = (req: Request, res: Response) => {
+    const { token } = req.params;
+
+    this.authService
+      .validatePasswordRecoverRequest(token)
+      .then(() => res.json("Password Recover Request Accepted"))
+      .catch((error) => this.handleError(error, res));
+  };
+
+  passwordRecoverUpdate = (req: Request, res: Response) => {
+    const [error, recoverDto] = RecoverPasswordDto.create(req.body);
+
+    if (error) return res.status(400).json({ error });
+
+    this.authService
+      .passwordRecoverUpdate(recoverDto!)
+      .then((user) => res.json(user))
+      .catch((error) => this.handleError(error, res));
+// res.json('perform password update');
+    // this.authService
+    //   .passwordRecover(email, id)
+    //   .then(() => res.json("Password updated succesfully"))
+    //   .catch((error) => this.handleError(error, res));
   };
 }
+
