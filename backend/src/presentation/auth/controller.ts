@@ -70,11 +70,6 @@ export class AuthController {
       .passwordRecoverUpdate(recoverDto!)
       .then((user) => res.json(user))
       .catch((error) => this.handleError(error, res));
-// res.json('perform password update');
-    // this.authService
-    //   .passwordRecover(email, id)
-    //   .then(() => res.json("Password updated succesfully"))
-    //   .catch((error) => this.handleError(error, res));
   };
 }
 

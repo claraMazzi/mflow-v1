@@ -16,14 +16,18 @@ export class Authroutes {
 
     const controller = new AuthController(authService);
     // Definir las rutas
+
+    //login - registration
     router.post("/login", controller.loginUser);
     router.post("/register", controller.registerUser);
+    router.get("/validate-email/:token", controller.validateEmail);
+
+    //Password recovery
     router.post("/password-recover", controller.passwordRecoverRequest);
     router.get("/password-recover/:token", controller.validateRecoverRequest);
     router.put("/password-recover", controller.passwordRecoverUpdate);
 
-
-    router.get("/validate-email/:token", controller.validateEmail);
+  
 
     return router;
   }
