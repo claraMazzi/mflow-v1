@@ -3,6 +3,8 @@
 
 # env
 
+node v ```22.13.0```
+
 1. instalar dependencias con el comando ```npm i``` 
 2. clonar el archivo .env.template a .env
 3. configurar las variables de entorno

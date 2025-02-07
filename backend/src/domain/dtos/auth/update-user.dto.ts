@@ -9,7 +9,7 @@ export class UpdateUserDto {
   ) {}
 
   static create(object: { [key: string]: any }): [string?, UpdateUserDto?] {
-    const { name, lastName, ßid } = object;
+    const { name, lastName, id } = object;
     if (!id) return ["Missing id"];
   
     return [
