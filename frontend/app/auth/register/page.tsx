@@ -1,13 +1,38 @@
 "use client"
 
+import { useState } from "react"
 import { TextInput, PasswordInput, Button, Paper, Title, Stack, Box, Select, Text, Grid } from "@mantine/core"
 import { MantineProvider } from "@mantine/core"
-import { theme } from "../../theme"
-import { useAuthForm } from "../../hooks/useAuthForm"
-
+import { theme } from "../../../theme"
+import { useForm } from "@mantine/form"
+// import { useAuth } from "../../lib/auth"
 
 export default function CreateAccount() {
-  const { form, loading, handleSubmit } = useAuthForm("register")
+  // const { register, isLoading, error } = useAuth()
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  const form = useForm({
+    initialValues: {
+      nombre: "",
+      apellido: "",
+      email: "",
+      password: "",
+      rol: "MODERADOR",
+    },
+    validate: {
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Invalid email"),
+      password: (value) => (value.length < 6 ? "Password should be at least 6 characters" : null),
+    },
+  })
+
+  const handleSubmit = async (values: typeof form.values) => {
+    setSuccessMessage(null)
+    // const result = await register(values)
+    // if (result.success) {
+    //   setSuccessMessage("Account created successfully!")
+    //   form.reset()
+    // }
+  }
 
   return (
     <MantineProvider theme={theme}>
@@ -82,22 +107,25 @@ export default function CreateAccount() {
               <Select
                 label="Rol"
                 placeholder="Moderador"
-                disabled
-                required
                 data={[
                   { value: "MODERADOR", label: "Moderador" },
                   { value: "VERIFICADOR", label: "Verificador" },
                   { value: "ADMIN", label: "Administrador" },
                 ]}
                 radius="md"
+                disabled
+                required
                 {...form.getInputProps("rol")}
               />
+
+              {/* {error && <Text color="red">{error}</Text>} */}
+              {successMessage && <Text color="green">{successMessage}</Text>}
 
               <Button
                 type="submit"
                 fullWidth
                 radius="md"
-                loading={loading}
+                // loading={isLoading}
                 styles={(theme) => ({
                   root: {
                     backgroundColor: theme?.colors?.purple?.[6],
@@ -125,3 +153,4 @@ export default function CreateAccount() {
     </MantineProvider>
   )
 }
+

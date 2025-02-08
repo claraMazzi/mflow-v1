@@ -20,11 +20,12 @@ export class Server {
   //punto de inicio de la aplicacion
   async start() {
     //* para servir todo lo que tengo en mi carpeta publica uso un middleware
-    //middleware - funciones que se ejecutan cada vez que el codigo pase por x ruta
+    //middleware - funciones que se ejecutan cada vez que el codigo pase por x ruta y antes del controller
 
     //* Middlewares
-    this.app.use( express.json() ); // raw
-    this.app.use( express.urlencoded({ extended: true }) ); // x-www-form-urlencoded
+    this.app.use( express.json() ); // raw - extrae el body en un jsin
+    this.app.use( express.urlencoded({ extended: true }) ); // x-www-form-urlencoded - extrae el form en json
+    
 
     //* Public folder
     this.app.use(express.static("/public"));

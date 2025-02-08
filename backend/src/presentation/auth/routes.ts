@@ -22,6 +22,12 @@ export class Authroutes {
     router.post("/register", controller.registerUser);
     router.get("/validate-email/:token", controller.validateEmail);
 
+    /** para usar un middleware se puede hacer de 2 formas 
+     
+    mandar el router.get("/ruta", Authmiddleware.validateJWT , controller.funcion);
+    o mandar un arreglo de middlewares router.get("/ruta", [Authmiddleware.validateJWT], controller.funcion);
+     */
+
     //Password recovery
     router.post("/password-recover", controller.passwordRecoverRequest);
     router.get("/password-recover/:token", controller.validateRecoverRequest);

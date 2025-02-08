@@ -5,7 +5,7 @@ import { createTheme } from "@mantine/core";
 export const theme = createTheme({
   fontFamily: 'sans-serif', // Default font for non-headings
   headings: {
-    fontFamily: 'Exo 2, serif',
+    fontFamily: '"Exo 2"',
   },
   colors: {
     purple: [

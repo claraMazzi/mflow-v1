@@ -5,7 +5,7 @@ export async function POST(request: Request) {
   const { email } = body
 
   try {
-    const response = await fetch(`${process.env.BACKEND_URL}/password-recover`, {
+    const response = await fetch(`${process.env.API_URL}/api/auth/password-recover`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
