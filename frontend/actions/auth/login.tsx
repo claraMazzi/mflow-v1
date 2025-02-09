@@ -10,10 +10,8 @@ export async function authenticate(
   formData: FormData,
 ) {
   try {
-    console.log('Form data:', Object.fromEntries(formData));
-    await signIn('credentials', Object.fromEntries(formData));
+    await signIn('credentials', {...Object.fromEntries(formData), redirectTo: '/dashboard'});
     //si todo sale bien esto va a recargar el navegador con las credenciales
-    
   } catch (error) {
     if (error instanceof AuthError) {
       switch (error.type) {

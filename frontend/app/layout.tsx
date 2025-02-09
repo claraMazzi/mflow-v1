@@ -6,13 +6,26 @@ import {
   mantineHtmlProps,
 } from "@mantine/core";
 import { theme } from "../theme";
+import '@/styles/global.css';
+import { auth } from '@/auth.config'
+import { redirect } from "next/navigation"
 
 export const metadata = {
   title: "Mflow",
   description: "I am using Mantine with Next.js!",
 };
 
-export default function RootLayout({ children }: { children: any }) {
+export default async function RootLayout({ children }: { children: any }) {
+  const session = await auth()
+  
+    
+    if (!session) {
+      redirect("/auth/login")
+    } 
+    // 
+    // else {
+    //   redirect("/dashboard")
+    // }
   return (
     <html lang="en" {...mantineHtmlProps}>
       <head>

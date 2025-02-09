@@ -1,6 +1,8 @@
 import NextAuth, { type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
+import { type AdapterUser } from "next-auth/adapters";
+import { CustomUser } from "./types/next-auth";
 
 export const authConfig: NextAuthConfig = {
   pages: {
@@ -29,23 +31,41 @@ export const authConfig: NextAuthConfig = {
 
           if (!res.ok) {
             const errorData = await res.json();
-            throw new Error(errorData.message || "Failed to authenticate");
+            console.log("errordata", errorData);
+            return null;
+            // throw new Error(errorData.message || "Failed to authenticate");
           }
 
-          const user = await res.json();
-          console.log('---------------- USER', user);
-          if (user) {
-            return user;
+          const response = await res.json();
+          if (response.user) {
+            return response.user;
           } else {
             return null;
           }
         } catch (error) {
           console.error("Authentication error:", error);
-          throw new Error(error instanceof Error ? error.message : "Failed to authenticate");
+          // throw new Error(error instanceof Error ? error.message : "Failed to authenticate");
+          return;
         }
       },
     }),
   ],
+  callbacks: {
+    // Attach custom user properties to the session
+    async session({ session, token }) {
+      session.user = token.user as CustomUser; // Pass the user object to the session
+      session.user.currentRole = "MODELADOR";
+      return session;
+    },
+    // Add user data to the JWT token
+    async jwt({ token, user }) {
+      if (user) {
+        token.user = user as CustomUser; // Store the user in the token
+        // token.currentRole = user.currentRole
+      }
+      return token;
+    },
+  },
 };
 
 export const { signIn, auth, signOut } = NextAuth(authConfig);
