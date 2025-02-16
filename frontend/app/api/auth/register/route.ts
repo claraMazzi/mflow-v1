@@ -12,7 +12,7 @@ export async function POST(request: Request) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ nombre, apellido, email, password, rol }),
+      body: JSON.stringify({ name: nombre, lastName: apellido, email: email, password:password, role: rol }),
     })
 
     console.log("Backend registration response status:", response.status)

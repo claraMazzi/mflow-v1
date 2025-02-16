@@ -1,37 +1,69 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { TextInput, PasswordInput, Button, Paper, Title, Stack, Box, Select, Text, Grid } from "@mantine/core"
 import { MantineProvider } from "@mantine/core"
-import { theme } from "../../../theme"
-import { useForm } from "@mantine/form"
-// import { useAuth } from "../../lib/auth"
+import { theme } from "@/theme"
+import { useForm, Controller } from "react-hook-form"
+import {emailRegex, passwordRegex} from '../../../../backend/src/config/regular-exp';
+
+// const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+// const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,25}$/
+
+interface FormData {
+  nombre: string
+  apellido: string
+  email: string
+  password: string
+  rol: "MODERADOR" | "VERIFICADOR" | "ADMIN" | string[]
+}
 
 export default function CreateAccount() {
-  // const { register, isLoading, error } = useAuth()
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const router = useRouter()
 
-  const form = useForm({
-    initialValues: {
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormData>({
+    defaultValues: {
       nombre: "",
       apellido: "",
       email: "",
       password: "",
-      rol: "MODERADOR",
+      rol: ["MODELADOR"],
     },
-    validate: {
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Invalid email"),
-      password: (value) => (value.length < 6 ? "Password should be at least 6 characters" : null),
-    },
+    mode: "onBlur",
   })
 
-  const handleSubmit = async (values: typeof form.values) => {
-    setSuccessMessage(null)
-    // const result = await register(values)
-    // if (result.success) {
-    //   setSuccessMessage("Account created successfully!")
-    //   form.reset()
-    // }
+  const onSubmit = async (data: FormData) => {
+    setIsLoading(true)
+    setErrorMessage(null)
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || "Registration failed")
+      }
+
+      // Registration successful
+      router.push("/login") // Redirect to login page
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "An error occurred during registration")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -56,7 +88,7 @@ export default function CreateAccount() {
             backgroundColor: "white",
           }}
         >
-          <form onSubmit={form.onSubmit(handleSubmit)}>
+          <form onSubmit={handleSubmit(onSubmit)}>
             <Stack gap="lg">
               <Title order={1} ta="center" fw={500} c={theme?.colors?.purple?.[6]}>
                 MFLOW
@@ -64,68 +96,120 @@ export default function CreateAccount() {
 
               <Grid>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
-                  <TextInput
-                    required
-                    label="Nombre"
-                    placeholder="Tu nombre"
-                    radius="md"
-                    {...form.getInputProps("nombre")}
+                  <Controller
+                    name="nombre"
+                    control={control}
+                    rules={{ required: "Name is required" }}
+                    render={({ field }) => (
+                      <TextInput
+                        required
+                        label="Nombre"
+                        placeholder="Tu nombre"
+                        radius="md"
+                        error={errors.nombre?.message}
+                        {...field}
+                      />
+                    )}
                   />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
-                  <TextInput
-                    required
-                    label="Apellido"
-                    placeholder="Tu apellido"
-                    radius="md"
-                    {...form.getInputProps("apellido")}
+                  <Controller
+                    name="apellido"
+                    control={control}
+                    rules={{ required: "Last name is required" }}
+                    render={({ field }) => (
+                      <TextInput
+                        required
+                        label="Apellido"
+                        placeholder="Tu apellido"
+                        radius="md"
+                        error={errors.apellido?.message}
+                        {...field}
+                      />
+                    )}
                   />
                 </Grid.Col>
               </Grid>
 
               <Grid>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
-                  <TextInput
-                    required
-                    label="Correo electrónico"
-                    placeholder="tu@email.com"
-                    radius="md"
-                    {...form.getInputProps("email")}
+                  <Controller
+                    name="email"
+                    control={control}
+                    rules={{
+                      required: "Email is required",
+                      pattern: {
+                        value: emailRegex,
+                        message: "Invalid email address",
+                      },
+                    }}
+                    render={({ field }) => (
+                      <TextInput
+                        required
+                        label="Correo electrónico"
+                        placeholder="tu@email.com"
+                        radius="md"
+                        error={errors.email?.message}
+                        {...field}
+                      />
+                    )}
                   />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
-                  <PasswordInput
-                    required
-                    label="Contraseña"
-                    placeholder="Tu contraseña"
-                    radius="md"
-                    {...form.getInputProps("password")}
+                  <Controller
+                    name="password"
+                    control={control}
+                    rules={{
+                      required: "Password is required",
+                      pattern: {
+                        value: passwordRegex,
+                        message:
+                          "Password must be 6-25 characters and include at least one lowercase letter, one uppercase letter, one digit, and one special character (@$!%*?&)",
+                      },
+                    }}
+                    render={({ field }) => (
+                      <PasswordInput
+                        required
+                        label="Contraseña"
+                        placeholder="Tu contraseña"
+                        radius="md"
+                        error={errors.password?.message}
+                        {...field}
+                      />
+                    )}
                   />
                 </Grid.Col>
               </Grid>
 
-              <Select
-                label="Rol"
-                placeholder="Moderador"
-                data={[
-                  { value: "MODERADOR", label: "Moderador" },
-                  { value: "VERIFICADOR", label: "Verificador" },
-                  { value: "ADMIN", label: "Administrador" },
-                ]}
-                radius="md"
-                disabled
-                required
-                {...form.getInputProps("rol")}
+              <Controller
+                name="rol"
+                control={control}
+                rules={{ required: "Role is required" }}
+                render={({ field }) => (
+                  <Select
+                    label="Rol"
+                    placeholder="Moderador"
+                    data={[
+                      { value: "MODELADOR", label: "Modelador" },
+                      { value: "VERIFICADOR", label: "Verificador" },
+                      { value: "ADMIN", label: "Administrador" },
+                    ]}
+                    radius="md"
+                    required
+                    disabled
+                    error={errors.rol?.message}
+                    {...field}
+                  />
+                )}
               />
 
-              {/* {error && <Text color="red">{error}</Text>} */}
-              {successMessage && <Text color="green">{successMessage}</Text>}
+              {errorMessage && <Text color="red">{errorMessage}</Text>}
 
               <Button
                 type="submit"
                 fullWidth
                 radius="md"
-                // loading={isLoading}
+                loading={isLoading}
                 styles={(theme) => ({
                   root: {
                     backgroundColor: theme?.colors?.purple?.[6],
@@ -142,7 +226,7 @@ export default function CreateAccount() {
                 <Text size="sm" c={theme?.colors?.grey?.[6]}>
                   Ya tenes una cuenta?
                 </Text>
-                <Button variant="default" radius="md" fullWidth>
+                <Button variant="default" radius="md" fullWidth onClick={() => router.push("/login")}>
                   INICIAR SESIÓN
                 </Button>
               </Stack>

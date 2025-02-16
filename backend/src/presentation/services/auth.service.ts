@@ -15,6 +15,27 @@ export class AuthService {
     private readonly webServiceUrl: string
   ) {}
 
+  private sendEmailValidationLink = async (email: string) => {
+    const token = await jwtAdapter.generateToken({ email });
+
+    if (!token) throw CustomError.internalServer("Error getting token");
+    //link de retorno
+    const link = `${this.webServiceUrl}/auth/validate-email/${token}`;
+
+    const html = `<h1>Validate your email</h1>
+    <p> Click on the following <a href=${link}>link</a> to validate your email </p>`;
+
+    const options = {
+      to: email,
+      subject: "MFLOW - Validate your email",
+      htmlBody: html,
+    };
+
+    const isSent = await this.emailService.sendEmail(options);
+    if (!isSent)
+      throw CustomError.internalServer("Error sending validation email");
+  };
+  
   async registerUser(registerUserDto: RegisterUserDto) {
     //1. verificar que no exista ese correo en la BD
     const existUser = await UserModel.findOne({ email: registerUserDto.email });
@@ -66,26 +87,6 @@ export class AuthService {
     };
   }
 
-  private sendEmailValidationLink = async (email: string) => {
-    const token = await jwtAdapter.generateToken({ email });
-
-    if (!token) throw CustomError.internalServer("Error getting token");
-    //link de retorno
-    const link = `${this.webServiceUrl}/auth/validate-email/${token}`;
-
-    const html = `<h1>Validate your email</h1>
-    <p> Click on the following <a href=${link}>link</a> to validate your email </p>`;
-
-    const options = {
-      to: email,
-      subject: "MFLOW - Validate your email",
-      htmlBody: html,
-    };
-
-    const isSent = await this.emailService.sendEmail(options);
-    if (!isSent)
-      throw CustomError.internalServer("Error sending validation email");
-  };
 
   public validateEmail = async (token: string) => {
     const payload = await jwtAdapter.validateToken(token);
