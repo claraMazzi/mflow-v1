@@ -22,6 +22,7 @@ export default async function RootLayout({ children }: { children: any }) {
     if (!session) {
       redirect("/auth/login")
     } 
+
     // 
     // else {
     //   redirect("/dashboard")

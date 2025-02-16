@@ -1,10 +1,9 @@
-import { Paper, Box } from "@mantine/core"
-import { MantineProvider } from "@mantine/core"
-import { theme } from "@/theme"
-import { LoginForm } from "@/app/auth/login/ui/login-form"
+import { Paper, Box } from "@mantine/core";
+import { MantineProvider } from "@mantine/core";
+import { theme } from "@/theme";
+import { LoginForm } from "@/app/auth/login/ui/login-form";
 
 export default function Login() {
-
   return (
     <MantineProvider theme={theme}>
       <Box
@@ -27,10 +26,9 @@ export default function Login() {
             backgroundColor: "white",
           }}
         >
-          <LoginForm/>
+          <LoginForm />
         </Paper>
       </Box>
     </MantineProvider>
-  )
+  );
 }
-

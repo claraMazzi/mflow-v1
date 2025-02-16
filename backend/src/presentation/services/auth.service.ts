@@ -12,7 +12,9 @@ import { EmailService } from "./email.service";
 export class AuthService {
   constructor(
     private readonly emailService: EmailService,
-    private readonly webServiceUrl: string
+    private readonly webServiceUrl: string,
+    private readonly frontEndUrl: string
+
   ) {}
 
   private sendEmailValidationLink = async (email: string) => {
@@ -20,7 +22,8 @@ export class AuthService {
 
     if (!token) throw CustomError.internalServer("Error getting token");
     //link de retorno
-    const link = `${this.webServiceUrl}/auth/validate-email/${token}`;
+    // const link = `${this.webServiceUrl}/auth/validate-email/${token}`;
+    const link = `${this.frontEndUrl}/auth/validate-email/?token=${token}`;
 
     const html = `<h1>Validate your email</h1>
     <p> Click on the following <a href=${link}>link</a> to validate your email </p>`;
