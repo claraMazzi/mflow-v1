@@ -1,8 +1,7 @@
-"use client";
-
+"use client"
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller } from "react-hook-form";
+import {Controller, useForm} from "react-hook-form"
 import {
   emailRegex,
   passwordRegex,

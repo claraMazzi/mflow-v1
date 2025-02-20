@@ -1,4 +1,5 @@
-"use client";
+"use client"
+
 import { useActionState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import Link from "next/link";
@@ -129,8 +130,14 @@ export const LoginForm = () => {
       <Button type="submit" isLoading={isPending}>
         INICIAR SESION
       </Button>
-      
-      <Button type="submit" as="a" href="/auth/register" variant="outline" isLoading={isPending}>
+
+      <Button
+        type="submit"
+        as="a"
+        href="/auth/register"
+        variant="outline"
+        isLoading={isPending}
+      >
         CREAR CUENTA
       </Button>
     </form>
