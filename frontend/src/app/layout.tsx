@@ -5,8 +5,8 @@ import "./globals.css";
 
 const Exo = Exo_2({
   variable: "--font-exo",
-  subsets: ['latin'],
-  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  subsets: ["latin"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
@@ -21,10 +21,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={` ${Exo.variable} antialiased`}
-      >
-        {children}
+      <body className={`${Exo.variable} antialiased`}>
+        <div className="hidden lg:block">{children}</div>
+        <div className="block lg:hidden">
+          <div className="min-h-screen flex items-center justify-center bg-purple-300 p-4">
+            <div className="w-full max-w-md bg-white shadow-md rounded-md p-8 border border-gray-200">
+              <h1 className="text-3xl font-medium text-center text-purple-600">
+                MFLOW
+              </h1>
+              <p>No se encuentra disponible para dispositivos móbiles</p>
+            </div>
+          </div>
+        </div>
       </body>
     </html>
   );
