@@ -1,5 +1,6 @@
+import { bcryptAdapter } from "../../config";
 import { UserModel } from "../../data";
-import { CustomError, UpdateUserDto, UserEntity } from "../../domain";
+import { CustomError, PasswordUpdateDto, UpdateUserDto, UserEntity } from "../../domain";
 
 export class UserService {
   constructor() {}
@@ -47,4 +48,37 @@ export class UserService {
         throw CustomError.internalServer(`${error}`);
     }
   }
+
+    /** Esto actualizar y sacar la old password, esto es para un UPDATE PASSOWRD */
+
+public passwordUpdate = async (recoverDto: PasswordUpdateDto) => {
+  //1. verificar que no exista ese correo en la BD
+  const user = await UserModel.findOne({ email: recoverDto.email });
+
+  console.log(user, recoverDto.email);
+  if (!user) throw CustomError.badRequest("User doesn't exists");
+
+  const passwordMatch = bcryptAdapter.compare(
+    recoverDto.oldPassword,
+    user.password
+  );
+  if (!passwordMatch)
+    throw CustomError.badRequest("Old password doesn't match");
+
+  if (recoverDto.oldPassword.trim() === recoverDto.newPassword.trim())
+    throw CustomError.badRequest(
+      "New password cant be the same as old password"
+    );
+  try {
+    //Encriptar la contraseña
+    user.password = bcryptAdapter.hash(recoverDto.newPassword);
+    await user.save();
+
+    const { password, ...userEntity } = UserEntity.fromObject(user);
+
+    return { user: userEntity };
+  } catch (error) {
+    throw CustomError.internalServer(`${error}`);
+  }
+};
 }

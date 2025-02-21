@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Exo_2 } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 
 const Exo = Exo_2({
   variable: "--font-exo",
@@ -22,6 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${Exo.variable} antialiased`}>
+        <Toaster />
         <div className="hidden lg:block">{children}</div>
         <div className="block lg:hidden">
           <div className="min-h-screen flex items-center justify-center bg-purple-300 p-4">

@@ -62,7 +62,7 @@ export class AuthController {
 
   passwordRecoverUpdate = (req: Request, res: Response) => {
     const [error, recoverDto] = RecoverPasswordDto.create(req.body);
-
+console.log('----------------------___ACA', req.body, error);
     if (error) return res.status(400).json({ error });
 
     this.authService

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { Button } from "@/components/button"
+import { Button } from "@/components/ui/button"
 
 const EmailValidation = () => {
   const [isLoading, setIsLoading] = useState(true)
@@ -53,8 +53,8 @@ const EmailValidation = () => {
               </>
             ) : (
               <>
-                <h2 className="text-2xl font-semibold text-red-600 mb-4">La verificación de tu email falló</h2>
-                <p className="text-lg text-gray-600 mb-8">
+                <h2 className="text-2xl font-semibold text-gray-600 mb-4">La verificación de tu email falló</h2>
+                <p className="text-lg  text-red-600 mb-8">
                   La verificación de tu email falló, vas a poder solicitar un nuevo codigo desde tu panel de cuenta
                 </p>
               </>

@@ -25,12 +25,12 @@ export class AuthService {
     // const link = `${this.webServiceUrl}/auth/validate-email/${token}`;
     const link = `${this.frontEndUrl}/auth/validate-email/?token=${token}`;
 
-    const html = `<h1>Validate your email</h1>
-    <p> Click on the following <a href=${link}>link</a> to validate your email </p>`;
+    const html = `<h1>Valida tu correo electrónico</h1>
+    <p> Hace Click en el siguiente <a href=${link}>link</a> para validar tu correo electrónico </p>`;
 
     const options = {
       to: email,
-      subject: "MFLOW - Validate your email",
+      subject: "MFLOW - Valida tu correo electrónico",
       htmlBody: html,
     };
 
@@ -139,14 +139,15 @@ export class AuthService {
 
     if (!token) throw CustomError.internalServer("Error getting token");
     //link de retorno
-    const link = `${this.webServiceUrl}/auth/password-recover/${token}`;
+    // const link = `${this.webServiceUrl}/auth/password-recover/${token}`;
+    const link = `${this.frontEndUrl}/auth/forgot-password/${token}`;
 
-    const html = `<h1>Reset your password</h1>
-    <p> Click on the following <a href=${link}>link</a> to reset your password</p>`;
+    const html = `<h1>Actualiza tu contraseña</h1>
+    <p> Hace click en el siguiente <a href=${link}>link</a> para actualizar tu contraseña</p>`;
 
     const options = {
       to: email,
-      subject: "MFLOW - Reset your password",
+      subject: "MFLOW - Recuperar contraseña",
       htmlBody: html,
     };
 
@@ -162,23 +163,14 @@ export class AuthService {
   };
 
   public passwordRecoverUpdate = async (recoverDto: RecoverPasswordDto) => {
-    //1. verificar que no exista ese correo en la BD
-    const user = await UserModel.findOne({ email: recoverDto.email });
+    const payload = await jwtAdapter.validateToken(recoverDto.email);
+    if (!payload) throw CustomError.unauthorized("Invalid token");
 
-    console.log(user, recoverDto.email);
+    const { email } = payload as { email: string };
+    const user = await UserModel.findOne({ email: email });
+
     if (!user) throw CustomError.badRequest("User doesn't exists");
 
-    const passwordMatch = bcryptAdapter.compare(
-      recoverDto.oldPassword,
-      user.password
-    );
-    if (!passwordMatch)
-      throw CustomError.badRequest("Old password doesn't match");
-
-    if (recoverDto.oldPassword.trim() === recoverDto.newPassword.trim())
-      throw CustomError.badRequest(
-        "New password cant be the same as old password"
-      );
     try {
       //Encriptar la contraseña
       user.password = bcryptAdapter.hash(recoverDto.newPassword);
@@ -191,4 +183,5 @@ export class AuthService {
       throw CustomError.internalServer(`${error}`);
     }
   };
+
 }

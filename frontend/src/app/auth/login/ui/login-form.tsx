@@ -1,11 +1,22 @@
-"use client"
+"use client";
 
 import { useActionState, useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import Link from "next/link";
 import { authenticate } from "@/actions";
-import { Button } from "@/components/button";
-
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { startTransition } from "react";
+import { toast } from "sonner"
+import { useSearchParams } from "next/navigation";
 interface FormData {
   email: string;
   password: string;
@@ -16,15 +27,19 @@ export const LoginForm = () => {
     authenticate,
     undefined
   );
+  const searchParams = useSearchParams()
 
   useEffect(() => {
-    console.log("USEEFFECT", errorMessage, isPending);
-  }, [isPending, errorMessage]);
+    if (searchParams.get("reset") === "success") {
+      toast("Contraseña actualizada", {
+        description: "Tu contraseña fue actualizada correctamente. Ahora podes loguearte con tu nueva contraseña.",
+        duration: 5000,
+      })
+    }
+  }, [searchParams, toast])
 
-  const {
-    control,
-    formState: { errors },
-  } = useForm<FormData>({
+
+  const form = useForm<FormData>({
     defaultValues: {
       email: "",
       password: "",
@@ -44,60 +59,51 @@ export const LoginForm = () => {
     }
   };
 
-  return (
-    <form action={formAction} className="space-y-6">
-      <h1 className="text-3xl font-medium text-center text-purple-600">
-        MFLOW
-      </h1>
+  const handleSubmit = (data: FormData) => {
+    startTransition(() => {
+      const formData = new FormData();
+      formData.append("email", data.email);
+      formData.append("password", data.password);
+      formAction(formData);
+    });
+  };
 
-      <div className="space-y-2">
-        <Controller
+  return (
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(handleSubmit)}
+        className="space-y-6"
+      >
+        <h1 className="text-3xl font-medium text-center text-purple-600">
+          MFLOW
+        </h1>
+
+        <FormField
+          control={form.control}
           name="email"
-          control={control}
           rules={{
             required: "Email is required",
             pattern: { value: /^\S+@\S+$/i, message: "Invalid email" },
           }}
           render={({ field }) => (
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Correo electrónico
-              </label>
-              <input
-                type="email"
-                id="email"
-                required
-                placeholder="tu@email.com"
-                className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                {...field}
-              />
-              {errors.email && (
-                <p className="mt-2 text-sm text-red-600">
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
+            <FormItem>
+              <FormLabel>Correo electrónico</FormLabel>
+              <FormControl>
+                <Input type="email" placeholder="tu@email.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
         />
-      </div>
 
-      <div className="space-y-2">
-        <Controller
+        <FormField
+          control={form.control}
           name="password"
-          control={control}
           rules={{ required: "Password is required" }}
           render={({ field }) => (
-            <div>
+            <FormItem>
               <div className="flex items-center justify-between">
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Contraseña
-                </label>
+                <FormLabel>Contraseña</FormLabel>
                 <Link
                   href="/auth/forgot-password"
                   className="text-sm text-gray-600 hover:text-purple-600 hover:underline"
@@ -105,41 +111,31 @@ export const LoginForm = () => {
                   ¿Olvidaste tu contraseña?
                 </Link>
               </div>
-              <input
-                type="password"
-                id="password"
-                required
-                placeholder="Tu contraseña"
-                className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                {...field}
-              />
-              {errors.password && (
-                <p className="mt-2 text-sm text-red-600">
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
+              <FormControl>
+                <Input type="password" placeholder="Tu contraseña" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
         />
-      </div>
 
-      {errorMessage && (
-        <p className="text-sm text-red-600">{parseErrorMessage()}</p>
-      )}
+        {errorMessage && (
+          <p className="text-sm text-red-600">{parseErrorMessage()}</p>
+        )}
 
-      <Button type="submit" isLoading={isPending}>
-        INICIAR SESION
-      </Button>
+        <Button type="submit" isLoading={isPending}>
+          INICIAR SESION
+        </Button>
 
-      <Button
-        type="submit"
-        as="a"
-        href="/auth/register"
-        variant="outline"
-        isLoading={isPending}
-      >
-        CREAR CUENTA
-      </Button>
-    </form>
+        <Button
+          as="a"
+          href="/auth/register"
+          variant="outline"
+          isLoading={isPending}
+        >
+          CREAR CUENTA
+        </Button>
+      </form>
+    </Form>
   );
 };

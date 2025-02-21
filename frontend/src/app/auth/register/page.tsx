@@ -1,12 +1,29 @@
-"use client"
+"use client";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {Controller, useForm} from "react-hook-form"
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   emailRegex,
   passwordRegex,
 } from "../../../../../backend/src/config/regular-exp";
-import { Button } from "@/components/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface FormData {
   nombre: string;
@@ -20,14 +37,9 @@ export default function CreateAccount() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
-
   const router = useRouter();
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormData>({
+  const form = useForm<FormData>({
     defaultValues: {
       nombre: "",
       apellido: "",
@@ -38,16 +50,14 @@ export default function CreateAccount() {
     mode: "onBlur",
   });
 
-  const onSubmit = async (data: FormData) => {
+  const handleSubmit = async (data: FormData) => {
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
@@ -70,7 +80,7 @@ export default function CreateAccount() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-purple-200 p-4">
-      <div className="w-full max-w-4xl bg-white shadow-md rounded-md p-8 border border-gray-200">
+      <div className="w-full max-w-3xl flex flex-col gap-8 bg-white shadow-md rounded-md p-8 border border-gray-200">
         {isSubmitted ? (
           <div className="text-center space-y-4">
             <h2 className="text-2xl font-medium text-purple-600">
@@ -82,193 +92,152 @@ export default function CreateAccount() {
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <h1 className="text-3xl font-medium text-center text-purple-600">
-              MFLOW
-            </h1>
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(handleSubmit)}
+              className="space-y-6"
+            >
+              <h1 className="text-3xl font-medium text-center text-purple-600">
+                MFLOW
+              </h1>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Controller
-                name="nombre"
-                control={control}
-                rules={{ required: "Name is required" }}
-                render={({ field }) => (
-                  <div>
-                    <label
-                      htmlFor="nombre"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Nombre
-                    </label>
-                    <input
-                      type="text"
-                      id="nombre"
-                      className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                      placeholder="Tu nombre"
-                      {...field}
-                    />
-                    {errors.nombre && (
-                      <p className="mt-2 text-sm text-red-600">
-                        {errors.nombre.message}
-                      </p>
-                    )}
-                  </div>
-                )}
-              />
-
-              <Controller
-                name="apellido"
-                control={control}
-                rules={{ required: "Last name is required" }}
-                render={({ field }) => (
-                  <div>
-                    <label
-                      htmlFor="apellido"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Apellido
-                    </label>
-                    <input
-                      type="text"
-                      id="apellido"
-                      className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                      placeholder="Tu apellido"
-                      {...field}
-                    />
-                    {errors.apellido && (
-                      <p className="mt-2 text-sm text-red-600">
-                        {errors.apellido.message}
-                      </p>
-                    )}
-                  </div>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Controller
-                name="email"
-                control={control}
-                rules={{
-                  required: "Email is required",
-                  pattern: {
-                    value: emailRegex,
-                    message: "Invalid email address",
-                  },
-                }}
-                render={({ field }) => (
-                  <div>
-                    <label
-                      htmlFor="email"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Correo electrónico
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                      placeholder="tu@email.com"
-                      {...field}
-                    />
-                    {errors.email && (
-                      <p className="mt-2 text-sm text-red-600">
-                        {errors.email.message}
-                      </p>
-                    )}
-                  </div>
-                )}
-              />
-
-              <Controller
-                name="password"
-                control={control}
-                rules={{
-                  required: "Password is required",
-                  pattern: {
-                    value: passwordRegex,
-                    message:
-                      "Password must be 6-25 characters and include at least one lowercase letter, one uppercase letter, one digit, and one special character (@$!%*?&)",
-                  },
-                }}
-                render={({ field }) => (
-                  <div>
-                    <label
-                      htmlFor="password"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Contraseña
-                    </label>
-                    <input
-                      type="password"
-                      id="password"
-                      className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                      placeholder="Tu contraseña"
-                      {...field}
-                    />
-                    {errors.password && (
-                      <p className="mt-2 text-sm text-red-600">
-                        {errors.password.message}
-                      </p>
-                    )}
-                  </div>
-                )}
-              />
-            </div>
-
-            <Controller
-              name="rol"
-              control={control}
-              rules={{ required: "Role is required" }}
-              render={({ field }) => (
-                <div>
-                  <label
-                    htmlFor="rol"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Rol
-                  </label>
-                  <select
-                    id="rol"
-                    className="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                    disabled
-                    {...field}
-                  >
-                    <option value="MODELADOR">Modelador</option>
-                    <option value="VERIFICADOR">Verificador</option>
-                    <option value="ADMIN">Administrador</option>
-                  </select>
-                  {errors.rol && (
-                    <p className="mt-2 text-sm text-red-600">
-                      {errors.rol.message}
-                    </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="nombre"
+                  rules={{ required: "Nombre es requerido" }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Tu nombre" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </div>
+                />
+
+                <FormField
+                  control={form.control}
+                  name="apellido"
+                  rules={{ required: "Apellido es requerido" }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Apellido</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Tu apellido" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  rules={{
+                    required: "Correo electrónico es requerido",
+                    pattern: {
+                      value: emailRegex,
+                      message: "Correo electrónico invalido",
+                    },
+                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Correo electrónico</FormLabel>
+                      <FormControl>
+                        <Input placeholder="tu@email.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="password"
+                  rules={{
+                    required: "Contraseña es requerida",
+                    pattern: {
+                      value: passwordRegex,
+                      message:
+                        "Contraseña debe tener entre 6-25 caracteres con al menos una minúscula, una mayúscula, un número y un caracter especial (@$!%*?&)",
+                    },
+                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contraseña</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="Tu contraseña"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="rol"
+                  rules={{ required: "Role is required" }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rol</FormLabel>
+                      <FormControl>
+                        <Select
+                          // onValueChange={field.onChange}
+                          disabled
+                          defaultValue={"MODELADOR"}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="MODELADOR" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="MODELADOR">MODELADOR</SelectItem>
+                            <SelectItem value="VERIFICADOR">
+                              VERIFICADOR
+                            </SelectItem>
+                            <SelectItem value="ADMIN">ADMIN</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="h-full flex items-end">
+                <Button
+                  type="submit"
+                  isLoading={isLoading}
+                  className="h-fit items-end"
+                >
+                  CREAR CUENTA
+                </Button></div>
+              </div>
+
+              {errorMessage && (
+                <p className="text-sm text-red-600">{errorMessage}</p>
               )}
-            />
-
-            {errorMessage && (
-              <p className="text-sm text-red-600">{errorMessage}</p>
-            )}
-
-            <Button type="submit" isLoading={isLoading}>
-              CREAR CUENTA
-            </Button>
-
-            <div className="text-center space-y-2">
-              <p className="text-sm text-gray-600">Ya tenes una cuenta?</p>
-
-              <Button
-                type="submit"
-                as="a"
-                href="/auth/register"
-                variant={"outline"}
-              >
-                INICIAR SESION{" "}
-              </Button>
-            </div>
-          </form>
+            </form>
+          </Form>
         )}
+        <div className="w-full flex flex-col items-center gap-2">
+          <p className="text-gray-600 text-sm">Ya tienes una cuenta?</p>
+          <Button
+            type="button"
+            as="a"
+            href="/auth/login"
+            variant="outline"
+            className="h-fit w-fit items-end"
+          >
+            INICIAR SESION
+          </Button>
+        </div>
       </div>
     </div>
   );

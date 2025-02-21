@@ -24,3 +24,25 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PUT(request: Request) {
+  try {
+    const { token, password } = await request.json()
+
+    const response = await fetch(`${process.env.API_URL}/api/auth/password-recover`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email: token, newPassword: password }),
+    })
+
+    if (!response.ok) {
+      throw new Error("Password reset failed")
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error resetting password:", error)
+    return NextResponse.json({ error: "Password reset failed" }, { status: 400 })
+  }
+}
