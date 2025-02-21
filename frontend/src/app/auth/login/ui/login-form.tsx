@@ -36,7 +36,7 @@ export const LoginForm = () => {
         duration: 5000,
       })
     }
-  }, [searchParams, toast])
+  }, [searchParams])
 
 
   const form = useForm<FormData>({
