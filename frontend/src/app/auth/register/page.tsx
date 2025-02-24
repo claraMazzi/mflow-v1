@@ -10,9 +10,9 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui/common/form";
+import { Input } from "@/components/ui/common/input";
+import { Button } from "@/components/ui/common/button";
 import {
   emailRegex,
   passwordRegex,
@@ -23,7 +23,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/common/select";
 
 interface FormData {
   nombre: string;

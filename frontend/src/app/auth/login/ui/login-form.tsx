@@ -4,7 +4,7 @@ import { useActionState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 import { authenticate } from "@/actions";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/common/button";
 import {
   Form,
   FormField,
@@ -12,8 +12,8 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+} from "@/components/ui/common/form";
+import { Input } from "@/components/ui/common/input";
 import { startTransition } from "react";
 import { toast } from "sonner"
 import { useSearchParams } from "next/navigation";
