@@ -1,32 +1,37 @@
-import { Schema, model } from "mongoose";
+import { Schema, SchemaTypes, model } from "mongoose";
 
-const userSchema = new Schema({
-  name: {
-    type: String,
-    required: [true, "Name is required"],
-  },
-  lastName: {
-    type: String,
-    required: [true, "Last Name is required"],
-  },
-  email: {
-    type: String,
-    required: [true, "Email is required"],
-    unique: true, //no quiero ningun duplicado
-  },
-  emailValidated: {
-    type: Boolean,
-    default: false,
-  },
-  password: {
-    type: String,
-    required: [true, "Password is required"],
-  },
-  roles: {
-    type: [String],
-    enum: ["VERIFICADOR", "MODELADOR", "ADMIN"],
-    default: ["MODELADOR"],
-  },
-}, { timestamps: true });
+const userSchema = new Schema(
+	{
+		name: {
+			type: String,
+			required: [true, "El campo nombre es obligatorio."],
+		},
+		lastName: {
+			type: String,
+			required: [true, "El campo apellido es obligatorio."],
+		},
+		email: {
+			type: String,
+			required: [true, "El campo correo electrónico es obligatorio."],
+			unique: true, //no quiero ningun duplicado
+		},
+		emailValidated: {
+			type: Boolean,
+			default: false,
+		},
+		password: {
+			type: String,
+			required: [true, "El campo contraseña es obligatorio."],
+		},
+		roles: {
+			type: [String],
+			enum: ["VERIFICADOR", "MODELADOR", "ADMIN"],
+			default: ["MODELADOR"],
+		},
+		sharedProjects: [{ type: Schema.Types.ObjectId, ref: "Project" }],
+		sharedArtifacts: [{ type: Schema.Types.ObjectId, ref: "Version" }],
+	},
+	{ timestamps: true }
+);
 
-export const UserModel = model('User', userSchema);
+export const UserModel = model("User", userSchema);
