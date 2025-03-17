@@ -1,0 +1,38 @@
+import { Schema, model } from "mongoose";
+import { conceptualModelSchema, todoItemSchema } from "./subdocuments-schemas";
+
+const versionSchema = new Schema(
+	{
+		title: {
+			type: String,
+			required: [true, "El campo titulo es obligatorio."],
+		},
+		state: {
+			type: String,
+			enum: ["EN EDICION", "FINALIZADA", "PENDIENTE DE REVISION", "REVISADA"],
+			default: "EN EDICION",
+		},
+		parentVersion: {
+			type: Schema.Types.ObjectId,
+			ref: "Version",
+		},
+		sharedWithReaders: {
+			type: [Schema.Types.ObjectId],
+			ref: "User",
+		},
+		revisions: {
+			type: [Schema.Types.ObjectId],
+			ref: "Revision",
+		},
+		todoItems: [todoItemSchema],
+		conceptualModel: conceptualModelSchema,
+		//Uncomment later if needed
+		/*comments : {
+			type: [Schema.Types.ObjectId],
+			ref: "Comment",
+		},*/
+	},
+	{ timestamps: true }
+);
+
+export const VersionModel = model("Version", versionSchema);
