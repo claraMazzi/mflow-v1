@@ -1,5 +1,37 @@
 import express, { Router } from "express";
 import { ProjectModel, UserModel, VersionModel } from "../data";
+import { Server as SocketIO } from "socket.io";
+
+type BaseSocketEventPayload = { type: string; timestamp: Date };
+
+enum CLIENT_WS_EVENT_TYPES {
+	JOIN_ROOM = "join-room",
+}
+
+type JoinRoomEventPayload = BaseSocketEventPayload & {
+	type: CLIENT_WS_EVENT_TYPES.JOIN_ROOM;
+	roomId: string;
+	username: string;
+};
+
+type InitRoomEventPayload = BaseSocketEventPayload & {
+	type: SERVER_WS_EVENT_TYPES.INIT_ROOM;
+};
+
+type FirstInRoomPayload = BaseSocketEventPayload & {
+	type: SERVER_WS_EVENT_TYPES.FIRST_IN_ROOM;
+};
+
+type UsersInRoomChangePayload = BaseSocketEventPayload & {
+	type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE;
+	socketsInRoom: string[];
+};
+
+enum SERVER_WS_EVENT_TYPES {
+	INIT_ROOM = "init-room",
+	FIRST_IN_ROOM = "first-in-room",
+	USERS_IN_ROOM_CHANGE = "users-in-room-change",
+}
 
 interface Options {
 	port?: number;
@@ -32,49 +64,114 @@ export class Server {
 		//* Routes
 		this.app.use(this.routes);
 
-		console.log("server started");
-
 		//pongo a la app a escuchar peticiones
 		this.serverListener = this.app.listen(this.port, () => {
 			console.log(`Server running on port ${this.port}`);
 		});
 
-    //Uncomment when needed
+		// Setup Socket IO
+		const io = new SocketIO(this.serverListener, {
+			cors: {
+				origin: "http://localhost:3000",
+				methods: ["GET", "POST"],
+			},
+		});
+
+		io.on("connection", (socket) => {
+			console.log("New Socket Connection: ", socket.id);
+
+			socket.emit(SERVER_WS_EVENT_TYPES.INIT_ROOM, {
+				type: SERVER_WS_EVENT_TYPES.INIT_ROOM,
+				timestamp: new Date(),
+			} satisfies InitRoomEventPayload);
+
+			socket.on(
+				CLIENT_WS_EVENT_TYPES.JOIN_ROOM,
+				async (payload: JoinRoomEventPayload) => {
+					//TODO: ADD CHECK OF VALIDIY BEFORE ADDING THE SOCKET TO THE ROOM
+
+					await socket.join(payload.roomId);
+					const socketsInRoom = await io.in(payload.roomId).fetchSockets();
+					if (socketsInRoom.length <= 1) {
+						socket.emit(SERVER_WS_EVENT_TYPES.FIRST_IN_ROOM, {
+							type: SERVER_WS_EVENT_TYPES.FIRST_IN_ROOM,
+							timestamp: new Date(),
+						} satisfies FirstInRoomPayload);
+					}
+
+					io.to(payload.roomId).emit(
+						SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
+						{
+							type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
+							socketsInRoom: socketsInRoom.map((s) => s.id),
+							timestamp: new Date(),
+						} satisfies UsersInRoomChangePayload
+					);
+				}
+			);
+
+			socket.on("disconnecting", async () => {
+				console.log("Socket Disconnected ", socket.id);
+				for (const roomID of Array.from(socket.rooms)) {
+					const otherClients = (await io.in(roomID).fetchSockets()).filter(
+						(_socket) => _socket.id !== socket.id
+					);
+
+					if (otherClients.length > 0) {						
+						socket.broadcast.to(roomID).emit(
+							SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
+							{
+								type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
+								socketsInRoom: otherClients.map((s) => s.id),
+								timestamp: new Date(),
+							} satisfies UsersInRoomChangePayload
+						);
+					}
+				}
+			});
+
+			socket.on("message", (data) => {
+				console.log(data);
+				io.emit("message", `${socket.id.substring(0, 5)}: ${data}`);
+			});
+		});
+
+		//Uncomment when needed
 		//this.createTestEntities();
 	}
 
 	private createTestEntities() {
-    //Warning! - Drops all collections to allow for a fresh start 
-    UserModel.collection.drop();
-    ProjectModel.collection.drop();
-    VersionModel.collection.drop();
+		//Warning! - Drops all collections to allow for a fresh start
+		UserModel.collection.drop();
+		ProjectModel.collection.drop();
+		VersionModel.collection.drop();
 
 		const user = new UserModel({
 			name: "Juan",
 			lastName: "Albani",
 			email: "juanalbani48@gmail.com",
-      password: "hola123",
-      emailValidated: true,
-      roles: ["MODELADOR"]
+			password: "hola123",
+			emailValidated: true,
+			roles: ["MODELADOR"],
 		});
 
 		user.save();
 
-    const version = new VersionModel({
-      title: "Version 1"
-    });
+		const version = new VersionModel({
+			title: "Version 1",
+		});
 
-    version.save();
+		version.save();
 
-    const project = new ProjectModel({
-      name: "P1",
-      description: "Whatever",
-      owner: user._id,
-    });
+		const project = new ProjectModel({
+			name: "P1",
+			description: "Whatever",
+			owner: user._id,
+		});
 
-    project.versions.push(version._id)
+		project.versions.push(version._id);
 
-    project.save();
+		project.save();
 	}
 
 	public close() {
