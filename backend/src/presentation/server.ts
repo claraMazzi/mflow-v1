@@ -1,6 +1,7 @@
 import express, { Router } from "express";
 import { ProjectModel, UserModel, VersionModel } from "../data";
 import { Server as SocketIO } from "socket.io";
+import { VersionService } from "./services";
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
@@ -14,10 +15,6 @@ type JoinRoomEventPayload = BaseSocketEventPayload & {
 	username: string;
 };
 
-type InitRoomEventPayload = BaseSocketEventPayload & {
-	type: SERVER_WS_EVENT_TYPES.INIT_ROOM;
-};
-
 type FirstInRoomPayload = BaseSocketEventPayload & {
 	type: SERVER_WS_EVENT_TYPES.FIRST_IN_ROOM;
 };
@@ -27,10 +24,15 @@ type UsersInRoomChangePayload = BaseSocketEventPayload & {
 	socketsInRoom: string[];
 };
 
+type InitializeConceptualModelPayload = BaseSocketEventPayload & {
+	type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL;
+	conceptualModel: any;
+};
+
 enum SERVER_WS_EVENT_TYPES {
-	INIT_ROOM = "init-room",
 	FIRST_IN_ROOM = "first-in-room",
 	USERS_IN_ROOM_CHANGE = "users-in-room-change",
+	INITIALIZE_CONCEPTUAL_MODEL = "initialize-conceptual-model",
 }
 
 interface Options {
@@ -77,20 +79,24 @@ export class Server {
 			},
 		});
 
+		const versionService = new VersionService();
+
 		io.on("connection", (socket) => {
 			console.log("New Socket Connection: ", socket.id);
-
-			socket.emit(SERVER_WS_EVENT_TYPES.INIT_ROOM, {
-				type: SERVER_WS_EVENT_TYPES.INIT_ROOM,
-				timestamp: new Date(),
-			} satisfies InitRoomEventPayload);
-
+			
 			socket.on(
 				CLIENT_WS_EVENT_TYPES.JOIN_ROOM,
 				async (payload: JoinRoomEventPayload) => {
 					//TODO: ADD CHECK OF VALIDIY BEFORE ADDING THE SOCKET TO THE ROOM
-
+					socket.emit(SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL, {
+						type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
+						timestamp: new Date(),
+						conceptualModel: await versionService.getVersionById(
+							payload.roomId
+						),
+					} satisfies InitializeConceptualModelPayload);
 					await socket.join(payload.roomId);
+
 					const socketsInRoom = await io.in(payload.roomId).fetchSockets();
 					if (socketsInRoom.length <= 1) {
 						socket.emit(SERVER_WS_EVENT_TYPES.FIRST_IN_ROOM, {
@@ -117,15 +123,14 @@ export class Server {
 						(_socket) => _socket.id !== socket.id
 					);
 
-					if (otherClients.length > 0) {						
-						socket.broadcast.to(roomID).emit(
-							SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
-							{
+					if (otherClients.length > 0) {
+						socket.broadcast
+							.to(roomID)
+							.emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
 								type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
 								socketsInRoom: otherClients.map((s) => s.id),
 								timestamp: new Date(),
-							} satisfies UsersInRoomChangePayload
-						);
+							} satisfies UsersInRoomChangePayload);
 					}
 				}
 			});
@@ -158,6 +163,7 @@ export class Server {
 		user.save();
 
 		const version = new VersionModel({
+			_id: "67d8321cd76cf5bc5bd75c79",
 			title: "Version 1",
 		});
 

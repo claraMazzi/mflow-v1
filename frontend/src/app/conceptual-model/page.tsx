@@ -18,10 +18,6 @@ type JoinRoomEventPayload = BaseSocketEventPayload & {
 	username: string;
 };
 
-type InitRoomEventPayload = BaseSocketEventPayload & {
-	type: SERVER_WS_EVENT_TYPES.INIT_ROOM;
-};
-
 type FirstInRoomPayload = BaseSocketEventPayload & {
 	type: SERVER_WS_EVENT_TYPES.FIRST_IN_ROOM;
 };
@@ -31,10 +27,15 @@ type UsersInRoomChangePayload = BaseSocketEventPayload & {
 	socketsInRoom: string[];
 };
 
+type InitializeConceptualModelPayload = BaseSocketEventPayload & {
+	type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL;
+	conceptualModel: any;
+};
+
 enum SERVER_WS_EVENT_TYPES {
-	INIT_ROOM = "init-room",
 	FIRST_IN_ROOM = "first-in-room",
 	USERS_IN_ROOM_CHANGE = "users-in-room-change",
+	INITIALIZE_CONCEPTUAL_MODEL = "initialize-conceptual-model",
 }
 
 type Collaborator = Readonly<{
@@ -51,7 +52,7 @@ export default function Page() {
 	const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(
 		new Map()
 	);
-	const [roomId, setRoomId] = useState("");
+	const [roomId, setRoomId] = useState("67d8321cd76cf5bc5bd75c79");
 	const [username, setUsername] = useState("");
 
 	const [messages, setMessages] = useState<string[]>([]);
@@ -69,6 +70,12 @@ export default function Page() {
 			socket.io.engine.on("upgrade", (transport) => {
 				setTransport(transport.name);
 			});
+			socket.emit(CLIENT_WS_EVENT_TYPES.JOIN_ROOM, {
+				type: CLIENT_WS_EVENT_TYPES.JOIN_ROOM,
+				username: "ignored",
+				roomId: roomId,
+				timestamp: new Date(),
+			} satisfies JoinRoomEventPayload);
 		}
 
 		function onDisconnect() {
@@ -81,8 +88,6 @@ export default function Page() {
 			console.log(data);
 			setMessages((prevMessages) => [...prevMessages, data]);
 		}
-
-		function onInitRoom(payload: InitRoomEventPayload) {}
 
 		function onFirstInRoom(payload: FirstInRoomPayload) {
 			if (!socket.id) return;
@@ -100,7 +105,7 @@ export default function Page() {
 				const newCollaborators = new Map<string, Collaborator>();
 				for (const socketId of payload.socketsInRoom) {
 					const existingCollaborator = prevCollaborators.get(socketId);
-					
+
 					if (existingCollaborator) {
 						newCollaborators.set(socketId, { ...existingCollaborator });
 					} else {
@@ -115,10 +120,19 @@ export default function Page() {
 			});
 		}
 
+		function onInitializeConceptualModel(
+			payload: InitializeConceptualModelPayload
+		) {
+			console.log(payload);
+		}
+
 		socket.on("connect", onConnect);
 		socket.on("disconnect", onDisconnect);
 		socket.on("message", onMessage);
-		socket.on(SERVER_WS_EVENT_TYPES.INIT_ROOM, onInitRoom);
+		socket.on(
+			SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
+			onInitializeConceptualModel
+		);
 		socket.on(SERVER_WS_EVENT_TYPES.FIRST_IN_ROOM, onFirstInRoom);
 		socket.on(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, onUsersInRoomChange);
 
@@ -126,7 +140,10 @@ export default function Page() {
 			socket.off("connect", onConnect);
 			socket.off("disconnect", onDisconnect);
 			socket.off("message", onMessage);
-			socket.off(SERVER_WS_EVENT_TYPES.INIT_ROOM, onInitRoom);
+			socket.off(
+				SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
+				onInitializeConceptualModel
+			);
 			socket.off(SERVER_WS_EVENT_TYPES.FIRST_IN_ROOM, onFirstInRoom);
 			socket.off(
 				SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
@@ -139,19 +156,6 @@ export default function Page() {
 		e.preventDefault();
 		socket.emit("message", message);
 		setMessage("");
-	};
-
-	const handleOnEnterChatRoom = (formData: FormData) => {
-		if (formData.get("username") && formData.get("roomId")) {
-			socket.emit(CLIENT_WS_EVENT_TYPES.JOIN_ROOM, {
-				type: CLIENT_WS_EVENT_TYPES.JOIN_ROOM,
-				username: formData.get("username")! as string,
-				roomId: formData.get("roomId")! as string,
-				timestamp: new Date(),
-			} satisfies JoinRoomEventPayload);
-			setUsername(formData.get("username")! as string);
-			setRoomId(formData.get("roomId")! as string);
-		}
 	};
 
 	return (
@@ -168,11 +172,6 @@ export default function Page() {
 					return <li key={collaborator.socketId}>{collaborator.socketId}</li>;
 				})}
 			</ul>
-			<form action={handleOnEnterChatRoom}>
-				<input name="username" type="text" placeholder="Your username" />
-				<input name="roomId" type="text" placeholder="chat room id" />
-				<button type="submit">Enter</button>
-			</form>
 			<form onSubmit={handleOnSendMessage}>
 				<input
 					type="text"
