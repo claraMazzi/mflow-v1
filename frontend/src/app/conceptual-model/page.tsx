@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEventHandler, use, useEffect, useState } from "react";
+import { useEffect, useState, MouseEvent, FocusEvent } from "react";
 import { io } from "socket.io-client";
 import { socket } from "../../socket";
 import { lightningCssTransform } from "next/dist/build/swc/generated-native";
 import { set } from "zod";
+import { useFieldArray, useForm } from "react-hook-form";
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
@@ -45,7 +46,90 @@ type Collaborator = Readonly<{
 	hasEditingRights: boolean;
 }>;
 
+//t1 -> U1 S devuelve un token que tiene el timestamp de inicio de la request
+//t2 -> U1 -> Envia el token y con eso el servidor compara
+
+type Diagram = {
+	usesPlantText: boolean;
+	plantTextCode: string;
+	imageFilePath: string;
+};
+
+type Property = {
+	_id: string;
+	nombre: string;
+	detailLevelDecision: {
+		include: boolean;
+		justification: string;
+		argumentType: "CALCULO SALIDA" | "DATO DE ENTRADA" | "SIMPLIFICACION";
+	};
+};
+
+type Entity = {
+	_id: string;
+	nombre: string;
+	scopeDecision: {
+		include: boolean;
+		justification: string;
+		argumentType:
+			| "SALIDA"
+			| "ENTRADA"
+			| "NO VINCULADO A OBJETIVOS"
+			| "SIMPLIFICACION";
+	};
+	dynamicDiagram: Diagram;
+	properties: Property[];
+};
+
+type Input = {
+	_id: string;
+	description: string;
+	entity: string;
+	type: "PARAMETRO" | "FACTOR EXPERIMENTAL";
+};
+
+type Output = {
+	_id: string;
+	description: string;
+	entity: string;
+};
+
+type Simplification = {
+	_id: string;
+	description: string;
+};
+
+type Assumption = {
+	_id: string;
+	description: string;
+};
+
+type ConceptualModel = {
+	objective: string;
+	simplifications: Simplification[];
+	assumptions: Assumption[];
+	structureDiagram: Diagram;
+	flowDiagram: Diagram;
+	inputs: Input[];
+	outputs: Output[];
+	entities: Entity[];
+};
+
 export default function Page() {
+	const [isModelInitialized, setIsModelInitialized] = useState(false);
+
+	const {
+		register,
+		control,
+		setValue,
+		getValues,
+		reset,
+		formState: { errors },
+	} = useForm<ConceptualModel>();
+	const fields = useFieldArray({ name: "simplifications", control });
+
+	console.log(getValues());
+
 	const [isConnected, setIsConnected] = useState(false);
 	const [transport, setTransport] = useState("N/A");
 
@@ -84,8 +168,6 @@ export default function Page() {
 		}
 
 		function onMessage(data: string) {
-			console.log(messages);
-			console.log(data);
 			setMessages((prevMessages) => [...prevMessages, data]);
 		}
 
@@ -98,6 +180,11 @@ export default function Page() {
 				hasEditingRights: true,
 			});
 			setCollaborators(newCollaborators);
+		}
+
+		function onFieldUpdate(payload: { fieldName: any; value: any }) {
+			console.log(`Server Sent Update ${payload.fieldName}: ${payload.value}`);
+			setValue(payload.fieldName, payload.value);
 		}
 
 		function onUsersInRoomChange(payload: UsersInRoomChangePayload) {
@@ -123,10 +210,13 @@ export default function Page() {
 		function onInitializeConceptualModel(
 			payload: InitializeConceptualModelPayload
 		) {
-			console.log(payload);
+			console.log("Initial State: ", payload);
+			reset(payload.conceptualModel);
+			setIsModelInitialized(true);
 		}
 
 		socket.on("connect", onConnect);
+		socket.on("field-update", onFieldUpdate);
 		socket.on("disconnect", onDisconnect);
 		socket.on("message", onMessage);
 		socket.on(
@@ -138,6 +228,7 @@ export default function Page() {
 
 		return () => {
 			socket.off("connect", onConnect);
+			socket.off("field-update", onFieldUpdate);
 			socket.off("disconnect", onDisconnect);
 			socket.off("message", onMessage);
 			socket.off(
@@ -158,8 +249,18 @@ export default function Page() {
 		setMessage("");
 	};
 
+	const handleOnFieldBlur = (e: FocusEvent<HTMLInputElement>) => {
+		const value = getValues(e.currentTarget.name as any);
+		socket.emit("field-update", { roomId, fieldName: e.target.name, value }); // Emit partial form data
+	};
+
+	const handleMouseMove = (e : MouseEvent) => {
+		const crazy = e.nativeEvent.offsetX
+		const crazy2 = e.nativeEvent.offsetY
+	}
+
 	return (
-		<div className="h-full">
+		<div className="min-h-full" onMouseMove={handleMouseMove}>
 			<p>Dashboard Page</p>
 			<p>Status: {isConnected ? "connected" : "disconnected"}</p>
 			<p>Id: {isConnected ? socket.id : "No disponible"}</p>
@@ -181,6 +282,26 @@ export default function Page() {
 				/>
 				<button>Send</button>
 			</form>
+			{!isModelInitialized ? (
+				<p>Loading Model</p>
+			) : (
+				<form>
+					<input
+						{...register("objective", { required: true })}
+						onBlur={(e) => {
+							register("objective").onBlur(e); // RHF handler
+							handleOnFieldBlur(e); // Your custom handler
+						}}
+					/>
+					<input
+						{...register("structureDiagram.imageFilePath")}
+						onBlur={(e) => {
+							register("structureDiagram.imageFilePath").onBlur(e); // RHF handler
+							handleOnFieldBlur(e); // Your custom handler
+						}}
+					/>
+				</form>
+			)}
 			<ul>
 				{messages.map((m, index) => (
 					<li key={index}>{m}</li>

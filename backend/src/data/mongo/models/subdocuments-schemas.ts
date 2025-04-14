@@ -46,7 +46,7 @@ export const conceptualModelSchema = new Schema(
 	{
 		objective: {
 			type: String,
-			required: [true, "El campo objetivo del diagrama es obligatorio."],
+			default: "",
 		},
 		//The internal id automatically added by mongoose.
 		//https://mongoosejs.com/docs/subdocs.html#altsyntaxarrays

@@ -43,7 +43,7 @@ export class Server {
 	private app = express();
 	private port: number;
 	private routes: Router;
-	private serverListener?: any;
+	private serverListener: any;
 
 	constructor(options: Options) {
 		const { port, routes } = options;
@@ -83,18 +83,21 @@ export class Server {
 
 		io.on("connection", (socket) => {
 			console.log("New Socket Connection: ", socket.id);
-			
+
 			socket.on(
 				CLIENT_WS_EVENT_TYPES.JOIN_ROOM,
 				async (payload: JoinRoomEventPayload) => {
 					//TODO: ADD CHECK OF VALIDIY BEFORE ADDING THE SOCKET TO THE ROOM
+					const { version } = await versionService.getVersionById(
+						payload.roomId
+					);
+
 					socket.emit(SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL, {
 						type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
 						timestamp: new Date(),
-						conceptualModel: await versionService.getVersionById(
-							payload.roomId
-						),
+						conceptualModel: { ...(version as any).conceptualModel._doc },
 					} satisfies InitializeConceptualModelPayload);
+					
 					await socket.join(payload.roomId);
 
 					const socketsInRoom = await io.in(payload.roomId).fetchSockets();
@@ -113,6 +116,41 @@ export class Server {
 							timestamp: new Date(),
 						} satisfies UsersInRoomChangePayload
 					);
+				}
+			);
+
+			socket.on(
+				"field-update",
+				async (payload: { fieldName: string; value: any; roomId: string }) => {
+					console.log(`Update ${payload.fieldName}: ${payload.value}`);
+					const { version } = await versionService.getVersionById(
+						payload.roomId
+					);
+
+					const setValue = (conceptualModel: any, path: string, value: any) => {
+						const parts = path.split(".");
+						console.log("parts ", parts)
+						while (
+							parts.length > 1
+							//parts.length > 1 &&
+							//conceptualModel.hasOwnProperty(parts[0])
+						) {
+							conceptualModel = conceptualModel[parts.shift()!];
+						}
+						conceptualModel[parts[0]] = value;
+					};
+
+					setValue(
+						(version as any).conceptualModel,
+						payload.fieldName,
+						payload.value
+					);
+					version.save();
+
+					io.to(payload.roomId).emit("field-update", {
+						fieldName: payload.fieldName,
+						value: payload.value,
+					});
 				}
 			);
 
@@ -136,7 +174,7 @@ export class Server {
 			});
 
 			socket.on("message", (data) => {
-				console.log(data);
+				console.log("message ", data);
 				io.emit("message", `${socket.id.substring(0, 5)}: ${data}`);
 			});
 		});
@@ -165,6 +203,19 @@ export class Server {
 		const version = new VersionModel({
 			_id: "67d8321cd76cf5bc5bd75c79",
 			title: "Version 1",
+			conceptualModel: {
+				objective: "",
+				structureDiagram: {
+					usesPlantText: true,
+					plantTextCode: "",
+					imageFilePath: "",
+				},
+				flowDiagram: {
+					usesPlantText: true,
+					plantTextCode: "",
+					imageFilePath: "",
+				},
+			},
 		});
 
 		version.save();
