@@ -5,7 +5,13 @@ import { io } from "socket.io-client";
 import { socket } from "../../socket";
 import { lightningCssTransform } from "next/dist/build/swc/generated-native";
 import { set } from "zod";
-import { useFieldArray, useForm } from "react-hook-form";
+import {
+	Path,
+	RegisterOptions,
+	useFieldArray,
+	useForm,
+	UseFormRegister,
+} from "react-hook-form";
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
@@ -142,7 +148,7 @@ export default function Page() {
 		reset,
 		formState: { errors },
 	} = useForm<ConceptualModel>();
-	const fields = useFieldArray({ name: "simplifications", control });
+	const { fields } = useFieldArray({ name: "simplifications", control });
 
 	console.log(getValues());
 
@@ -297,6 +303,8 @@ export default function Page() {
 	};
 
 	const handleMouseMove = (e: MouseEvent) => {
+		//Had to change the previous implementation because using offsetX and offsetY caused inconsistent values
+		//when scrollbars appeared
 		const { width, height, left, top } =
 			e.currentTarget.getBoundingClientRect();
 		const xPosition = e.clientX - left;
@@ -310,7 +318,31 @@ export default function Page() {
 		throttledEmitMouseUpdateFunction.current(roomId, mousePosition);
 	};
 
-	const handleAddItemToList = (e: MouseEvent) => {};
+	const handleAddItemToList = (e: MouseEvent) => {
+		e.preventDefault();
+	};
+
+	const customRegisterField = (
+		name: Path<ConceptualModel>,
+		options: RegisterOptions<ConceptualModel, Path<ConceptualModel>> = {}
+	) => {
+		const { ...registerOptions } = options;
+
+		// Get the standard register result
+		const registerResult = register(name, registerOptions);
+
+		const enhancedRegister = {
+			...registerResult,
+			onBlur: (e: React.FocusEvent<HTMLInputElement>) => {
+				// Call the original onBlur handler
+				registerResult.onBlur(e);
+
+				handleOnFieldBlur(e);
+			},
+		};
+
+		return enhancedRegister;
+	};
 
 	return (
 		<div className="flex-grow" onMouseMove={handleMouseMove}>
@@ -334,7 +366,7 @@ export default function Page() {
 									{collaborator.mousePosition.relativeY}
 								</p>
 							) : (
-								<p> Mouse Position no available</p>
+								<p> Mouse Position not available</p>
 							)}
 						</li>
 					);
@@ -344,20 +376,20 @@ export default function Page() {
 				<p>Loading Model</p>
 			) : (
 				<form>
-					<input
-						{...register("objective", { required: true })}
-						onBlur={(e) => {
-							register("objective").onBlur(e); // RHF handler
-							handleOnFieldBlur(e); // Your custom handler
-						}}
-					/>
-					<input
-						{...register("structureDiagram.imageFilePath")}
-						onBlur={(e) => {
-							register("structureDiagram.imageFilePath").onBlur(e); // RHF handler
-							handleOnFieldBlur(e); // Your custom handler
-						}}
-					/>
+					<input {...customRegisterField("objective")} />
+					<input {...customRegisterField("structureDiagram.imageFilePath")} />
+					<br />
+					<ul>
+						{fields.map((field, index) => {
+							return (
+								<input
+									key={field.id}
+									{...register(`assumptions.${index}.description`)}
+								/>
+							);
+						})}
+					</ul>
+					<button onClick={handleAddItemToList}>Agregar Simplificacion</button>
 				</form>
 			)}
 		</div>
