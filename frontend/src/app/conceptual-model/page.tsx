@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, MouseEvent, FocusEvent } from "react";
+import { useEffect, useState, MouseEvent, FocusEvent, useRef } from "react";
 import { io } from "socket.io-client";
 import { socket } from "../../socket";
 import { lightningCssTransform } from "next/dist/build/swc/generated-native";
@@ -44,6 +44,8 @@ type Collaborator = Readonly<{
 	userId?: string;
 	isCurrentUser: boolean;
 	hasEditingRights: boolean;
+	mousePosition?: { relativeX: number; relativeY: number };
+	currentTab?: string;
 }>;
 
 //t1 -> U1 S devuelve un token que tiene el timestamp de inicio de la request
@@ -115,6 +117,20 @@ type ConceptualModel = {
 	entities: Entity[];
 };
 
+function throttle(func: any, delay: number) {
+	let timeout: NodeJS.Timeout | null = null;
+	return (...args: any) => {
+		if (!timeout) {
+			func(...args);
+			timeout = setTimeout(() => {
+				timeout = null;
+			}, delay);
+		}
+	};
+}
+
+const MOUSE_POSITION_UPDATE_DELAY = 33; //30 fps
+
 export default function Page() {
 	const [isModelInitialized, setIsModelInitialized] = useState(false);
 
@@ -132,15 +148,23 @@ export default function Page() {
 
 	const [isConnected, setIsConnected] = useState(false);
 	const [transport, setTransport] = useState("N/A");
+	const throttledEmitMouseUpdateFunction = useRef(
+		throttle((roomId: any, mousePosition: any) => {
+			socket.volatile.emit("client-volatile-broadcast", {
+				roomId,
+				userId: "ignored",
+				mousePosition: mousePosition,
+				type: "mouse-position-change",
+				timestamp: new Date(),
+			});
+		}, MOUSE_POSITION_UPDATE_DELAY)
+	);
 
 	const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(
 		new Map()
 	);
 	const [roomId, setRoomId] = useState("67d8321cd76cf5bc5bd75c79");
 	const [username, setUsername] = useState("");
-
-	const [messages, setMessages] = useState<string[]>([]);
-	const [message, setMessage] = useState("");
 
 	useEffect(() => {
 		if (socket.connected) {
@@ -167,10 +191,6 @@ export default function Page() {
 			setTransport("N/A");
 		}
 
-		function onMessage(data: string) {
-			setMessages((prevMessages) => [...prevMessages, data]);
-		}
-
 		function onFirstInRoom(payload: FirstInRoomPayload) {
 			if (!socket.id) return;
 			const newCollaborators = new Map<string, Collaborator>();
@@ -185,6 +205,34 @@ export default function Page() {
 		function onFieldUpdate(payload: { fieldName: any; value: any }) {
 			console.log(`Server Sent Update ${payload.fieldName}: ${payload.value}`);
 			setValue(payload.fieldName, payload.value);
+		}
+
+		function onServerVolatileBroadcast(payload: {
+			socketId: string;
+			userId: string;
+			mousePosition: { relativeX: number; relativeY: number };
+			type: string;
+			timestamp: Date;
+		}) {
+			setCollaborators((prevCollaborators) => {
+				const newCollaborators = new Map<string, Collaborator>();
+				for (const socketId of prevCollaborators.keys()) {
+					const existingCollaborator = prevCollaborators.get(socketId);
+
+					if (!existingCollaborator) continue;
+
+					if (socketId === payload.socketId) {
+						newCollaborators.set(socketId, {
+							...existingCollaborator,
+							userId: payload.userId,
+							mousePosition: payload.mousePosition,
+						});
+					} else {
+						newCollaborators.set(socketId, { ...existingCollaborator });
+					}
+				}
+				return newCollaborators;
+			});
 		}
 
 		function onUsersInRoomChange(payload: UsersInRoomChangePayload) {
@@ -218,7 +266,7 @@ export default function Page() {
 		socket.on("connect", onConnect);
 		socket.on("field-update", onFieldUpdate);
 		socket.on("disconnect", onDisconnect);
-		socket.on("message", onMessage);
+		socket.on("server-volatile-broadcast", onServerVolatileBroadcast);
 		socket.on(
 			SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
 			onInitializeConceptualModel
@@ -230,7 +278,7 @@ export default function Page() {
 			socket.off("connect", onConnect);
 			socket.off("field-update", onFieldUpdate);
 			socket.off("disconnect", onDisconnect);
-			socket.off("message", onMessage);
+			socket.off("server-volatile-broadcast", onServerVolatileBroadcast);
 			socket.off(
 				SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
 				onInitializeConceptualModel
@@ -243,24 +291,29 @@ export default function Page() {
 		};
 	}, []);
 
-	const handleOnSendMessage = (e: any) => {
-		e.preventDefault();
-		socket.emit("message", message);
-		setMessage("");
-	};
-
 	const handleOnFieldBlur = (e: FocusEvent<HTMLInputElement>) => {
 		const value = getValues(e.currentTarget.name as any);
 		socket.emit("field-update", { roomId, fieldName: e.target.name, value }); // Emit partial form data
 	};
 
-	const handleMouseMove = (e : MouseEvent) => {
-		const crazy = e.nativeEvent.offsetX
-		const crazy2 = e.nativeEvent.offsetY
-	}
+	const handleMouseMove = (e: MouseEvent) => {
+		const { width, height, left, top } =
+			e.currentTarget.getBoundingClientRect();
+		const xPosition = e.clientX - left;
+		const yPosition = e.clientY - top;
+
+		const mousePosition = {
+			relativeX: xPosition / width,
+			relativeY: yPosition / height,
+		};
+
+		throttledEmitMouseUpdateFunction.current(roomId, mousePosition);
+	};
+
+	const handleAddItemToList = (e: MouseEvent) => {};
 
 	return (
-		<div className="min-h-full" onMouseMove={handleMouseMove}>
+		<div className="flex-grow" onMouseMove={handleMouseMove}>
 			<p>Dashboard Page</p>
 			<p>Status: {isConnected ? "connected" : "disconnected"}</p>
 			<p>Id: {isConnected ? socket.id : "No disponible"}</p>
@@ -270,18 +323,23 @@ export default function Page() {
 			<h1>Collaborators:</h1>
 			<ul>
 				{Array.from(collaborators.values()).map((collaborator) => {
-					return <li key={collaborator.socketId}>{collaborator.socketId}</li>;
+					return (
+						<li key={collaborator.socketId}>
+							<p>
+								{collaborator.socketId} - {collaborator.userId}
+							</p>
+							{collaborator.mousePosition ? (
+								<p>
+									X: {collaborator.mousePosition.relativeX} Y:{" "}
+									{collaborator.mousePosition.relativeY}
+								</p>
+							) : (
+								<p> Mouse Position no available</p>
+							)}
+						</li>
+					);
 				})}
 			</ul>
-			<form onSubmit={handleOnSendMessage}>
-				<input
-					type="text"
-					placeholder="Your message"
-					value={message}
-					onChange={(e) => setMessage(e.target.value)}
-				/>
-				<button>Send</button>
-			</form>
 			{!isModelInitialized ? (
 				<p>Loading Model</p>
 			) : (
@@ -302,11 +360,6 @@ export default function Page() {
 					/>
 				</form>
 			)}
-			<ul>
-				{messages.map((m, index) => (
-					<li key={index}>{m}</li>
-				))}
-			</ul>
 		</div>
 	);
 }

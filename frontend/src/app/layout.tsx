@@ -23,7 +23,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${Exo.variable} antialiased`}>
         <Toaster />
-        <div className="hidden lg:block">{children}</div>
+        <div className="hidden lg:flex lg:flex-col flex-grow">{children}</div>
         <div className="block lg:hidden">
           <div className="min-h-screen flex items-center justify-center bg-purple-300 p-4">
             <div className="w-full max-w-md bg-white shadow-md rounded-md p-8 border border-gray-200">

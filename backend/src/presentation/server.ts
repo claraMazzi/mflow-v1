@@ -97,7 +97,7 @@ export class Server {
 						timestamp: new Date(),
 						conceptualModel: { ...(version as any).conceptualModel._doc },
 					} satisfies InitializeConceptualModelPayload);
-					
+
 					await socket.join(payload.roomId);
 
 					const socketsInRoom = await io.in(payload.roomId).fetchSockets();
@@ -120,6 +120,25 @@ export class Server {
 			);
 
 			socket.on(
+				"client-volatile-broadcast",
+				(payload: {
+					roomId: string;
+					userId: string;
+					mousePosition: { relativeX: number; relativeY: number };
+					type: string;
+					timestamp: Date;
+				}) => {
+					socket.to(payload.roomId).emit("server-volatile-broadcast", {
+						socketId: socket.id,
+						userId: payload.userId,
+						mousePosition: payload.mousePosition,
+						type: payload.type,
+						timestamp: payload.timestamp
+					});
+				}
+			);
+
+			socket.on(
 				"field-update",
 				async (payload: { fieldName: string; value: any; roomId: string }) => {
 					console.log(`Update ${payload.fieldName}: ${payload.value}`);
@@ -129,7 +148,7 @@ export class Server {
 
 					const setValue = (conceptualModel: any, path: string, value: any) => {
 						const parts = path.split(".");
-						console.log("parts ", parts)
+						console.log("parts ", parts);
 						while (
 							parts.length > 1
 							//parts.length > 1 &&
@@ -173,10 +192,6 @@ export class Server {
 				}
 			});
 
-			socket.on("message", (data) => {
-				console.log("message ", data);
-				io.emit("message", `${socket.id.substring(0, 5)}: ${data}`);
-			});
 		});
 
 		//Uncomment when needed
