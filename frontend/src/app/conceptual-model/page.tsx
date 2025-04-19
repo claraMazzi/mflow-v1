@@ -1,10 +1,18 @@
 "use client";
 
-import { useEffect, useState, MouseEvent, FocusEvent, useRef } from "react";
+import {
+	useEffect,
+	useState,
+	MouseEvent,
+	FocusEvent,
+	useRef,
+	ChangeEvent,
+	useMemo,
+} from "react";
 import { io } from "socket.io-client";
 import { socket } from "../../socket";
 import { lightningCssTransform } from "next/dist/build/swc/generated-native";
-import { set } from "zod";
+import { set, string } from "zod";
 import {
 	Path,
 	RegisterOptions,
@@ -12,6 +20,7 @@ import {
 	useForm,
 	UseFormRegister,
 } from "react-hook-form";
+import Diagram from "@/components/ui/conceptual-model/diagram";
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
@@ -112,7 +121,7 @@ type Assumption = {
 	description: string;
 };
 
-type ConceptualModel = {
+export type ConceptualModel = {
 	objective: string;
 	simplifications: Simplification[];
 	assumptions: Assumption[];
@@ -135,6 +144,19 @@ function throttle(func: any, delay: number) {
 	};
 }
 
+function parsePropertyPath(conceptualModel: any, path: string) {
+	const pathParts = path.split(".");
+	for (let i = 0; i < pathParts.length - 1; i++) {
+		if (Array.isArray(conceptualModel[pathParts[i]])) {
+			pathParts[i + 1] = conceptualModel[pathParts[i]].findIndex(
+				(e: any) => e._id === pathParts[i + 1]
+			);
+		}
+		conceptualModel = conceptualModel[pathParts[i]];
+	}
+	return pathParts.join(".");
+}
+
 const MOUSE_POSITION_UPDATE_DELAY = 33; //30 fps
 
 export default function Page() {
@@ -144,11 +166,15 @@ export default function Page() {
 		register,
 		control,
 		setValue,
+		watch,
 		getValues,
 		reset,
 		formState: { errors },
 	} = useForm<ConceptualModel>();
-	const { fields } = useFieldArray({ name: "simplifications", control });
+	const simplificationList = useFieldArray({
+		name: "simplifications",
+		control,
+	});
 
 	console.log(getValues());
 
@@ -170,7 +196,9 @@ export default function Page() {
 		new Map()
 	);
 	const [roomId, setRoomId] = useState("67d8321cd76cf5bc5bd75c79");
-	const [username, setUsername] = useState("");
+	const canUserEdit = useMemo(() => {
+		return !!collaborators.get(socket.id!)?.hasEditingRights;
+	}, [collaborators]);
 
 	useEffect(() => {
 		if (socket.connected) {
@@ -202,6 +230,7 @@ export default function Page() {
 			const newCollaborators = new Map<string, Collaborator>();
 			newCollaborators.set(socket.id, {
 				socketId: socket.id,
+				userId: "ignored",
 				isCurrentUser: true,
 				hasEditingRights: true,
 			});
@@ -210,7 +239,8 @@ export default function Page() {
 
 		function onFieldUpdate(payload: { fieldName: any; value: any }) {
 			console.log(`Server Sent Update ${payload.fieldName}: ${payload.value}`);
-			setValue(payload.fieldName, payload.value);
+			const parsedPath = parsePropertyPath(getValues(), payload.fieldName);
+			setValue(parsedPath as any, payload.value);
 		}
 
 		function onServerVolatileBroadcast(payload: {
@@ -269,9 +299,36 @@ export default function Page() {
 			setIsModelInitialized(true);
 		}
 
+		function onItemAddedToList<K extends keyof ConceptualModel>({
+			listFieldPath,
+			newItem,
+		}: {
+			listFieldPath: Path<ConceptualModel>;
+			newItem: any;
+		}) {
+			const parsedPath: any = parsePropertyPath(getValues, listFieldPath);
+			setValue(parsedPath, [...getValues(parsedPath), newItem]);
+		}
+
+		function onItemRemovedFromList<K extends keyof ConceptualModel>({
+			listFieldPath,
+			itemId,
+		}: {
+			listFieldPath: Path<ConceptualModel>;
+			itemId: string;
+		}) {
+			const parsedPath: any = parsePropertyPath(getValues, listFieldPath);
+			const currentValue = getValues(listFieldPath)
+			if(Array.isArray(currentValue)) {
+				setValue(parsedPath, [...currentValue.filter((s) => s._id !== itemId)]);
+			} 
+		}
+
 		socket.on("connect", onConnect);
-		socket.on("field-update", onFieldUpdate);
 		socket.on("disconnect", onDisconnect);
+		socket.on("field-update", onFieldUpdate);
+		socket.on("item-added-to-list", onItemAddedToList);
+		socket.on("item-removed-from-list", onItemRemovedFromList);
 		socket.on("server-volatile-broadcast", onServerVolatileBroadcast);
 		socket.on(
 			SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
@@ -284,6 +341,8 @@ export default function Page() {
 			socket.off("connect", onConnect);
 			socket.off("field-update", onFieldUpdate);
 			socket.off("disconnect", onDisconnect);
+			socket.off("item-added-to-list", onItemAddedToList);
+			socket.off("item-removed-from-list", onItemRemovedFromList);
 			socket.off("server-volatile-broadcast", onServerVolatileBroadcast);
 			socket.off(
 				SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
@@ -297,9 +356,13 @@ export default function Page() {
 		};
 	}, []);
 
-	const handleOnFieldBlur = (e: FocusEvent<HTMLInputElement>) => {
+	const handleOnFieldBlur = (
+		e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
+		propertyPath: string
+	) => {
+		if (!canUserEdit) return;
 		const value = getValues(e.currentTarget.name as any);
-		socket.emit("field-update", { roomId, fieldName: e.target.name, value }); // Emit partial form data
+		socket.emit("field-update", { roomId, fieldName: propertyPath, value }); // Emit partial form data
 	};
 
 	const handleMouseMove = (e: MouseEvent) => {
@@ -318,14 +381,41 @@ export default function Page() {
 		throttledEmitMouseUpdateFunction.current(roomId, mousePosition);
 	};
 
-	const handleAddItemToList = (e: MouseEvent) => {
+	const handleAddItemToList = (
+		e: MouseEvent,
+		listFieldPath: Path<ConceptualModel>
+	) => {
 		e.preventDefault();
+		socket.emit("add-item-to-list", { roomId, listFieldPath });
 	};
 
-	const customRegisterField = (
-		name: Path<ConceptualModel>,
-		options: RegisterOptions<ConceptualModel, Path<ConceptualModel>> = {}
+	const handleRemoveItemFromList = (
+		e: MouseEvent,
+		listFieldPath: Path<ConceptualModel>,
+		itemId: string
 	) => {
+		e.preventDefault();
+		socket.emit("remove-item-from-list", { roomId, listFieldPath, itemId });
+	};
+
+	const customRegisterField = ({
+		name,
+		propertyPath = name,
+		options = {},
+		customOnBlurHandler = handleOnFieldBlur,
+		customOnChangeHandler,
+	}: {
+		name: Path<ConceptualModel>;
+		propertyPath?: string;
+		options?: RegisterOptions<ConceptualModel, Path<ConceptualModel>>;
+		customOnBlurHandler?: (
+			e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
+			propertyPath: string
+		) => void;
+		customOnChangeHandler?: (
+			e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+		) => void;
+	}) => {
 		const { ...registerOptions } = options;
 
 		// Get the standard register result
@@ -333,12 +423,19 @@ export default function Page() {
 
 		const enhancedRegister = {
 			...registerResult,
-			onBlur: (e: React.FocusEvent<HTMLInputElement>) => {
+			onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+				// Call the original onChange handler
+				registerResult.onChange(e);
+
+				customOnChangeHandler?.(e);
+			},
+			onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
 				// Call the original onBlur handler
 				registerResult.onBlur(e);
 
-				handleOnFieldBlur(e);
+				customOnBlurHandler(e, propertyPath);
 			},
+			readOnly: !canUserEdit,
 		};
 
 		return enhancedRegister;
@@ -351,14 +448,14 @@ export default function Page() {
 			<p>Id: {isConnected ? socket.id : "No disponible"}</p>
 			<p>Transport: {transport}</p>
 			<p>Current Room: {roomId}</p>
-			<p>Current Username: {username}</p>
 			<h1>Collaborators:</h1>
 			<ul>
 				{Array.from(collaborators.values()).map((collaborator) => {
 					return (
 						<li key={collaborator.socketId}>
 							<p>
-								{collaborator.socketId} - {collaborator.userId}
+								{collaborator.socketId} - {collaborator.userId} - Can Edit:{" "}
+								{collaborator.hasEditingRights.toString()}
 							</p>
 							{collaborator.mousePosition ? (
 								<p>
@@ -376,20 +473,50 @@ export default function Page() {
 				<p>Loading Model</p>
 			) : (
 				<form>
-					<input {...customRegisterField("objective")} />
-					<input {...customRegisterField("structureDiagram.imageFilePath")} />
+					<input {...customRegisterField({ name: "objective" })} />
+					<input
+						{...customRegisterField({ name: "structureDiagram.imageFilePath" })}
+					/>
 					<br />
+					<button
+						disabled={!canUserEdit}
+						onClick={(e) => handleAddItemToList(e, "simplifications")}
+					>
+						Agregar Simplificacion
+					</button>
 					<ul>
-						{fields.map((field, index) => {
+						{simplificationList.fields.map((field, index) => {
 							return (
-								<input
-									key={field.id}
-									{...register(`assumptions.${index}.description`)}
-								/>
+								<div key={field.id}>
+									<label>
+										{`Simplification Id: ${field._id}`} - Description:
+									</label>
+									<input
+										{...customRegisterField({
+											name: `simplifications.${index}.description`,
+											propertyPath: `simplifications.${field._id}.description`,
+										})}
+									/>
+									<button
+										disabled={!canUserEdit}
+										onClick={(e) =>
+											handleRemoveItemFromList(e, "simplifications", field._id)
+										}
+									>
+										Delete
+									</button>
+								</div>
 							);
 						})}
 					</ul>
-					<button onClick={handleAddItemToList}>Agregar Simplificacion</button>
+					<Diagram
+						{...{
+							register: customRegisterField,
+							watch,
+							namePrefix: "structureDiagram",
+							propertyPathPrefix: "structureDiagram",
+						}}
+					/>
 				</form>
 			)}
 		</div>

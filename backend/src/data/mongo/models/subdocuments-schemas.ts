@@ -78,8 +78,6 @@ export const conceptualModelSchema = new Schema(
 		],
         entities: [entitySchema]
 	},
-	//Prevents mongo from generating a default id
-	{ _id: false }
 );
 
 export const correctionSchema = new Schema({

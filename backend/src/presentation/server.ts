@@ -133,22 +133,38 @@ export class Server {
 						userId: payload.userId,
 						mousePosition: payload.mousePosition,
 						type: payload.type,
-						timestamp: payload.timestamp
+						timestamp: payload.timestamp,
 					});
 				}
 			);
 
+			const parsePropertyPath = (conceptualModel: any, path: string) => {
+				const pathParts = path.split(".");
+				for (let i = 0; i < pathParts.length - 1; i++) {
+					if (Array.isArray(conceptualModel[pathParts[i]])) {
+						pathParts[i + 1] = conceptualModel[pathParts[i]].findIndex(
+							(e: any) => e._id.equals(pathParts[i + 1])
+						);
+					}
+					conceptualModel = conceptualModel[pathParts[i]];
+				}
+				return pathParts;
+			};
+
 			socket.on(
 				"field-update",
 				async (payload: { fieldName: string; value: any; roomId: string }) => {
-					console.log(`Update ${payload.fieldName}: ${payload.value}`);
 					const { version } = await versionService.getVersionById(
 						payload.roomId
 					);
 
-					const setValue = (conceptualModel: any, path: string, value: any) => {
-						const parts = path.split(".");
-						console.log("parts ", parts);
+					const setValue = (
+						conceptualModel: any,
+						properyPath: string,
+						value: any
+					) => {
+						const parts = parsePropertyPath(conceptualModel, properyPath);
+						console.log("Updated Field Path Parts: ", parts);
 						while (
 							parts.length > 1
 							//parts.length > 1 &&
@@ -173,6 +189,51 @@ export class Server {
 				}
 			);
 
+			const getProperty = (conceptualModel: any, propertyPath: string) => {
+				const pathParts = parsePropertyPath(conceptualModel, propertyPath);
+				while (
+					pathParts.length > 1
+					//parts.length > 1 &&
+					//conceptualModel.hasOwnProperty(parts[0])
+				) {
+					conceptualModel = conceptualModel[pathParts.shift()!];
+				}
+				return conceptualModel[pathParts[0]];
+			};
+
+			socket.on("add-item-to-list", async ({ roomId, listFieldPath }) => {
+				const { version } = await versionService.getVersionById(roomId);
+
+				let listField = getProperty(version.conceptualModel, listFieldPath);
+				listField.push({ description: "" });
+
+				version.save();
+
+				listField = getProperty(version.conceptualModel, listFieldPath);
+				let newItem = listField.at(listField.length - 1);
+				newItem = newItem._doc;
+
+				io.to(roomId).emit("item-added-to-list", { listFieldPath, newItem });
+			});
+
+			socket.on(
+				"remove-item-from-list",
+				async ({ roomId, listFieldPath, itemId }) => {
+					const { version } = await versionService.getVersionById(roomId);
+
+					let listField = getProperty(version.conceptualModel, listFieldPath);
+					const itemToDelete = listField.find((s : any) => s._id.equals(itemId));
+					listField.remove(itemToDelete);
+
+					version.save();
+
+					io.to(roomId).emit("item-removed-from-list", {
+						listFieldPath,
+						itemId,
+					});
+				}
+			);
+
 			socket.on("disconnecting", async () => {
 				console.log("Socket Disconnected ", socket.id);
 				for (const roomID of Array.from(socket.rooms)) {
@@ -191,7 +252,6 @@ export class Server {
 					}
 				}
 			});
-
 		});
 
 		//Uncomment when needed
