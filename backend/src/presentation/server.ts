@@ -201,34 +201,70 @@ export class Server {
 				return conceptualModel[pathParts[0]];
 			};
 
-			socket.on("add-item-to-list", async ({ roomId, listFieldPath }) => {
-				const { version } = await versionService.getVersionById(roomId);
+			socket.on(
+				"add-item-to-list",
+				async ({
+					roomId,
+					listPropertyPath,
+					itemType,
+				}: {
+					roomId: string;
+					listPropertyPath: string;
+					itemType: "assumption" | "simplification" | "entity";
+				}) => {
+					const { version } = await versionService.getVersionById(roomId);
 
-				let listField = getProperty(version.conceptualModel, listFieldPath);
-				listField.push({ description: "" });
+					let listField = getProperty(
+						version.conceptualModel,
+						listPropertyPath
+					);
 
-				version.save();
+					switch (itemType) {
+						case "assumption":
+							listField.push({ description: "" });
+							break;
+						case "entity":
+							listField.push({
+								name: "",
+								scopeDecision: {},
+								dynamicDiagram: {},
+								properties: [],
+							});
+							break;
+						case "simplification":	
+							listField.push({ description: "" });
+							break;
+					}
 
-				listField = getProperty(version.conceptualModel, listFieldPath);
-				let newItem = listField.at(listField.length - 1);
-				newItem = newItem._doc;
+					version.save();
 
-				io.to(roomId).emit("item-added-to-list", { listFieldPath, newItem });
-			});
+					listField = getProperty(version.conceptualModel, listPropertyPath);
+					let newItem = listField.at(listField.length - 1);
+					newItem = newItem._doc;
+
+					io.to(roomId).emit("item-added-to-list", {
+						listPropertyPath,
+						newItem,
+					});
+				}
+			);
 
 			socket.on(
 				"remove-item-from-list",
-				async ({ roomId, listFieldPath, itemId }) => {
+				async ({ roomId, listPropertyPath, itemId }) => {
 					const { version } = await versionService.getVersionById(roomId);
 
-					let listField = getProperty(version.conceptualModel, listFieldPath);
-					const itemToDelete = listField.find((s : any) => s._id.equals(itemId));
+					let listField = getProperty(
+						version.conceptualModel,
+						listPropertyPath
+					);
+					const itemToDelete = listField.find((s: any) => s._id.equals(itemId));
 					listField.remove(itemToDelete);
 
 					version.save();
 
 					io.to(roomId).emit("item-removed-from-list", {
-						listFieldPath,
+						listPropertyPath,
 						itemId,
 					});
 				}

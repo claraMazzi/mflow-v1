@@ -1,6 +1,6 @@
 "use client";
 
-import { ConceptualModel } from "@/app/conceptual-model/page";
+import { ConceptualModel } from "@/types/conceptual-model";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Path } from "react-hook-form";
 const plantumlEncoder = require("plantuml-encoder");
@@ -23,14 +23,13 @@ export default function Diagram({
 	register,
 	watch,
 	namePrefix,
-	propertyPathPrefix = namePrefix
+	propertyPathPrefix = namePrefix,
 }: {
 	register: any;
 	watch: any;
 	namePrefix: Path<ConceptualModel>;
 	propertyPathPrefix?: string;
 }) {
-	
 	const [imgSource, setImageSource] = useState<undefined | string>();
 	const debouncedRenderDiagram = useRef(
 		debounce((value: any) => {
@@ -48,15 +47,28 @@ export default function Diagram({
 		return () => {};
 	}, [plantTextCodeValue, usesPlantTextValue]);
 
+	const checkboxRegister = register({
+		name: `${namePrefix}.usesPlantText`,
+		propertyPath: `${propertyPathPrefix}.usesPlantText`,
+		propagateUpdateOnChange: true,
+	});
+
 	return (
 		<>
 			<label>Utiliza PlanText: </label>
-			<input type="checkbox" {...register({ name: `${namePrefix}.usesPlantText`, propertyPath: `${propertyPathPrefix}.usesPlantText` })} />
+			<input
+				type="checkbox"
+				{...checkboxRegister}
+				className={`${checkboxRegister.readOnly? "pointer-events-none" : ""}`}
+			/>
 			<div className="flex flex-row gap-2">
 				{usesPlantTextValue ? (
 					<textarea
 						className="flex-grow max-w-[50%]"
-						{...register({ name: `${namePrefix}.plantTextCode`, propertyPath: `${propertyPathPrefix}.plantTextCode` })}
+						{...register({
+							name: `${namePrefix}.plantTextCode`,
+							propertyPath: `${propertyPathPrefix}.plantTextCode`,
+						})}
 					/>
 				) : (
 					<input
@@ -66,8 +78,8 @@ export default function Diagram({
 							if (e.currentTarget.files && e.currentTarget.files.length > 0) {
 								setImageSource(URL.createObjectURL(e.currentTarget.files[0]));
 							} else {
-                                setImageSource("")
-                            }
+								setImageSource("");
+							}
 						}}
 					/>
 				)}

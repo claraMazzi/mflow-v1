@@ -21,6 +21,7 @@ import {
 	UseFormRegister,
 } from "react-hook-form";
 import Diagram from "@/components/ui/conceptual-model/diagram";
+import { ConceptualModel } from "@/types/conceptual-model";
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
@@ -66,71 +67,6 @@ type Collaborator = Readonly<{
 //t1 -> U1 S devuelve un token que tiene el timestamp de inicio de la request
 //t2 -> U1 -> Envia el token y con eso el servidor compara
 
-type Diagram = {
-	usesPlantText: boolean;
-	plantTextCode: string;
-	imageFilePath: string;
-};
-
-type Property = {
-	_id: string;
-	nombre: string;
-	detailLevelDecision: {
-		include: boolean;
-		justification: string;
-		argumentType: "CALCULO SALIDA" | "DATO DE ENTRADA" | "SIMPLIFICACION";
-	};
-};
-
-type Entity = {
-	_id: string;
-	nombre: string;
-	scopeDecision: {
-		include: boolean;
-		justification: string;
-		argumentType:
-			| "SALIDA"
-			| "ENTRADA"
-			| "NO VINCULADO A OBJETIVOS"
-			| "SIMPLIFICACION";
-	};
-	dynamicDiagram: Diagram;
-	properties: Property[];
-};
-
-type Input = {
-	_id: string;
-	description: string;
-	entity: string;
-	type: "PARAMETRO" | "FACTOR EXPERIMENTAL";
-};
-
-type Output = {
-	_id: string;
-	description: string;
-	entity: string;
-};
-
-type Simplification = {
-	_id: string;
-	description: string;
-};
-
-type Assumption = {
-	_id: string;
-	description: string;
-};
-
-export type ConceptualModel = {
-	objective: string;
-	simplifications: Simplification[];
-	assumptions: Assumption[];
-	structureDiagram: Diagram;
-	flowDiagram: Diagram;
-	inputs: Input[];
-	outputs: Output[];
-	entities: Entity[];
-};
 
 function throttle(func: any, delay: number) {
 	let timeout: NodeJS.Timeout | null = null;
@@ -173,6 +109,14 @@ export default function Page() {
 	} = useForm<ConceptualModel>();
 	const simplificationList = useFieldArray({
 		name: "simplifications",
+		control,
+	});
+	const assumptionList = useFieldArray({
+		name: "assumptions",
+		control,
+	});
+	const entitiesList = useFieldArray({
+		name: "entities",
 		control,
 	});
 
@@ -300,28 +244,28 @@ export default function Page() {
 		}
 
 		function onItemAddedToList<K extends keyof ConceptualModel>({
-			listFieldPath,
+			listPropertyPath,
 			newItem,
 		}: {
-			listFieldPath: Path<ConceptualModel>;
+			listPropertyPath: string;
 			newItem: any;
 		}) {
-			const parsedPath: any = parsePropertyPath(getValues, listFieldPath);
+			const parsedPath: any = parsePropertyPath(getValues, listPropertyPath);
 			setValue(parsedPath, [...getValues(parsedPath), newItem]);
 		}
 
 		function onItemRemovedFromList<K extends keyof ConceptualModel>({
-			listFieldPath,
+			listPropertyPath,
 			itemId,
 		}: {
-			listFieldPath: Path<ConceptualModel>;
+			listPropertyPath: Path<ConceptualModel>;
 			itemId: string;
 		}) {
-			const parsedPath: any = parsePropertyPath(getValues, listFieldPath);
-			const currentValue = getValues(listFieldPath)
-			if(Array.isArray(currentValue)) {
+			const parsedPath: any = parsePropertyPath(getValues, listPropertyPath);
+			const currentValue = getValues(listPropertyPath);
+			if (Array.isArray(currentValue)) {
 				setValue(parsedPath, [...currentValue.filter((s) => s._id !== itemId)]);
-			} 
+			}
 		}
 
 		socket.on("connect", onConnect);
@@ -356,12 +300,8 @@ export default function Page() {
 		};
 	}, []);
 
-	const handleOnFieldBlur = (
-		e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
-		propertyPath: string
-	) => {
+	const sendPropertyUpdate = (value: any, propertyPath: string) => {
 		if (!canUserEdit) return;
-		const value = getValues(e.currentTarget.name as any);
 		socket.emit("field-update", { roomId, fieldName: propertyPath, value }); // Emit partial form data
 	};
 
@@ -381,40 +321,42 @@ export default function Page() {
 		throttledEmitMouseUpdateFunction.current(roomId, mousePosition);
 	};
 
-	const handleAddItemToList = (
-		e: MouseEvent,
-		listFieldPath: Path<ConceptualModel>
-	) => {
+	const handleAddItemToList = ({
+		e,
+		listPropertyPath,
+		itemType
+	}: {
+		e: MouseEvent;
+		listPropertyPath: Path<ConceptualModel>;
+		itemType: "assumption" | "simplification" | "entity";
+	}) => {
 		e.preventDefault();
-		socket.emit("add-item-to-list", { roomId, listFieldPath });
+		socket.emit("add-item-to-list", { roomId, listPropertyPath, itemType });
 	};
 
-	const handleRemoveItemFromList = (
-		e: MouseEvent,
-		listFieldPath: Path<ConceptualModel>,
-		itemId: string
-	) => {
+	const handleRemoveItemFromList = ({
+		e,
+		listPropertyPath,
+		itemId,
+	}: {
+		e: MouseEvent;
+		listPropertyPath: Path<ConceptualModel>;
+		itemId: string;
+	}) => {
 		e.preventDefault();
-		socket.emit("remove-item-from-list", { roomId, listFieldPath, itemId });
+		socket.emit("remove-item-from-list", { roomId, listPropertyPath, itemId });
 	};
 
 	const customRegisterField = ({
 		name,
 		propertyPath = name,
 		options = {},
-		customOnBlurHandler = handleOnFieldBlur,
-		customOnChangeHandler,
+		propagateUpdateOnChange = false,
 	}: {
 		name: Path<ConceptualModel>;
 		propertyPath?: string;
 		options?: RegisterOptions<ConceptualModel, Path<ConceptualModel>>;
-		customOnBlurHandler?: (
-			e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
-			propertyPath: string
-		) => void;
-		customOnChangeHandler?: (
-			e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-		) => void;
+		propagateUpdateOnChange?: boolean;
 	}) => {
 		const { ...registerOptions } = options;
 
@@ -427,13 +369,19 @@ export default function Page() {
 				// Call the original onChange handler
 				registerResult.onChange(e);
 
-				customOnChangeHandler?.(e);
+				if (propagateUpdateOnChange) {
+					const value = getValues(e.currentTarget.name as any);
+					sendPropertyUpdate(value, propertyPath);
+				}
 			},
 			onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
 				// Call the original onBlur handler
 				registerResult.onBlur(e);
 
-				customOnBlurHandler(e, propertyPath);
+				if (!propagateUpdateOnChange) {
+					const value = getValues(e.currentTarget.name as any);
+					sendPropertyUpdate(value, propertyPath);
+				}
 			},
 			readOnly: !canUserEdit,
 		};
@@ -478,16 +426,47 @@ export default function Page() {
 						{...customRegisterField({ name: "structureDiagram.imageFilePath" })}
 					/>
 					<br />
+					<h2>Suposiciones</h2>
 					<button
 						disabled={!canUserEdit}
-						onClick={(e) => handleAddItemToList(e, "simplifications")}
+						onClick={(e) => handleAddItemToList({e, listPropertyPath: "assumptions", itemType: "assumption"})}
+					>
+						Agregar Suposición
+					</button>
+					<ul>
+						{assumptionList.fields.map((field, index) => {
+							return (
+								<li key={field.id}>
+									<label>{`Assumption Id: ${field._id}`} - Description:</label>
+									<input
+										{...customRegisterField({
+											name: `assumptions.${index}.description`,
+											propertyPath: `assumptions.${field._id}.description`,
+										})}
+									/>
+									<button
+										disabled={!canUserEdit}
+										onClick={(e) =>
+											handleRemoveItemFromList({e, listPropertyPath: "assumptions", itemId: field._id})
+										}
+									>
+										Delete
+									</button>
+								</li>
+							);
+						})}
+					</ul>
+					<h2>Simplificaciones</h2>
+					<button
+						disabled={!canUserEdit}
+						onClick={(e) => handleAddItemToList({e, listPropertyPath: "simplifications", itemType: "simplification"})}
 					>
 						Agregar Simplificacion
 					</button>
 					<ul>
 						{simplificationList.fields.map((field, index) => {
 							return (
-								<div key={field.id}>
+								<li key={field.id}>
 									<label>
 										{`Simplification Id: ${field._id}`} - Description:
 									</label>
@@ -500,15 +479,16 @@ export default function Page() {
 									<button
 										disabled={!canUserEdit}
 										onClick={(e) =>
-											handleRemoveItemFromList(e, "simplifications", field._id)
+											handleRemoveItemFromList({e, listPropertyPath: "simplifications", itemId: field._id})
 										}
 									>
 										Delete
 									</button>
-								</div>
+								</li>
 							);
 						})}
 					</ul>
+					<h2>Diagrama de Estructura</h2>
 					<Diagram
 						{...{
 							register: customRegisterField,
@@ -517,6 +497,36 @@ export default function Page() {
 							propertyPathPrefix: "structureDiagram",
 						}}
 					/>
+					<h2>Entidades</h2>
+					<button
+						disabled={!canUserEdit}
+						onClick={(e) => handleAddItemToList({e, listPropertyPath: "entities", itemType: "entity"})}
+					>
+						Agregar Entidad
+					</button>
+					<ul>
+						{entitiesList.fields.map((field, index) => {
+							return (
+								<li key={field.id}>
+									<label>{`Entity Id: ${field._id}`} - Nombre:</label>
+									<input
+										{...customRegisterField({
+											name: `entities.${index}.name`,
+											propertyPath: `entities.${field._id}.name`,
+										})}
+									/>
+									<button
+										disabled={!canUserEdit}
+										onClick={(e) =>
+											handleRemoveItemFromList({e, listPropertyPath: "entities", itemId: field._id})
+										}
+									>
+										Delete
+									</button>
+								</li>
+							);
+						})}
+					</ul>
 				</form>
 			)}
 		</div>
