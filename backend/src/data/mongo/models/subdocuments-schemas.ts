@@ -26,9 +26,9 @@ const propertySchema = new Schema({
 });
 
 const entitySchema = new Schema({
-	nombre: {
+	name: {
 		type: String,
-		required: [true, "El campo nombre de la entidad es obligatorio."],
+		default: "",
 	},
 	scopeDecision: {
 		include: Boolean,
