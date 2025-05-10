@@ -1,7 +1,8 @@
 // pages/api/switch-role.ts
 import { getSession } from "next-auth/react"
 import { NextApiRequest, NextApiResponse } from "next"
-import { auth } from "@/auth.config"
+import { auth } from "@auth";
+
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
 //   const session = await getSession({ req })
