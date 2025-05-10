@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { ChevronsUpDown } from "lucide-react"
-
+import {Team} from '#types/common'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,26 +10,21 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@components/ui/common/dropdown-menu"
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@components/ui/sidebar-ol/sidebar"
-
-type Team = {
-  name: string
-  role: "modelador" | "admin" | "verificador"
-  logo: React.ElementType
-}
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@src/components/dashboard/sidebar/sidebar"
+import { useState } from "react"
 
 type TeamSwitcherProps = {
   teams: Team[]
-  onTeamChange: (team: Team) => void
+  activeRole: string
+  onTeamChange: (team: string) => void
 }
 
-export function TeamSwitcher({ teams, onTeamChange }: TeamSwitcherProps) {
-  const { isMobile } = useSidebar()
-  const [activeTeam, setActiveTeam] = React.useState(teams[0])
-
+export function TeamSwitcher({ teams, activeRole, onTeamChange }: TeamSwitcherProps) {
+  const [activeTeam, setActiveTeam] = useState<Team>(teams.find(team => team.role === activeRole) ?? teams[0])
   const handleTeamChange = (team: Team) => {
+
     setActiveTeam(team)
-    onTeamChange(team)
+    onTeamChange(team.role)
   }
 
   return (
@@ -54,7 +49,7 @@ export function TeamSwitcher({ teams, onTeamChange }: TeamSwitcherProps) {
           <DropdownMenuContent
             className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
             align="start"
-            side={isMobile ? "bottom" : "right"}
+            side={"right"}
             sideOffset={4}
           >
             <DropdownMenuLabel className="text-xs text-muted-foreground">Teams</DropdownMenuLabel>

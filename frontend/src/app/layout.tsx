@@ -29,8 +29,8 @@ export default function RootLayout({
           <LayoutProvider>
           <main>
             <Toaster />
-            <div className="hidden lg:block">{children}</div>
-            <div className="block lg:hidden">
+            <div className="block">{children}</div>
+            {/* <div className="block lg:hidden">
               <div className="min-h-screen flex items-center justify-center bg-purple-300 p-4">
                 <div className="w-full max-w-md bg-white shadow-md rounded-md p-8 border border-gray-200">
                   <h1 className="text-3xl font-medium text-center text-purple-600">
@@ -39,7 +39,7 @@ export default function RootLayout({
                   <p>No se encuentra disponible para dispositivos móbiles</p>
                 </div>
               </div>
-            </div>
+            </div> */}
           </main>
           </LayoutProvider>
         </NextAuthProvider>

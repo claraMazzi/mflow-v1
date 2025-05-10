@@ -72,7 +72,6 @@ export const authConfig: NextAuthConfig = {
     // Attach custom user properties to the session
     async session({ session, token }) {
       session.user = token.user as CustomUser // Pass the user object to the session
-      session.user.currentRole = "MODELADOR"
       return session
     },
     // Add user data to the JWT token

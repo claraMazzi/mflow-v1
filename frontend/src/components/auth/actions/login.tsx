@@ -1,6 +1,7 @@
 'use server';
  
 import { signIn } from '@lib/auth';
+import { redirect } from 'next/navigation';
 import  {AuthError} from 'next-auth';
  
 // ...
@@ -10,7 +11,8 @@ export async function authenticate(
   formData: FormData,
 ) {
   try {
-    await signIn('credentials', {...Object.fromEntries(formData), redirectTo: '/dashboard'});
+    
+    await signIn('credentials', {...Object.fromEntries(formData)});
     //si todo sale bien esto va a recargar el navegador con las credenciales
   } catch (error) {
     if (error instanceof AuthError) {
@@ -22,5 +24,8 @@ export async function authenticate(
       }
     }
     throw error;
+  }
+  finally{
+    redirect('/dashboard')
   }
 }

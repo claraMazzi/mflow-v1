@@ -12,7 +12,7 @@ import {
   useReducer,
   useRef,
 } from 'react'
-import { getActiveSidebarOption } from '@components/sidebar/navigation'
+import { getActiveSidebarOption } from '@src/components/dashboard/navigation'
 
 const LayoutStateContext = createContext<any>({})
 const LayoutActionContext = createContext<any>({})
@@ -58,6 +58,9 @@ function layoutReducer(state: any, action: any) {
     // }
     case 'toggleDashboardSidebar': {
       return { ...state, isSidebarOpen: !state.isSidebarOpen }
+    }
+    case 'setSidebarState': {
+      return { ...state, sidebarState: action.state }
     }
     case 'setActiveSidebarOption': {
       return {
@@ -113,10 +116,17 @@ const useLayoutActions = () => {
     // },
     toggleDashboardSidebar: () => {
       dispatch({ type: 'toggleDashboardSidebar' })
-      dispatch({
-        type: 'setRedirectAfterLogin',
-        redirects: undefined,
-      })
+      // dispatch({
+      //   type: 'setRedirectAfterLogin',
+      //   redirects: undefined,
+      // })
+    },
+    setSidebarState: (state: string) => {
+      dispatch({ type: 'setSidebarState', state: state })
+      // dispatch({
+      //   type: 'setRedirectAfterLogin',
+      //   redirects: undefined,
+      // })
     },
     setActiveSidebarOption: (id: string) =>
       dispatch({ type: 'setActiveSidebarOption', id: id }),
@@ -147,9 +157,10 @@ const LayoutProvider = ({ children }: { children: ReactElement }) => {
     // comparisonWidgetRef: comparisonWidgetRef,
     // reviewsWidgetRef: reviewsWidgetRef,
     // isVisibleEmptySearchMessage: false,
-    activeRole: '',
+    activeRole: 'MODELADOR',
     // isMediumScreen: false,
     isSidebarOpen: true,
+    sidebarState: 'expanded'
     // redirectAfterLogin: undefined,
   })
 
@@ -169,6 +180,15 @@ const LayoutProvider = ({ children }: { children: ReactElement }) => {
     })
   }, [pathname])
 
+  useEffect(() => {
+    const sidebarState = state.isSidebarOpen ? 'expanded' : 'collapsed'
+    dispatch({
+      type: 'setSidebarState',
+      state: sidebarState
+    })
+
+  }, [state.isSidebarOpen])
+  
   return (
     <LayoutActionContext.Provider value={dispatch}>
       <LayoutStateContext.Provider value={state}>

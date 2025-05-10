@@ -1,5 +1,3 @@
-// "use client"
-
 // import React from "react"
 // import { AppSidebar } from "@components/ui/sidebar/app-sidebar"
 // import {
@@ -61,20 +59,13 @@
 
 
 
-'use client'
 
-import { useSession } from "next-auth/react";
 
 
 const Page = () => {
-  const { data: session, status } = useSession();
-  console.log('aca', session)
   return (
     <div>
-      <div>
-        {status}
       </div>
-    </div>
   )
 }
 
