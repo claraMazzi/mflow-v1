@@ -9,8 +9,6 @@ interface CustomUser extends AdapterUser {
   email: string;
   emailValidated: boolean;
   roles: string[];
-  currentRole: "MODELADOR" | "VERIFICADOR" | "ADMIN";
-  roles?: string[];
 }
 
 declare module "next-auth" {

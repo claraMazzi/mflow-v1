@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { CustomError } from "../../domain";
 import { ProjectService } from "../services"; // Assume a service layer is used for business logic
+import { CreateProjectDto } from "../../domain/dtos/project/create-project.dto";
+import { UpdateProjectDto } from "../../domain/dtos/project/update-project.dto";
 
 export class ProjectController {
   constructor(readonly projectService: ProjectService) {}
@@ -15,10 +17,10 @@ export class ProjectController {
   };
 
   // Get a specific project
-  getProject = (req: Request, res: Response) => {
+  getProjectById = (req: Request, res: Response) => {
     const { projectId } = req.params;
     this.projectService
-      .getProject(projectId)
+      .getProjectById(projectId)
       .then((project) => res.json(project))
       .catch((error) => this.handleError(error, res));
   };
@@ -27,17 +29,47 @@ export class ProjectController {
   updateProject = (req: Request, res: Response) => {
     const { projectId } = req.params;
     const projectData = req.body;
+
+    const [error, updateProjectDto] = UpdateProjectDto.create({
+      id: projectId,
+      ...projectData
+    });
+
+    if (error || !updateProjectDto) return res.status(400).json({ error });
+
     this.projectService
-      .updateProject(projectId, projectData)
+      .updateProject(updateProjectDto)
       .then((updatedProject) => res.json(updatedProject))
       .catch((error) => this.handleError(error, res));
   };
 
+  // "DELETE" project --> mark as deleted 
+  deleteProject = (req: Request, res: Response) => {
+    const { projectId } = req.params;
+    this.projectService
+      .deleteProject(projectId)
+      .then((updatedProject) => res.json(updatedProject))
+      .catch((error) => this.handleError(error, res));
+  };
+
+
   // Create a new project
   createProject = (req: Request, res: Response) => {
     const projectData = req.body;
+    const name = projectData.name;
+    const description = projectData.description;
+    const owner = req.session?.userId ?? ''
+
+    const [error, createProjectDto] = CreateProjectDto.create({
+      name: name,
+      description: description,
+      owner: owner,
+    });
+
+    if (error || !createProjectDto) return res.status(400).json({ error });
+
     this.projectService
-      .createProject(projectData)
+      .createProject(createProjectDto)
       .then((newProject) => res.status(201).json(newProject))
       .catch((error) => this.handleError(error, res));
   };
@@ -117,8 +149,4 @@ export class ProjectController {
       .then(() => res.json({ message: "Verification status updated" }))
       .catch((error) => this.handleError(error, res));
   };
-
-
-
-  
 }
