@@ -18,6 +18,8 @@ import { Team } from "#types/common";
 import { useSession } from "next-auth/react";
 import { getUserRolesTeamItems } from "../navigation";
 import { useLayoutActions, useLayoutState } from "@components/global/Context";
+import { useState, useEffect } from "react";
+import { Skeleton } from "@components/ui/common/skeleton";
 
 // This is sample data.
 const data = {
@@ -48,13 +50,22 @@ const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 
 export function AppSidebar({
-  // onMenuItemClick,
   ...props
-}: // }: React.ComponentProps<typeof Sidebar> & { onMenuItemClick: (item: string) => void }) {
+}: 
 React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession();
   const { activeRole } = useLayoutState();
   const { setActiveRole } = useLayoutActions();
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    setIsLoading(false)
+  
+  }, [])
+
+  if (isLoading)  {
+    return <Skeleton className='h-screen w-64' />
+  }
   
   if (!session) {
     return <></>;
@@ -82,7 +93,7 @@ React.ComponentProps<typeof Sidebar>) {
             // ...style,
           } as React.CSSProperties
         }
-        className="group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar"
+        className="group/sidebar-wrapper flex min-h-svh has-[[data-variant=inset]]:bg-sidebar"
         {...props}
       >
         <Sidebar collapsible="icon" {...props}>
