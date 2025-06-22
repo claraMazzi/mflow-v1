@@ -6,7 +6,7 @@ import { AuthMiddleware } from "../middlewares/auth.middleware";
 // import { AuthService, EmailService } from "../services";
 // import { envs } from "../../config";
 
-export class Projectroutes {
+export class ProjectRoutes {
   static get routes(): Router {
     const router = Router();
     // const emailService = new EmailService(
@@ -26,6 +26,8 @@ export class Projectroutes {
     const service = new ProjectService();
     const controller = new ProjectController(service);
     // Projects CRUD routes
+    //get projects by user
+    router.get('/', AuthMiddleware.validateJWT, controller.getUserProjects)
     //create
     router.post("/", AuthMiddleware.validateJWT, controller.createProject);
     //getById

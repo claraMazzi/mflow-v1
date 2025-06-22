@@ -16,6 +16,18 @@ export class ProjectController {
     return res.status(500).json({ error: "Internal server error" });
   };
 
+  getUserProjects = (req: Request, res: Response) => {
+    const owner = req.session?.userId ?? ''
+    if (!owner) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    this.projectService
+      .getUserProjects(owner)
+      .then((projects) => res.json(projects))
+      .catch((error) => this.handleError(error, res));
+  }
+
   // Get a specific project
   getProjectById = (req: Request, res: Response) => {
     const { projectId } = req.params;

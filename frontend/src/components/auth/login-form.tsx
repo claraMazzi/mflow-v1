@@ -12,7 +12,7 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
-} from "@components/ui/common/form";
+} from "@components/ui/Forms/form";
 import { Input } from "@components/ui/common/input";
 import { startTransition } from "react";
 import { toast } from "sonner"

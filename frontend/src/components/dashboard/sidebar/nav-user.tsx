@@ -27,8 +27,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@src/components/dashboard/sidebar/sidebar";
-import LogoutButton from "@src/components/auth/logout-button";
+} from "@components/dashboard/sidebar/sidebar";
+import LogoutButton from "@components/auth/logout-button";
 
 export function NavUser({
   name,

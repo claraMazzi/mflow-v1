@@ -10,7 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@components/ui/common/dropdown-menu"
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@src/components/dashboard/sidebar/sidebar"
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@components/dashboard/sidebar/sidebar"
 import { useState } from "react"
 
 type TeamSwitcherProps = {
