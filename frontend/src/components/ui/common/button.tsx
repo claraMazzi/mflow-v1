@@ -3,7 +3,7 @@ import Link from "next/link"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Loader2, Plus } from 'lucide-react'
-import { cn } from "@/lib/utils"
+import cn from 'clsx'
 
 const buttonVariants = cva(
   "flex justify-center items-center gap-2 px-4 py-3 rounded-md shadow-md font-medium transition-colors duration-200 text-sm disabled:cursor-not-allowed disabled:opacity-50",
