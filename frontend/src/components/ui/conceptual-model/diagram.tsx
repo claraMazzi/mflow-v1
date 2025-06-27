@@ -1,6 +1,6 @@
 "use client";
 
-import { ConceptualModel } from "@/types/conceptual-model";
+import { ConceptualModel } from "#types/conceptual-model";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Path } from "react-hook-form";
 const plantumlEncoder = require("plantuml-encoder");
