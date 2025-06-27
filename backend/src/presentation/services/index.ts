@@ -3,3 +3,4 @@ export * from './email.service';
 export * from './project.service';
 export * from './user.service';
 export * from './version.service';
+export * from './upload.service';

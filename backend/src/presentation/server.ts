@@ -2,6 +2,10 @@ import express, { Router } from "express";
 import { ProjectModel, UserModel, VersionModel } from "../data";
 import { Server as SocketIO } from "socket.io";
 import { VersionService } from "./services";
+import fs from "fs/promises";
+import { error } from "console";
+import { envs } from "../config";
+import path from "path";
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
@@ -73,6 +77,7 @@ export class Server {
 
 		// Setup Socket IO
 		const io = new SocketIO(this.serverListener, {
+			maxHttpBufferSize: 1e8,
 			cors: {
 				origin: "http://localhost:3000",
 				methods: ["GET", "POST"],
@@ -151,44 +156,6 @@ export class Server {
 				return pathParts;
 			};
 
-			socket.on(
-				"field-update",
-				async (payload: { fieldName: string; value: any; roomId: string }) => {
-					const { version } = await versionService.getVersionById(
-						payload.roomId
-					);
-
-					const setValue = (
-						conceptualModel: any,
-						properyPath: string,
-						value: any
-					) => {
-						const parts = parsePropertyPath(conceptualModel, properyPath);
-						console.log("Updated Field Path Parts: ", parts);
-						while (
-							parts.length > 1
-							//parts.length > 1 &&
-							//conceptualModel.hasOwnProperty(parts[0])
-						) {
-							conceptualModel = conceptualModel[parts.shift()!];
-						}
-						conceptualModel[parts[0]] = value;
-					};
-
-					setValue(
-						(version as any).conceptualModel,
-						payload.fieldName,
-						payload.value
-					);
-					version.save();
-
-					io.to(payload.roomId).emit("field-update", {
-						fieldName: payload.fieldName,
-						value: payload.value,
-					});
-				}
-			);
-
 			const getProperty = (conceptualModel: any, propertyPath: string) => {
 				const pathParts = parsePropertyPath(conceptualModel, propertyPath);
 				while (
@@ -200,6 +167,107 @@ export class Server {
 				}
 				return conceptualModel[pathParts[0]];
 			};
+
+			const setValue = (
+				conceptualModel: any,
+				properyPath: string,
+				value: any
+			) => {
+				const parts = parsePropertyPath(conceptualModel, properyPath);
+				console.log("Updated Field Path Parts: ", parts);
+				while (
+					parts.length > 1
+					//parts.length > 1 &&
+					//conceptualModel.hasOwnProperty(parts[0])
+				) {
+					conceptualModel = conceptualModel[parts.shift()!];
+				}
+				conceptualModel[parts[0]] = value;
+			};
+
+			socket.on(
+				"field-update",
+				async (payload: {
+					propertyPath: string;
+					value: any;
+					roomId: string;
+				}) => {
+					const { version } = await versionService.getVersionById(
+						payload.roomId
+					);
+
+					setValue(
+						(version as any).conceptualModel,
+						payload.propertyPath,
+						payload.value
+					);
+					version.save();
+
+					io.to(payload.roomId).emit("field-update", {
+						propertyPath: payload.propertyPath,
+						value: payload.value,
+					});
+				}
+			);
+
+			socket.on(
+				"upload-file",
+				async ({
+					roomId,
+					file,
+					fileExtension,
+					propertyPath,
+				}: {
+					roomId: string;
+					file: Buffer;
+					fileExtension: string;
+					propertyPath: string;
+				}) => {
+					const { version } = await versionService.getVersionById(roomId);
+
+					const newFilePath = `${process.cwd()}/uploads/${roomId}/conceptual-model/${propertyPath}.${fileExtension}`;
+
+					//Make sure that the directory exists
+					try {
+						await fs.mkdir(path.dirname(newFilePath), { recursive: true });
+					} catch (error) {
+						console.error(error);
+						return;
+					}
+
+					const existingFilePath = getProperty(
+						version.conceptualModel,
+						propertyPath
+					);
+					if (existingFilePath) {
+						try {
+							await fs.unlink(existingFilePath);
+						} catch (error) {
+							console.error(error);
+							return;
+						}
+					}
+
+					try {
+						await fs.writeFile(newFilePath, file);
+					} catch (error) {
+						console.error(error);
+						return;
+					}
+
+					const newFileUrl =
+						envs.WEBSERVICE_URL +
+						`/uploads/${roomId}/conceptual-model/${propertyPath}.${fileExtension}`;
+					setValue((version as any).conceptualModel, propertyPath, newFileUrl);
+
+					version.save();
+
+					io.to(roomId).emit("field-update", {
+						propertyPath: propertyPath,
+						value: newFileUrl,
+					});
+				}
+			);
 
 			socket.on(
 				"add-item-to-list",
@@ -231,7 +299,7 @@ export class Server {
 								properties: [],
 							});
 							break;
-						case "simplification":	
+						case "simplification":
 							listField.push({ description: "" });
 							break;
 					}

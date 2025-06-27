@@ -67,7 +67,6 @@ type Collaborator = Readonly<{
 //t1 -> U1 S devuelve un token que tiene el timestamp de inicio de la request
 //t2 -> U1 -> Envia el token y con eso el servidor compara
 
-
 function throttle(func: any, delay: number) {
 	let timeout: NodeJS.Timeout | null = null;
 	return (...args: any) => {
@@ -181,9 +180,11 @@ export default function Page() {
 			setCollaborators(newCollaborators);
 		}
 
-		function onFieldUpdate(payload: { fieldName: any; value: any }) {
-			console.log(`Server Sent Update ${payload.fieldName}: ${payload.value}`);
-			const parsedPath = parsePropertyPath(getValues(), payload.fieldName);
+		function onFieldUpdate(payload: { propertyPath: any; value: any }) {
+			console.log(
+				`Server Sent Update ${payload.propertyPath}: ${payload.value}`
+			);
+			const parsedPath = parsePropertyPath(getValues(), payload.propertyPath);
 			setValue(parsedPath as any, payload.value);
 		}
 
@@ -302,7 +303,7 @@ export default function Page() {
 
 	const sendPropertyUpdate = (value: any, propertyPath: string) => {
 		if (!canUserEdit) return;
-		socket.emit("field-update", { roomId, fieldName: propertyPath, value }); // Emit partial form data
+		socket.emit("field-update", { roomId, propertyPath, value }); // Emit partial form data
 	};
 
 	const handleMouseMove = (e: MouseEvent) => {
@@ -324,14 +325,26 @@ export default function Page() {
 	const handleAddItemToList = ({
 		e,
 		listPropertyPath,
-		itemType
+		itemType,
 	}: {
 		e: MouseEvent;
-		listPropertyPath: Path<ConceptualModel>;
+		listPropertyPath: string;
 		itemType: "assumption" | "simplification" | "entity";
 	}) => {
 		e.preventDefault();
 		socket.emit("add-item-to-list", { roomId, listPropertyPath, itemType });
+	};
+
+	const handleFileUpload = ({
+		file,
+		propertyPath,
+	}: {
+		file: File;
+		propertyPath: string;
+	}) => {
+		console.log("Uploading File: ", file);
+		const fileExtension = file.name.split(".").pop();
+		socket.emit("upload-file", { roomId, file, propertyPath, fileExtension });
 	};
 
 	const handleRemoveItemFromList = ({
@@ -340,7 +353,7 @@ export default function Page() {
 		itemId,
 	}: {
 		e: MouseEvent;
-		listPropertyPath: Path<ConceptualModel>;
+		listPropertyPath: string;
 		itemId: string;
 	}) => {
 		e.preventDefault();
@@ -429,7 +442,13 @@ export default function Page() {
 					<h2>Suposiciones</h2>
 					<button
 						disabled={!canUserEdit}
-						onClick={(e) => handleAddItemToList({e, listPropertyPath: "assumptions", itemType: "assumption"})}
+						onClick={(e) =>
+							handleAddItemToList({
+								e,
+								listPropertyPath: "assumptions",
+								itemType: "assumption",
+							})
+						}
 					>
 						Agregar Suposición
 					</button>
@@ -447,7 +466,11 @@ export default function Page() {
 									<button
 										disabled={!canUserEdit}
 										onClick={(e) =>
-											handleRemoveItemFromList({e, listPropertyPath: "assumptions", itemId: field._id})
+											handleRemoveItemFromList({
+												e,
+												listPropertyPath: "assumptions",
+												itemId: field._id,
+											})
 										}
 									>
 										Delete
@@ -459,7 +482,13 @@ export default function Page() {
 					<h2>Simplificaciones</h2>
 					<button
 						disabled={!canUserEdit}
-						onClick={(e) => handleAddItemToList({e, listPropertyPath: "simplifications", itemType: "simplification"})}
+						onClick={(e) =>
+							handleAddItemToList({
+								e,
+								listPropertyPath: "simplifications",
+								itemType: "simplification",
+							})
+						}
 					>
 						Agregar Simplificacion
 					</button>
@@ -479,7 +508,11 @@ export default function Page() {
 									<button
 										disabled={!canUserEdit}
 										onClick={(e) =>
-											handleRemoveItemFromList({e, listPropertyPath: "simplifications", itemId: field._id})
+											handleRemoveItemFromList({
+												e,
+												listPropertyPath: "simplifications",
+												itemId: field._id,
+											})
 										}
 									>
 										Delete
@@ -495,12 +528,19 @@ export default function Page() {
 							watch,
 							namePrefix: "structureDiagram",
 							propertyPathPrefix: "structureDiagram",
+							handleFileUpload,
 						}}
 					/>
 					<h2>Entidades</h2>
 					<button
 						disabled={!canUserEdit}
-						onClick={(e) => handleAddItemToList({e, listPropertyPath: "entities", itemType: "entity"})}
+						onClick={(e) =>
+							handleAddItemToList({
+								e,
+								listPropertyPath: "entities",
+								itemType: "entity",
+							})
+						}
 					>
 						Agregar Entidad
 					</button>
@@ -518,7 +558,11 @@ export default function Page() {
 									<button
 										disabled={!canUserEdit}
 										onClick={(e) =>
-											handleRemoveItemFromList({e, listPropertyPath: "entities", itemId: field._id})
+											handleRemoveItemFromList({
+												e,
+												listPropertyPath: "entities",
+												itemId: field._id,
+											})
 										}
 									>
 										Delete

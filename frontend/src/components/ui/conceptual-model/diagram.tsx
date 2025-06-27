@@ -24,13 +24,22 @@ export default function Diagram({
 	watch,
 	namePrefix,
 	propertyPathPrefix = namePrefix,
+	handleFileUpload,
 }: {
 	register: any;
 	watch: any;
 	namePrefix: Path<ConceptualModel>;
 	propertyPathPrefix?: string;
+	handleFileUpload: ({
+		file,
+		propertyPath,
+	}: {
+		file: File;
+		propertyPath: string;
+	}) => void;
 }) {
 	const [imgSource, setImageSource] = useState<undefined | string>();
+	const imgRef = useRef<null|HTMLImageElement>(null);
 	const debouncedRenderDiagram = useRef(
 		debounce((value: any) => {
 			const encoded = plantumlEncoder.encode(value);
@@ -39,13 +48,16 @@ export default function Diagram({
 	);
 	const plantTextCodeValue = watch(`${namePrefix}.plantTextCode`);
 	const usesPlantTextValue = watch(`${namePrefix}.usesPlantText`);
+	const imageFilePath = watch(`${namePrefix}.imageFilePath`);
 
 	useEffect(() => {
 		if (usesPlantTextValue) {
 			debouncedRenderDiagram.current(plantTextCodeValue);
+		} else {
+			setImageSource(imageFilePath);
 		}
 		return () => {};
-	}, [plantTextCodeValue, usesPlantTextValue]);
+	}, [plantTextCodeValue, usesPlantTextValue, imageFilePath]);
 
 	const checkboxRegister = register({
 		name: `${namePrefix}.usesPlantText`,
@@ -59,7 +71,7 @@ export default function Diagram({
 			<input
 				type="checkbox"
 				{...checkboxRegister}
-				className={`${checkboxRegister.readOnly? "pointer-events-none" : ""}`}
+				className={`${checkboxRegister.readOnly ? "pointer-events-none" : ""}`}
 			/>
 			<div className="flex flex-row gap-2">
 				{usesPlantTextValue ? (
@@ -75,15 +87,16 @@ export default function Diagram({
 						type="file"
 						accept=".png, .jpg, .jpeg"
 						onChange={(e) => {
-							if (e.currentTarget.files && e.currentTarget.files.length > 0) {
-								setImageSource(URL.createObjectURL(e.currentTarget.files[0]));
-							} else {
-								setImageSource("");
-							}
+							const files = e.currentTarget.files;
+							if (!files || files.length == 0) return;
+							handleFileUpload({
+								file: files[0],
+								propertyPath: `${propertyPathPrefix}.imageFilePath`,
+							});
 						}}
 					/>
 				)}
-				<img src={imgSource} alt="Diagram" />
+				<img alt="Diagram" src={imgSource} />
 			</div>
 		</>
 	);
