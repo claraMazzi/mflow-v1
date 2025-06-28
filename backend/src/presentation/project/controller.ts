@@ -17,7 +17,7 @@ export class ProjectController {
   };
 
   getUserProjects = (req: Request, res: Response) => {
-    const owner = req.session?.userId ?? ''
+    const owner = req.session?.userId ?? "";
     if (!owner) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -26,7 +26,7 @@ export class ProjectController {
       .getUserProjects(owner)
       .then((projects) => res.json(projects))
       .catch((error) => this.handleError(error, res));
-  }
+  };
 
   // Get a specific project
   getProjectById = (req: Request, res: Response) => {
@@ -44,7 +44,7 @@ export class ProjectController {
 
     const [error, updateProjectDto] = UpdateProjectDto.create({
       id: projectId,
-      ...projectData
+      ...projectData,
     });
 
     if (error || !updateProjectDto) return res.status(400).json({ error });
@@ -55,7 +55,7 @@ export class ProjectController {
       .catch((error) => this.handleError(error, res));
   };
 
-  // "DELETE" project --> mark as deleted 
+  // "DELETE" project --> mark as deleted
   deleteProject = (req: Request, res: Response) => {
     const { projectId } = req.params;
     this.projectService
@@ -64,13 +64,12 @@ export class ProjectController {
       .catch((error) => this.handleError(error, res));
   };
 
-
   // Create a new project
   createProject = (req: Request, res: Response) => {
     const projectData = req.body;
     const name = projectData.name;
     const description = projectData.description;
-    const owner = req.session?.userId ?? ''
+    const owner = req.session?.userId ?? "";
 
     const [error, createProjectDto] = CreateProjectDto.create({
       name: name,
