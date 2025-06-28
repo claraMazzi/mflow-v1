@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { Exo_2 } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@components/ui/sonner";
+import { NextAuthProvider } from "@components/auth/provider";
+import { LayoutProvider } from "@components/global/Context";
+import ModalUI from "@components/ui/common/modal/modal-ui";
+import { ManagedUIContext } from "@components/ui/context";
 
 const Exo = Exo_2({
   variable: "--font-exo",
@@ -23,18 +26,29 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${Exo.variable} antialiased`}>
-        <Toaster />
-        <div className="hidden lg:block">{children}</div>
-        <div className="block lg:hidden">
-          <div className="min-h-screen flex items-center justify-center bg-purple-300 p-4">
-            <div className="w-full max-w-md bg-white shadow-md rounded-md p-8 border border-gray-200">
-              <h1 className="text-3xl font-medium text-center text-purple-600">
-                MFLOW
-              </h1>
-              <p>No se encuentra disponible para dispositivos móbiles</p>
-            </div>
-          </div>
-        </div>
+        <NextAuthProvider>
+        <ManagedUIContext>
+          <LayoutProvider>
+          <main>
+            <Toaster />
+            aca
+            <ModalUI />
+
+            <div className="block">{children}</div>
+            {/* <div className="block lg:hidden">
+              <div className="min-h-screen flex items-center justify-center bg-purple-300 p-4">
+                <div className="w-full max-w-md bg-white shadow-md rounded-md p-8 border border-gray-200">
+                  <h1 className="text-3xl font-medium text-center text-purple-600">
+                    MFLOW
+                  </h1>
+                  <p>No se encuentra disponible para dispositivos móbiles</p>
+                </div>
+              </div>
+            </div> */}
+          </main>
+          </LayoutProvider>
+          </ ManagedUIContext>
+        </NextAuthProvider>
       </body>
     </html>
   );
