@@ -23,7 +23,8 @@ const ModalHead = ({ title }: { title: ModalProps["title"] }) => {
   if (!title) return null
 
   return (
-    <DialogHeader>
+
+    <DialogHeader className="sr-only">
       <DialogTitle className="text-left">{title}</DialogTitle>
     </DialogHeader>
   )

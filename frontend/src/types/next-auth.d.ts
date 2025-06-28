@@ -39,6 +39,7 @@ export interface CustomUser extends AdapterUser {
   email: string
   emailValidated: boolean
   roles: string[]
+  currentRole:string
 }
 
 declare module "next-auth" {
