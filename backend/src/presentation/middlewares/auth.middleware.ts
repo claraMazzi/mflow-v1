@@ -27,7 +27,7 @@ export class AuthMiddleware {
 
             //TODO: validar si el usuario esta acitvo 
 
-
+                console.log('acaaa', user)
             req.session = {userId: user.id};
              
             next(); //procede con el siguiente middleware o el proximo controlador de ruta 

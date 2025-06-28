@@ -1,15 +1,29 @@
-// import { CustomError } from "../../domain";
-// import { ProjectModel } from "../../data"; // Assuming you have a ProjectModel to interact with the DB
-
-import { ProjectModel } from "../../data";
+import { DeletionRequestModel, ProjectModel } from "../../data";
 import { CustomError } from "../../domain";
+import { CreateDeletionRequestDto } from "../../domain/dtos/project/create-deletion-request.dto";
 import { CreateProjectDto } from "../../domain/dtos/project/create-project.dto";
 import { UpdateProjectDto } from "../../domain/dtos/project/update-project.dto";
+import { DelitionRequestEntity } from "../../domain/entities/delition-request.entity";
 import { ProjectEntity } from "../../domain/entities/project.entity";
+import { EmailService } from "./email.service";
 
+const projectState: {
+  created: "CREADO";
+  pending: "PENDIENTE DE ELIMINACION";
+  deleted: "ELIMINADO";
+} = {
+  created: "CREADO",
+  pending: "PENDIENTE DE ELIMINACION",
+  deleted: "ELIMINADO",
+};
 export class ProjectService {
-  constructor() {
+  constructor(
+    private readonly emailService: EmailService,
+    private readonly webServiceUrl: string,
+    private readonly frontEndUrl: string
+  ) {
     // If you need any dependencies, inject them here (e.g., email service, etc.)
+       
   }
 
   //get user active projects
@@ -18,9 +32,12 @@ export class ProjectService {
 
     if (!project) throw CustomError.badRequest("User has no Projects");
 
-    const filteredProjects = project.map((p) => ProjectEntity.fromObject(p)).filter((item)=> item.state !== "ELIMINADO")
+    const filteredProjects = project
+      .map((p) => ProjectEntity.fromObject(p))
+      .filter((item) => item.state !== projectState.deleted);
 
-    if (!filteredProjects.length) throw CustomError.badRequest("User has no active Projects");
+    if (!filteredProjects.length)
+      throw CustomError.badRequest("User has no active Projects");
 
     return {
       count: filteredProjects.length,
@@ -32,7 +49,7 @@ export class ProjectService {
     const project = await ProjectModel.findOne({ _id: projectId });
     if (!project) throw CustomError.badRequest("Project not exists");
 
-    if (project.state == "ELIMINADO")
+    if (project.state == projectState.deleted)
       throw CustomError.badRequest("Project not exists - deleted");
 
     const projectEntity = ProjectEntity.fromObject(project);
@@ -76,13 +93,13 @@ export class ProjectService {
       if (name) project.name = name;
       if (description) project.description = description;
 
-      project.save();
+      await project.save();
 
-      const projectEntity = ProjectEntity.fromObject(project)
+      const projectEntity = ProjectEntity.fromObject(project);
 
       return {
-        project: projectEntity
-      }
+        project: projectEntity,
+      };
     } catch (error) {
       throw CustomError.internalServer(`${error}`);
     }
@@ -92,14 +109,14 @@ export class ProjectService {
     const project = await ProjectModel.findOne({ _id: projectId });
     if (!project) throw CustomError.badRequest("Project does not exists");
     switch (project.state) {
-      case "ELIMINADO":
+      case projectState.deleted:
         throw CustomError.badRequest("Project already deleted");
 
-      case "PENDIENTE DE ELIMINACION":
+      case projectState.pending:
         try {
-          project.state = "ELIMINADO";
+          project.state = projectState.deleted;
 
-          project.save();
+          await project.save();
           return {
             message: "Project deleted successfully",
           };
@@ -107,7 +124,7 @@ export class ProjectService {
           throw CustomError.internalServer(`${error}`);
         }
 
-      case "CREADO":
+      case projectState.created:
         throw CustomError.badRequest(
           "To delete a Project you need to request it first"
         );
@@ -118,8 +135,43 @@ export class ProjectService {
     throw new Error("To be implemented");
   }
 
-  async requestProjectDeletion(projectId: string) {
-    throw new Error("To be implemented");
+  async requestProjectDeletion(createDelitionRequestDto: CreateDeletionRequestDto) {
+    const project = await ProjectModel.findOne({
+      _id: createDelitionRequestDto.project,
+    });
+    if (!project) throw CustomError.badRequest("Project not exists");
+
+    const request = await DeletionRequestModel.findOne({ project: createDelitionRequestDto.project });
+    if (request) throw CustomError.badRequest("Deletion request is alredy created");
+
+    
+    try {
+      const delitionRequest = new DeletionRequestModel(createDelitionRequestDto);
+      await delitionRequest.save();
+      const delitionRequestEntity =
+        DelitionRequestEntity.fromObject(delitionRequest);
+
+      project.state = projectState.pending;
+      await project.save();
+
+      return {
+        message: "Delition request was successful",
+        request: delitionRequestEntity,
+      };
+    } catch (error) {
+      throw CustomError.internalServer(`${error}`);
+    }
+  }
+
+  async getDeletionDetails(projectId: string) {
+    const request = await DeletionRequestModel.findOne({ project: projectId });
+    if (!request) throw CustomError.badRequest("Request doesn't exist ");
+
+    const requestEntity = DelitionRequestEntity.fromObject(request);
+
+    return {
+      request: requestEntity,
+    };
   }
 
   async handleCollaboration(projectId: string, userId: string, action: string) {
@@ -127,10 +179,6 @@ export class ProjectService {
   }
 
   async removeCollaborator(projectId: string, userId: string) {
-    throw new Error("To be implemented");
-  }
-
-  async getDeletionDetails(projectId: string) {
     throw new Error("To be implemented");
   }
 

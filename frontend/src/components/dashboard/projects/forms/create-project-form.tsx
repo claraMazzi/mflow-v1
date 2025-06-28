@@ -82,7 +82,7 @@ export const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
             <FormItem>
               <div className="flex items-center justify-between">
 
-              <FormLabel>Nombre del proyecto</FormLabel>
+              <FormLabel>Nombre del proyecto <span className="text-sm text-red-600"> *</span></FormLabel>
               <span className="text-sm text-gray-500">Máximo 100 caracteres</span>
               </div>
               <FormControl>
@@ -120,7 +120,6 @@ export const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
 
         {state?.error && <p className="text-sm text-red-600">{parseErrorMessage(state.error)}</p>}
 
-        {state?.success && <p className="text-sm text-green-600">¡Proyecto creado exitosamente!</p>}
 
         <Button type="submit" className="uppercase w-full" isLoading={isPending}>
           Crear proyecto

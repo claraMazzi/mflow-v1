@@ -2,7 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { Button } from "@components/ui/common/button";
-import React from "react";
+import React, { ReactNode } from "react";
 import ContentCard from "@components/ui/Cards/ContentCard";
 import { Skeleton } from "@components/ui/skeleton";
 import { useRouter } from "next/navigation";
@@ -11,11 +11,27 @@ import { CreateProjectForm } from "./forms/create-project-form";
 import { useProjects } from "@hooks/use-projects";
 import { ModifyProjectForm } from "./forms/modify-project-form";
 import { ProjectEntity } from "@src/types/project";
+import { DelitionRequestForm } from "./forms/delition-request-form";
+
+const getProjectDecorators = (project: ProjectEntity) => {
+  const decorators: ReactNode[] = [];
+
+  if (project.state && project.state === "PENDIENTE DE ELIMINACION") {
+    decorators.push(
+      <div className="font-bold text-xs flex gap-1">
+        Estado:
+        <span className="font-normal">Pendiente de eliminación</span>
+      </div>
+    );
+  }
+  //TODO: add owner
+  return decorators;
+};
 
 const MyProjects = () => {
   const router = useRouter();
   const { openModal } = useUI();
-  const { projects, isLoading, refreshProjects } = useProjects()
+  const { projects, isLoading, refreshProjects } = useProjects();
 
   const handleCreateProject = () => {
     openModal({
@@ -26,12 +42,12 @@ const MyProjects = () => {
       content: (
         <CreateProjectForm
           onSuccess={() => {
-            refreshProjects()
+            refreshProjects();
           }}
         />
       ),
-    })
-  }
+    });
+  };
 
   const handleModifyProject = (project: ProjectEntity) => {
     openModal({
@@ -42,13 +58,30 @@ const MyProjects = () => {
       content: (
         <ModifyProjectForm
           onSuccess={() => {
-            refreshProjects()
+            refreshProjects();
           }}
           project={project}
         />
       ),
-    })
-  }
+    });
+  };
+
+  const handleDelitionRequest = (project: ProjectEntity) => {
+    openModal({
+      name: "fullscreen-modal",
+      title: "Solicitar eliminación de proyecto",
+      size: "md",
+      showCloseButton: false,
+      content: (
+        <DelitionRequestForm
+          onSuccess={() => {
+            refreshProjects();
+          }}
+          project={project}
+        />
+      ),
+    });
+  };
 
   return (
     <div className="w-full flex flex-col gap-4">
@@ -64,44 +97,7 @@ const MyProjects = () => {
               const popoverOptions = [
                 {
                   content: (
-                    <Button
-                      variant={"optionList"}
-                      onClick={() => {
-                        openModal({
-                          name: "fullscreen-modal",
-                          title: "Full Screen Modal",
-                          size: "md",
-                          content: (
-                            <div className="space-y-6">
-                              <p>
-                                This modal takes up the full screen on all
-                                devices.
-                              </p>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="bg-muted p-4 rounded">
-                                  <h3 className="font-semibold mb-2">
-                                    Section 1
-                                  </h3>
-                                  <p className="text-sm">
-                                    Content for section 1...
-                                  </p>
-                                </div>
-                                <div className="bg-muted p-4 rounded">
-                                  <h3 className="font-semibold mb-2">
-                                    Section 2
-                                  </h3>
-                                  <p className="text-sm">
-                                    Content for section 2...
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          ),
-                        });
-                      }}
-                    >
-                      Compartir proyecto
-                    </Button>
+                    <Button variant={"optionList"}>Compartir proyecto</Button>
                   ),
                 },
                 {
@@ -111,12 +107,20 @@ const MyProjects = () => {
                 },
                 {
                   content: (
-                    <Button variant={"optionList"} onClick={()=>handleModifyProject(project)}>Modificar proyecto</Button>
+                    <Button
+                      variant={"optionList"}
+                      onClick={() => handleModifyProject(project)}
+                    >
+                      Modificar proyecto
+                    </Button>
                   ),
                 },
                 {
                   content: (
-                    <Button variant={"optionList"}>
+                    <Button
+                      variant={"optionList"}
+                      onClick={() => handleDelitionRequest(project)}
+                    >
                       Solicitar eliminación
                     </Button>
                   ),
@@ -128,6 +132,7 @@ const MyProjects = () => {
                   title={project.name}
                   description={project.description}
                   options={popoverOptions}
+                  decorators={getProjectDecorators(project)}
                   action={() => {
                     router.push(`/dashboard/project/${project.id}`); // Navigate to the project details page
                   }}
@@ -139,10 +144,7 @@ const MyProjects = () => {
           <div>Todavía no tenes ningun proyecto creado</div>
         )}
       </div>
-      <Button
-        className="uppercase"
-        onClick={handleCreateProject}
-      >
+      <Button className="uppercase" onClick={handleCreateProject}>
         <Plus />
         Crear proyecto
       </Button>

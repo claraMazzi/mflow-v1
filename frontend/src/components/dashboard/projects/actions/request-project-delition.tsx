@@ -9,7 +9,7 @@ export type ActionState = {
   data?: any
 }
 
-export const modifyProject = async (prevState: ActionState, formData: FormData): Promise<ActionState> => {
+export const requestProjectDelition = async (prevState: ActionState, formData: FormData): Promise<ActionState> => {
   try {
     // NextAuth v5 uses auth() instead of getServerSession
     const session = await auth()
@@ -24,8 +24,7 @@ export const modifyProject = async (prevState: ActionState, formData: FormData):
 
     // Extract data from FormData
     const projectData = {
-      name: formData.get("name") as string,
-      description: (formData.get("description") as string) || undefined,
+      motive: formData.get("motive") as string,
     }
 
     const accessToken = session.auth 
@@ -34,8 +33,8 @@ export const modifyProject = async (prevState: ActionState, formData: FormData):
       return { error: "No access token available" }
     }
 
-    const response = await fetch(`${process.env.API_URL}/api/projects/${formData.get('id')}`, {
-        method: "PUT",
+    const response = await fetch(`${process.env.API_URL}/api/projects/${formData.get('id')}/deletion`, {
+        method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
@@ -45,14 +44,14 @@ export const modifyProject = async (prevState: ActionState, formData: FormData):
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      return { error: errorData.error || "Project modification failed" }
+      return { error: errorData.error || "Project deletion request failed" }
     }
 
     const data = await response.json()
     
     return { success: true, data }
   } catch (error) {
-    console.error("Modify project error:", error)
+    console.error("Delition Request for project error:", error)
     return { error: "Something went wrong." }
   }
 }

@@ -30,7 +30,6 @@ export const getProjects = async (): Promise<ActionState> => {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      console.log('errorData', response)
       return { error: errorData.error || "Project get failed" }
     }
 

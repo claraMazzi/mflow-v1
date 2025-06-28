@@ -17,11 +17,11 @@ import { Textarea } from "@components/ui/common/textarea";
 import { useUI } from "@components/ui/context";
 import { ProjectEntity } from "#types/project";
 import { modifyProject } from "../actions/modify-project";
+import { requestProjectDelition } from "../actions/request-project-delition";
 
 export type ModifyProjectFormData = {
   id: string;
-  name?: string;
-  description?: string;
+  motive?: string;
 };
 
 interface ModifyProjectFormProps {
@@ -34,12 +34,12 @@ const initialState: ActionState = {
   success: false,
 };
 
-export const ModifyProjectForm = ({
+export const DelitionRequestForm = ({
   onSuccess,
   project,
 }: ModifyProjectFormProps) => {
   const [state, formAction, isPending] = useActionState(
-    modifyProject,
+    requestProjectDelition,
     initialState
   );
   const { closeModal } = useUI();
@@ -47,8 +47,7 @@ export const ModifyProjectForm = ({
   const form = useForm<ModifyProjectFormData>({
     defaultValues: {
       id: project.id,
-      name: "",
-      description: "",
+      motive: "",
     },
     mode: "onBlur",
   });
@@ -80,7 +79,7 @@ export const ModifyProjectForm = ({
     return (
       <div className="flex flex-col gap-4 justify-center p-2 items-center">
         <h2 className="font-medium">
-          Se ha modificado el proyecto exitosamente!
+          Eliminación solicitada exitosamente!
         </h2>
         <Button className="uppercase" onClick={closeModal}>
           Continuar
@@ -92,7 +91,9 @@ export const ModifyProjectForm = ({
   return (
     <Form {...form}>
       <form action={formAction} className="space-y-6">
-        <h2 className="text-3xl font-medium text-center">Modificar proyecto</h2>
+        <h2 className="text-3xl font-medium text-center">
+          Solicitar Eliminación de Proyecto
+        </h2>
         <div className="hidden">
           <FormField
             control={form.control}
@@ -102,7 +103,6 @@ export const ModifyProjectForm = ({
             }}
             render={({ field }) => (
               <FormItem>
-                
                 <FormControl>
                   <Input
                     type="text"
@@ -116,58 +116,29 @@ export const ModifyProjectForm = ({
             )}
           />
         </div>
-        <FormField
-          control={form.control}
-          name="name"
-          rules={{
-            required: "Name is required",
-            maxLength: 100,
-          }}
-          render={({ field }) => (
-            <FormItem>
-              <div className="flex items-center justify-between">
-                <FormLabel>Nombre del proyecto</FormLabel>
-                <span className="text-sm text-gray-500">
-                  Máximo 100 caracteres
-                </span>
-              </div>
-              <FormControl>
-                <Input
-                  type="text"
-                  defaultValue={project.name}
-                  placeholder="MiProyecto"
-                  name="name"
-                  required
-                  maxLength={100}
-                  disabled={isPending}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <FormField
           control={form.control}
-          name="description"
+          name="motive"
           rules={{
+            required: true,
             maxLength: 200,
           }}
           render={({ field }) => (
             <FormItem>
-              <div className="flex items-center justify-between">
-                <FormLabel>Descripción</FormLabel>
+              <div className="flex flex-col gap-2">
+                <FormLabel className="!font-bold">Motivo de la solicitud <span className="text-sm text-red-600"> *</span></FormLabel>
                 <span className="text-sm text-gray-500">
-                  Máximo 200 caracteres
+                  Por favor, adjunte la razón por la que quiere eliminar el
+                  proyecto
                 </span>
               </div>
               <FormControl>
                 <Textarea
-                  placeholder="Descripción de tu proyecto"
-                  name="description"
-                  maxLength={200}
+                  placeholder="Razon de para solicitar eliminación de proyecto"
+                  name="motive"
+                  maxLength={300}
                   disabled={isPending}
-                  defaultValue={project.description}
                 />
               </FormControl>
               <FormMessage />
@@ -181,13 +152,14 @@ export const ModifyProjectForm = ({
           </p>
         )}
 
+    
 
         <Button
           type="submit"
           className="uppercase w-full"
           isLoading={isPending}
         >
-          Modificar proyecto
+          Enviar solicitud
         </Button>
       </form>
     </Form>
