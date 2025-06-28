@@ -71,6 +71,8 @@ React.ComponentProps<typeof Sidebar>) {
     return <></>;
   }
 
+  console.log('session', session)
+
   const userName = `${session?.user.name} ${session?.user.lastName}`;
   const avatar =
     session?.user.name.charAt(0).toUpperCase() +

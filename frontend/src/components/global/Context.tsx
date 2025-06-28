@@ -12,7 +12,7 @@ import {
   useReducer,
   useRef,
 } from 'react'
-import { getActiveSidebarOption } from '@src/components/dashboard/navigation'
+import { getActiveSidebarOption } from '@components/dashboard/navigation'
 
 const LayoutStateContext = createContext<any>({})
 const LayoutActionContext = createContext<any>({})

@@ -18,7 +18,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@components/ui/tooltip"
-import { useLayoutActions, useLayoutState } from "@src/components/global/Context"
+import { useLayoutActions, useLayoutState } from "@components/global/Context"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7

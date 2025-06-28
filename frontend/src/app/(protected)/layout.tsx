@@ -12,5 +12,6 @@ export default async function Layout({
     return <Unauthorized />;
   }
 
-  return <> {children} </>;
+  return <> {children} 
+  </>;
 }

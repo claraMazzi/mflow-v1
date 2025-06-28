@@ -1,15 +1,7 @@
-
 import DashboardContent from "@components/dashboard/content";
 
-
 const DashboardPage = async () => {
+  return <DashboardContent />;
+};
 
-  return (
-    
-    <DashboardContent/>
-
-    
-  )
-}
-
-export default DashboardPage
+export default DashboardPage;
