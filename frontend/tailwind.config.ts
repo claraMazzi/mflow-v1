@@ -40,6 +40,10 @@ export default {
   				DEFAULT: 'hsl(var(--muted))',
   				foreground: 'hsl(var(--muted-foreground))'
   			},
+  			accent: {
+  				DEFAULT: 'hsl(var(--accent))',
+  				foreground: 'hsl(var(--accent-foreground))'
+  			},
   			destructive: {
   				DEFAULT: 'hsl(var(--destructive))',
   				foreground: 'hsl(var(--destructive-foreground))'
@@ -64,18 +68,6 @@ export default {
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
   			},
-        accent: {
-          50: '#f7f7f7',
-          100: '#e3e3e3',
-          200: '#c6c6c6',
-          300: '#aaaaaa',
-          400: '#d9d9d9',
-          500: '#8e8e8e',
-          600: '#717171',
-          700: '#53575a',
-          800: '#393939',
-          900: '#1c1c1c',
-        },
         purple: {
           50: '#fff4ff',
           100: '#fff0ff',

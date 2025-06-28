@@ -20,9 +20,7 @@ export async function POST(request: Request) {
     if (!response.ok) {
       const errorData = await response.json()
       console.error("Registration failed:", errorData)
-      throw new Error(errorData.error)
-    // return NextResponse.json({ message: errorData.message}, { status: errorData.status })
-
+      throw new Error(errorData.message || "Registration failed")
     }
 
     const data = await response.json()

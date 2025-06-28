@@ -4,7 +4,7 @@ import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Loader2, Plus } from 'lucide-react'
 
-import cn from 'clsx'
+import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
   "flex justify-center items-center gap-2 px-4 py-3 rounded-md shadow-md font-medium transition-colors duration-200 text-sm disabled:cursor-not-allowed disabled:opacity-50",
@@ -15,8 +15,6 @@ const buttonVariants = cva(
         outline: "bg-white border border-gray-300 text-gray-600 hover:bg-gray-50",
         secondary: "bg-bordo-600 hover:bg-bordo-500 text-white disabled:opacity-50", 
         tertiary: "bg-green-700 hover:bg-green-600 text-white disabled:opacity-50",
-        ghost: "bg-transparent hover:bg-gray-100",
-        optionList: 'bg-transparent hover:bg-blue-0 w-full shadow-none min-w-10 !text-xs !p-0 !rounded-none'
       },
       size: {
         default: "h-10 px-4 py-2",

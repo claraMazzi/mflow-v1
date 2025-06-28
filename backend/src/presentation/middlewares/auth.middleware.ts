@@ -1,4 +1,4 @@
-import { NextFunction, Response, Request } from "express";
+import { NextFunction, Request, Response } from "express";
 import { jwtAdapter } from "../../config";
 import { UserModel } from "../../data";
 import { UserEntity } from "../../domain";
@@ -25,10 +25,10 @@ export class AuthMiddleware {
 
             if (!user) return res.status(404).json({error: `Invalid token user`});
 
-            //TODO: validar si el usuario esta acitvo 
+            //todo: validar si el usuario esta acitvo 
 
 
-            req.session = {userId: user.id};
+            req.body.user = UserEntity.fromObject(user);
              
             next(); //procede con el siguiente middleware o el proximo controlador de ruta 
         } catch (error) {

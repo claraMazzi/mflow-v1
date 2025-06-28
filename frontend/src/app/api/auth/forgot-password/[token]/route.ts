@@ -18,6 +18,8 @@ export async function GET(request: Request, { params }: { params: { token: strin
     })
 
     if (!response.ok) {
+      // throw new Error("Password Recover request failed ")
+      console.log('-------ACA', response)
     return NextResponse.json({ message: "Password recover request failed" }, { status: 500 })
 
     }
