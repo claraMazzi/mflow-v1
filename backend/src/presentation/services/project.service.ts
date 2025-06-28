@@ -12,6 +12,22 @@ export class ProjectService {
     // If you need any dependencies, inject them here (e.g., email service, etc.)
   }
 
+  //get user active projects
+  async getUserProjects(owner: string) {
+    const project = await ProjectModel.find({ owner: owner });
+
+    if (!project) throw CustomError.badRequest("User has no Projects");
+
+    const filteredProjects = project.map((p) => ProjectEntity.fromObject(p)).filter((item)=> item.state !== "ELIMINADO")
+
+    if (!filteredProjects.length) throw CustomError.badRequest("User has no active Projects");
+
+    return {
+      count: filteredProjects.length,
+      projects: filteredProjects,
+    };
+  }
+
   async getProjectById(projectId: string) {
     const project = await ProjectModel.findOne({ _id: projectId });
     if (!project) throw CustomError.badRequest("Project not exists");

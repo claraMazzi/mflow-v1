@@ -14,7 +14,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@components/ui/common/form";
+} from "@components/ui/Forms/form";
 import { passwordRegex } from "../../../../../../backend/src/config/regular-exp";
 
 interface FormData {

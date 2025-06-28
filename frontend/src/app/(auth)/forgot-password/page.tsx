@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Button } from "@components/ui/common/button"
 import { Input } from "@components/ui/common/input"
 import { Label } from "@components/ui/common/label"
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@components/ui/common/form"
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@components/ui/Forms/form"
 
 interface FormData {
   email: string

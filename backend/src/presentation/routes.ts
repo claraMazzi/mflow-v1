@@ -2,7 +2,7 @@ import { Router } from "express";
 import { Authroutes } from "./auth/routes";
 import { UserRoutes } from "./user/routes";
 import { UploadRoutes } from "./upload/routes";
-import { Projectroutes } from "./project/routes";
+import { ProjectRoutes } from "./project/routes";
 
 
 export class AppRoutes {
@@ -16,7 +16,7 @@ export class AppRoutes {
 
         router.use('/api/uploads', UploadRoutes.routes)
 
-        router.use('/api/projects', Projectroutes.routes)
+        router.use('/api/projects', ProjectRoutes.routes)
 
         return router;
     }

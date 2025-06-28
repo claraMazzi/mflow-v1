@@ -52,7 +52,7 @@ export const authConfig: NextAuthConfig = {
           try {
             const response = JSON.parse(text)
             if (response.user) {
-              return response.user
+              return response
             } else {
               console.error("No user object in response:", response)
               return null
@@ -69,19 +69,27 @@ export const authConfig: NextAuthConfig = {
     }),
   ],
   callbacks: {
-    // Attach custom user properties to the session
-    async session({ session, token }) {
-      session.user = token.user as CustomUser // Pass the user object to the session
-      return session
-    },
-    // Add user data to the JWT token
-    async jwt({ token, user }) {
-      if (user) {
-        token.user = user as CustomUser // Store the user in the token
-        // token.currentRole = user.currentRole
-      }
-      return token
-    },
+      async jwt({ token, user }) {
+        // When user signs in, add user data and auth token to JWT
+        if (user) {
+          // user here is the return value from authorize()
+          // It should have the structure: { user: CustomUser, token: string }
+          token.user = user.user as CustomUser
+          token.auth = user.token
+        }
+        return token
+      },
+  
+      async session({ session, token }) {
+        // Add custom user data and auth token to session
+        if (token.user) {
+          session.user = token.user as CustomUser
+        }
+        if (token.auth) {
+          session.auth = token.auth as string
+        }
+        return session
+      },
   },
 }
 

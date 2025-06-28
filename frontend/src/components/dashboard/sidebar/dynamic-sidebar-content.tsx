@@ -12,7 +12,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-} from "@src/components/dashboard/sidebar/sidebar";
+} from "@components/dashboard/sidebar/sidebar";
 import { getMenuItemsByRole } from "@components/dashboard/navigation";
 import { useEffect, useState } from "react";
 
