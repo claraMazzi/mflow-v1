@@ -4,8 +4,9 @@ import { Server as SocketIO } from "socket.io";
 import { VersionService } from "./services";
 import fs from "fs/promises";
 import { error } from "console";
-import { envs } from "../config";
+import { envs, jwtAdapter } from "../config";
 import path from "path";
+import { CollaborationRoom } from "./collaboration/collaborationRoom";
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
@@ -48,6 +49,7 @@ export class Server {
 	private port: number;
 	private routes: Router;
 	private serverListener: any;
+	private collaborationRooms: Map<string, CollaborationRoom> = new Map();
 
 	constructor(options: Options) {
 		const { port, routes } = options;
@@ -77,17 +79,37 @@ export class Server {
 
 		// Setup Socket IO
 		const io = new SocketIO(this.serverListener, {
-			maxHttpBufferSize: 1e8,
 			cors: {
 				origin: "http://localhost:3000",
 				methods: ["GET", "POST"],
 			},
 		});
 
+		//Socket Authentication Middleware
+		io.use(async (socket, next) => {
+			const sessionToken = socket.handshake.auth.sessionToken;
+
+			try {
+				const payload = await jwtAdapter.validateToken<{ id: string }>(sessionToken);
+				if (!payload) return next(new Error("Invalid token"));
+
+				const user = await UserModel.findById(payload.id);
+
+				if (!user) return next(new Error(`Invalid user token`));
+
+				socket.data.userId = user.id;
+
+				next();
+			} catch (error) {
+				console.log(error)
+				return next(new Error("Internal server error"));
+			}
+		});
+
 		const versionService = new VersionService();
 
 		io.on("connection", (socket) => {
-			console.log("New Socket Connection: ", socket.id);
+			console.log(`New Socket Connection: ${socket.id} - User: ${socket.data.userId}`);
 
 			socket.on(
 				CLIENT_WS_EVENT_TYPES.JOIN_ROOM,

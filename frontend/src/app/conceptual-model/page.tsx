@@ -20,8 +20,16 @@ import {
 	useForm,
 	UseFormRegister,
 } from "react-hook-form";
-import Diagram from "@/components/ui/conceptual-model/diagram";
-import { ConceptualModel } from "@/types/conceptual-model";
+import Diagram from "@components/ui/conceptual-model/diagram";
+import { ConceptualModel } from "#types/conceptual-model";
+import {
+	Tabs,
+	TabsContent,
+	TabsList,
+	TabsTrigger,
+} from "@src/components/ui/tabs/tabs";
+import { Input } from "@src/components/ui/common/input";
+import { useSession } from "@node_modules/next-auth/react";
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
@@ -96,7 +104,8 @@ const MOUSE_POSITION_UPDATE_DELAY = 33; //30 fps
 
 export default function Page() {
 	const [isModelInitialized, setIsModelInitialized] = useState(false);
-
+	const { data: session } = useSession();
+	
 	const {
 		register,
 		control,
@@ -140,10 +149,21 @@ export default function Page() {
 	);
 	const [roomId, setRoomId] = useState("67d8321cd76cf5bc5bd75c79");
 	const canUserEdit = useMemo(() => {
-		return !!collaborators.get(socket.id!)?.hasEditingRights;
+		if(!socket.id) return false;
+		return !!collaborators.get(socket.id)?.hasEditingRights;
 	}, [collaborators]);
 
 	useEffect(() => {
+		
+		if(!session) {
+			socket.disconnect();
+		} else {
+			socket.auth = {
+				sessionToken: session.auth
+			};
+			socket.connect();
+		}
+		
 		if (socket.connected) {
 			onConnect();
 		}
@@ -169,7 +189,7 @@ export default function Page() {
 		}
 
 		function onFirstInRoom(payload: FirstInRoomPayload) {
-			if (!socket.id) return;
+			if(!socket.id) return;
 			const newCollaborators = new Map<string, Collaborator>();
 			newCollaborators.set(socket.id, {
 				socketId: socket.id,
@@ -299,7 +319,7 @@ export default function Page() {
 				onUsersInRoomChange
 			);
 		};
-	}, []);
+	}, [session]);
 
 	const sendPropertyUpdate = (value: any, propertyPath: string) => {
 		if (!canUserEdit) return;
@@ -433,94 +453,113 @@ export default function Page() {
 			{!isModelInitialized ? (
 				<p>Loading Model</p>
 			) : (
-				<form>
-					<input {...customRegisterField({ name: "objective" })} />
+				<form className="flex flex-col">
 					<input
 						{...customRegisterField({ name: "structureDiagram.imageFilePath" })}
 					/>
 					<br />
-					<h2>Suposiciones</h2>
-					<button
-						disabled={!canUserEdit}
-						onClick={(e) =>
-							handleAddItemToList({
-								e,
-								listPropertyPath: "assumptions",
-								itemType: "assumption",
-							})
-						}
-					>
-						Agregar Suposición
-					</button>
-					<ul>
-						{assumptionList.fields.map((field, index) => {
-							return (
-								<li key={field.id}>
-									<label>{`Assumption Id: ${field._id}`} - Description:</label>
-									<input
-										{...customRegisterField({
-											name: `assumptions.${index}.description`,
-											propertyPath: `assumptions.${field._id}.description`,
-										})}
-									/>
-									<button
-										disabled={!canUserEdit}
-										onClick={(e) =>
-											handleRemoveItemFromList({
-												e,
-												listPropertyPath: "assumptions",
-												itemId: field._id,
-											})
-										}
-									>
-										Delete
-									</button>
-								</li>
-							);
-						})}
-					</ul>
-					<h2>Simplificaciones</h2>
-					<button
-						disabled={!canUserEdit}
-						onClick={(e) =>
-							handleAddItemToList({
-								e,
-								listPropertyPath: "simplifications",
-								itemType: "simplification",
-							})
-						}
-					>
-						Agregar Simplificacion
-					</button>
-					<ul>
-						{simplificationList.fields.map((field, index) => {
-							return (
-								<li key={field.id}>
-									<label>
-										{`Simplification Id: ${field._id}`} - Description:
-									</label>
-									<input
-										{...customRegisterField({
-											name: `simplifications.${index}.description`,
-											propertyPath: `simplifications.${field._id}.description`,
-										})}
-									/>
-									<button
-										disabled={!canUserEdit}
-										onClick={(e) =>
-											handleRemoveItemFromList({
-												e,
-												listPropertyPath: "simplifications",
-												itemId: field._id,
-											})
-										}
-									>
-										Delete
-									</button>
-								</li>
-							);
-						})}
-					</ul>
+					<Tabs orientation="vertical" defaultValue="objetivo-suposiciones">
+						<TabsList className="flex-col h-auto items-stretch">
+							<TabsTrigger value="objetivo-suposiciones">
+								Objetivo y Suposiciones
+							</TabsTrigger>
+							<TabsTrigger value="diagrama-estructura-entidades">
+								Diagrama de Estructura
+							</TabsTrigger>
+							<TabsTrigger value="entidades-diagramas-dinamica">
+								Entidades y Diagramas Dinámica
+							</TabsTrigger>
+						</TabsList>
+						<TabsContent value="objetivo-suposiciones">
+							<input {...customRegisterField({ name: "objective" })} />
+
+							<h2>Suposiciones</h2>
+							<button
+								disabled={!canUserEdit}
+								onClick={(e) =>
+									handleAddItemToList({
+										e,
+										listPropertyPath: "assumptions",
+										itemType: "assumption",
+									})
+								}
+							>
+								Agregar Suposición
+							</button>
+							<ul>
+								{assumptionList.fields.map((field, index) => {
+									return (
+										<li key={field.id}>
+											<label>
+												{`Assumption Id: ${field._id}`} - Description:
+											</label>
+											<input
+												{...customRegisterField({
+													name: `assumptions.${index}.description`,
+													propertyPath: `assumptions.${field._id}.description`,
+												})}
+											/>
+											<button
+												disabled={!canUserEdit}
+												onClick={(e) =>
+													handleRemoveItemFromList({
+														e,
+														listPropertyPath: "assumptions",
+														itemId: field._id,
+													})
+												}
+											>
+												Delete
+											</button>
+										</li>
+									);
+								})}
+							</ul>
+							<h2>Simplificaciones</h2>
+							<button
+								disabled={!canUserEdit}
+								onClick={(e) =>
+									handleAddItemToList({
+										e,
+										listPropertyPath: "simplifications",
+										itemType: "simplification",
+									})
+								}
+							>
+								Agregar Simplificacion
+							</button>
+							<ul>
+								{simplificationList.fields.map((field, index) => {
+									return (
+										<li key={field.id}>
+											<label>
+												{`Simplification Id: ${field._id}`} - Description:
+											</label>
+											<input
+												{...customRegisterField({
+													name: `simplifications.${index}.description`,
+													propertyPath: `simplifications.${field._id}.description`,
+												})}
+											/>
+											<button
+												disabled={!canUserEdit}
+												onClick={(e) =>
+													handleRemoveItemFromList({
+														e,
+														listPropertyPath: "simplifications",
+														itemId: field._id,
+													})
+												}
+											>
+												Delete
+											</button>
+										</li>
+									);
+								})}
+							</ul>
+						</TabsContent>
+					</Tabs>
+
 					<h2>Diagrama de Estructura</h2>
 					<Diagram
 						{...{
