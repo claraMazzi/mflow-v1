@@ -40,16 +40,21 @@ enum CLIENT_WS_EVENT_TYPES {
 type JoinRoomEventPayload = BaseSocketEventPayload & {
 	type: CLIENT_WS_EVENT_TYPES.JOIN_ROOM;
 	roomId: string;
-	username: string;
-};
-
-type FirstInRoomPayload = BaseSocketEventPayload & {
-	type: SERVER_WS_EVENT_TYPES.FIRST_IN_ROOM;
 };
 
 type UsersInRoomChangePayload = BaseSocketEventPayload & {
 	type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE;
-	socketsInRoom: string[];
+	roomState: {
+		roomId: string;
+		currentEditingUser: string | null;
+		collaborators: {
+			userId: string;
+			name: string;
+			lastName: string;
+			email: string;
+			socketIds: string[];
+		}[];
+	};
 };
 
 type InitializeConceptualModelPayload = BaseSocketEventPayload & {
@@ -63,13 +68,19 @@ enum SERVER_WS_EVENT_TYPES {
 	INITIALIZE_CONCEPTUAL_MODEL = "initialize-conceptual-model",
 }
 
-type Collaborator = Readonly<{
+type SocketPosition = Readonly<{
 	socketId: string;
-	userId?: string;
-	isCurrentUser: boolean;
-	hasEditingRights: boolean;
 	mousePosition?: { relativeX: number; relativeY: number };
 	currentTab?: string;
+}>;
+
+type Collaborator = Readonly<{
+	userId: string;
+	name: string;
+	lastName: string;
+	email: string;
+	sockets: Map<string, SocketPosition>;
+	hasEditingRights: boolean;
 }>;
 
 //t1 -> U1 S devuelve un token que tiene el timestamp de inicio de la request
@@ -105,7 +116,7 @@ const MOUSE_POSITION_UPDATE_DELAY = 33; //30 fps
 export default function Page() {
 	const [isModelInitialized, setIsModelInitialized] = useState(false);
 	const { data: session } = useSession();
-	
+
 	const {
 		register,
 		control,
@@ -132,38 +143,37 @@ export default function Page() {
 
 	const [isConnected, setIsConnected] = useState(false);
 	const [transport, setTransport] = useState("N/A");
+	const [currentTab, setCurrentTab] = useState("objetivo-suposiciones");
 	const throttledEmitMouseUpdateFunction = useRef(
-		throttle((roomId: any, mousePosition: any) => {
+		throttle((roomId: any, mousePosition: any, currentTab: string) => {
 			socket.volatile.emit("client-volatile-broadcast", {
 				roomId,
-				userId: "ignored",
-				mousePosition: mousePosition,
-				type: "mouse-position-change",
+				mousePosition,
+				currentTab,
 				timestamp: new Date(),
 			});
 		}, MOUSE_POSITION_UPDATE_DELAY)
 	);
+	const tabRef = useRef<HTMLElement>(null);
 
 	const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(
 		new Map()
 	);
 	const [roomId, setRoomId] = useState("67d8321cd76cf5bc5bd75c79");
 	const canUserEdit = useMemo(() => {
-		if(!socket.id) return false;
-		return !!collaborators.get(socket.id)?.hasEditingRights;
+		if (!session) return false;
+		return !!collaborators.get(session.user.id)?.hasEditingRights;
 	}, [collaborators]);
 
+
 	useEffect(() => {
-		
-		if(!session) {
-			socket.disconnect();
-		} else {
+		if (session) {
 			socket.auth = {
-				sessionToken: session.auth
+				sessionToken: session.auth,
 			};
 			socket.connect();
 		}
-		
+
 		if (socket.connected) {
 			onConnect();
 		}
@@ -177,7 +187,6 @@ export default function Page() {
 			});
 			socket.emit(CLIENT_WS_EVENT_TYPES.JOIN_ROOM, {
 				type: CLIENT_WS_EVENT_TYPES.JOIN_ROOM,
-				username: "ignored",
 				roomId: roomId,
 				timestamp: new Date(),
 			} satisfies JoinRoomEventPayload);
@@ -186,18 +195,6 @@ export default function Page() {
 		function onDisconnect() {
 			setIsConnected(false);
 			setTransport("N/A");
-		}
-
-		function onFirstInRoom(payload: FirstInRoomPayload) {
-			if(!socket.id) return;
-			const newCollaborators = new Map<string, Collaborator>();
-			newCollaborators.set(socket.id, {
-				socketId: socket.id,
-				userId: "ignored",
-				isCurrentUser: true,
-				hasEditingRights: true,
-			});
-			setCollaborators(newCollaborators);
 		}
 
 		function onFieldUpdate(payload: { propertyPath: any; value: any }) {
@@ -211,46 +208,79 @@ export default function Page() {
 		function onServerVolatileBroadcast(payload: {
 			socketId: string;
 			userId: string;
+			currentTab: string;
 			mousePosition: { relativeX: number; relativeY: number };
-			type: string;
 			timestamp: Date;
 		}) {
 			setCollaborators((prevCollaborators) => {
 				const newCollaborators = new Map<string, Collaborator>();
-				for (const socketId of prevCollaborators.keys()) {
-					const existingCollaborator = prevCollaborators.get(socketId);
+				for (const userId of prevCollaborators.keys()) {
+					const existingCollaborator = prevCollaborators.get(userId)!;
 
-					if (!existingCollaborator) continue;
-
-					if (socketId === payload.socketId) {
-						newCollaborators.set(socketId, {
-							...existingCollaborator,
-							userId: payload.userId,
-							mousePosition: payload.mousePosition,
-						});
-					} else {
-						newCollaborators.set(socketId, { ...existingCollaborator });
+					if (userId !== payload.userId) {
+						newCollaborators.set(userId, { ...existingCollaborator });
+						continue;
 					}
+
+					const newSocketPositions: Map<string, SocketPosition> = new Map();
+
+					for (const socketId of existingCollaborator.sockets.keys()) {
+						const existingSocketPosition =
+							existingCollaborator.sockets.get(socketId)!;
+						if (socketId === payload.socketId) {
+							newSocketPositions.set(socketId, {
+								...existingSocketPosition,
+								mousePosition: payload.mousePosition,
+								currentTab: payload.currentTab,
+							});
+						} else {
+							newSocketPositions.set(socketId, {
+								...existingSocketPosition,
+							});
+						}
+					}
+					
+					newCollaborators.set(userId, { ...existingCollaborator, sockets: newSocketPositions });
 				}
 				return newCollaborators;
 			});
 		}
 
-		function onUsersInRoomChange(payload: UsersInRoomChangePayload) {
+		function onUsersInRoomChange({ roomState }: UsersInRoomChangePayload) {
+			console.log("users-in-room-chage: ", roomState)
 			setCollaborators((prevCollaborators) => {
 				const newCollaborators = new Map<string, Collaborator>();
-				for (const socketId of payload.socketsInRoom) {
-					const existingCollaborator = prevCollaborators.get(socketId);
+				for (const user of roomState.collaborators) {
+					const existingCollaborator = prevCollaborators.get(user.userId);
+					const hasEditingRights = roomState.currentEditingUser
+						? roomState.currentEditingUser === user.userId
+						: false;
+					const newSocketPositions: Map<string, SocketPosition> = new Map();
 
-					if (existingCollaborator) {
-						newCollaborators.set(socketId, { ...existingCollaborator });
+					if (!existingCollaborator) {
+						for (const socketId of user.socketIds) {
+							newSocketPositions.set(socketId, { socketId });
+						}
 					} else {
-						newCollaborators.set(socketId, {
-							socketId: socketId,
-							isCurrentUser: socketId === socket.id,
-							hasEditingRights: false,
-						});
+						for (const socketId of user.socketIds) {
+							const existingSocketPosition =
+								existingCollaborator.sockets.get(socketId);
+							if (existingSocketPosition) {
+								newSocketPositions.set(socketId, { ...existingSocketPosition });
+							} else {
+								newSocketPositions.set(socketId, { socketId });
+							}
+						}
 					}
+
+					newCollaborators.set(user.userId, {
+						userId: user.userId,
+						name: user.name,
+						lastName: user.lastName,
+						hasEditingRights,
+						email: user.email,
+						sockets: newSocketPositions,
+					});
 				}
 				return newCollaborators;
 			});
@@ -299,7 +329,6 @@ export default function Page() {
 			SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
 			onInitializeConceptualModel
 		);
-		socket.on(SERVER_WS_EVENT_TYPES.FIRST_IN_ROOM, onFirstInRoom);
 		socket.on(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, onUsersInRoomChange);
 
 		return () => {
@@ -313,11 +342,11 @@ export default function Page() {
 				SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
 				onInitializeConceptualModel
 			);
-			socket.off(SERVER_WS_EVENT_TYPES.FIRST_IN_ROOM, onFirstInRoom);
 			socket.off(
 				SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
 				onUsersInRoomChange
 			);
+			socket.disconnect();
 		};
 	}, [session]);
 
@@ -339,7 +368,7 @@ export default function Page() {
 			relativeY: yPosition / height,
 		};
 
-		throttledEmitMouseUpdateFunction.current(roomId, mousePosition);
+		throttledEmitMouseUpdateFunction.current(roomId, mousePosition, currentTab);
 	};
 
 	const handleAddItemToList = ({
@@ -433,19 +462,36 @@ export default function Page() {
 			<ul>
 				{Array.from(collaborators.values()).map((collaborator) => {
 					return (
-						<li key={collaborator.socketId}>
+						<li className="ml-5" key={collaborator.userId}>
 							<p>
-								{collaborator.socketId} - {collaborator.userId} - Can Edit:{" "}
-								{collaborator.hasEditingRights.toString()}
+								User: {collaborator.userId} - Can Edit: {collaborator.hasEditingRights.toString()}
 							</p>
-							{collaborator.mousePosition ? (
-								<p>
-									X: {collaborator.mousePosition.relativeX} Y:{" "}
-									{collaborator.mousePosition.relativeY}
-								</p>
-							) : (
-								<p> Mouse Position not available</p>
-							)}
+							<p>
+								{collaborator.name} {collaborator.lastName} - {collaborator.email}
+							</p>
+							<p>Sockets:</p>
+							<ul> 
+								{Array.from(collaborator.sockets.values()).map((socket) => {
+									return (
+										<li className="ml-5" key={socket.socketId}>
+											<p>Socket: {socket.socketId}</p>
+											{socket.currentTab ? (
+												<p className="ml-5">Current Tab: {socket.currentTab}</p>
+											) : (
+												<p className="ml-5"> Current Tab not available</p>
+											)}
+											{socket.mousePosition ? (
+												<p className="ml-5"> Mouse Position:
+													X: {socket.mousePosition.relativeX} Y:{" "}
+													{socket.mousePosition.relativeY}
+												</p>
+											) : (
+												<p className="ml-5"> Mouse Position not available</p>
+											)}
+										</li>
+									);
+								})}
+							</ul>
 						</li>
 					);
 				})}
@@ -458,7 +504,7 @@ export default function Page() {
 						{...customRegisterField({ name: "structureDiagram.imageFilePath" })}
 					/>
 					<br />
-					<Tabs orientation="vertical" defaultValue="objetivo-suposiciones">
+					<Tabs orientation="vertical" value={currentTab} onValueChange={setCurrentTab} defaultValue="objetivo-suposiciones">
 						<TabsList className="flex-col h-auto items-stretch">
 							<TabsTrigger value="objetivo-suposiciones">
 								Objetivo y Suposiciones

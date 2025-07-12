@@ -17,16 +17,21 @@ enum CLIENT_WS_EVENT_TYPES {
 type JoinRoomEventPayload = BaseSocketEventPayload & {
 	type: CLIENT_WS_EVENT_TYPES.JOIN_ROOM;
 	roomId: string;
-	username: string;
-};
-
-type FirstInRoomPayload = BaseSocketEventPayload & {
-	type: SERVER_WS_EVENT_TYPES.FIRST_IN_ROOM;
 };
 
 type UsersInRoomChangePayload = BaseSocketEventPayload & {
 	type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE;
-	socketsInRoom: string[];
+	roomState: {
+		roomId: string;
+		currentEditingUser: string | null;
+		collaborators: {
+			userId: string;
+			name: string;
+			lastName: string;
+			email: string;
+			socketIds: string[];
+		}[];
+	};
 };
 
 type InitializeConceptualModelPayload = BaseSocketEventPayload & {
@@ -90,7 +95,9 @@ export class Server {
 			const sessionToken = socket.handshake.auth.sessionToken;
 
 			try {
-				const payload = await jwtAdapter.validateToken<{ id: string }>(sessionToken);
+				const payload = await jwtAdapter.validateToken<{ id: string }>(
+					sessionToken
+				);
 				if (!payload) return next(new Error("Invalid token"));
 
 				const user = await UserModel.findById(payload.id);
@@ -98,18 +105,26 @@ export class Server {
 				if (!user) return next(new Error(`Invalid user token`));
 
 				socket.data.userId = user.id;
+				socket.data.name = user.name;
+				socket.data.lastName = user.lastName;
+				socket.data.email = user.email;
 
 				next();
 			} catch (error) {
-				console.log(error)
+				console.log(error);
 				return next(new Error("Internal server error"));
 			}
 		});
 
 		const versionService = new VersionService();
 
-		io.on("connection", (socket) => {
-			console.log(`New Socket Connection: ${socket.id} - User: ${socket.data.userId}`);
+		io.on("connection", async (socket) => {
+			console.log(
+				`New Socket Connection: ${socket.id} - User: ${socket.data.userId}`
+			);
+
+			//Individual room for the user
+			await socket.join(`user@${socket.data.userId}`);
 
 			socket.on(
 				CLIENT_WS_EVENT_TYPES.JOIN_ROOM,
@@ -119,6 +134,15 @@ export class Server {
 						payload.roomId
 					);
 
+					if (!this.collaborationRooms.has(version.id)) {
+						console.log("New collaboration room created:", version.id)
+						this.collaborationRooms.set(
+							version.id,
+							new CollaborationRoom(version.id)
+						);
+					}
+					const collabRoom = this.collaborationRooms.get(version.id)!;
+
 					socket.emit(SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL, {
 						type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
 						timestamp: new Date(),
@@ -127,19 +151,13 @@ export class Server {
 
 					await socket.join(payload.roomId);
 
-					const socketsInRoom = await io.in(payload.roomId).fetchSockets();
-					if (socketsInRoom.length <= 1) {
-						socket.emit(SERVER_WS_EVENT_TYPES.FIRST_IN_ROOM, {
-							type: SERVER_WS_EVENT_TYPES.FIRST_IN_ROOM,
-							timestamp: new Date(),
-						} satisfies FirstInRoomPayload);
-					}
+					collabRoom.addCollaborator(socket.id, socket.data);
 
 					io.to(payload.roomId).emit(
 						SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
 						{
 							type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
-							socketsInRoom: socketsInRoom.map((s) => s.id),
+							roomState: collabRoom.getRoomState(),
 							timestamp: new Date(),
 						} satisfies UsersInRoomChangePayload
 					);
@@ -150,16 +168,15 @@ export class Server {
 				"client-volatile-broadcast",
 				(payload: {
 					roomId: string;
-					userId: string;
+					currentTab: string;
 					mousePosition: { relativeX: number; relativeY: number };
-					type: string;
 					timestamp: Date;
 				}) => {
 					socket.to(payload.roomId).emit("server-volatile-broadcast", {
 						socketId: socket.id,
-						userId: payload.userId,
+						userId: socket.data.userId,
+						currentTab: payload.currentTab,
 						mousePosition: payload.mousePosition,
-						type: payload.type,
 						timestamp: payload.timestamp,
 					});
 				}
@@ -362,19 +379,21 @@ export class Server {
 
 			socket.on("disconnecting", async () => {
 				console.log("Socket Disconnected ", socket.id);
-				for (const roomID of Array.from(socket.rooms)) {
-					const otherClients = (await io.in(roomID).fetchSockets()).filter(
-						(_socket) => _socket.id !== socket.id
-					);
+				for (const roomId of Array.from(socket.rooms)) {
+					const collabRoom = this.collaborationRooms.get(roomId);
 
-					if (otherClients.length > 0) {
-						socket.broadcast
-							.to(roomID)
-							.emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
-								type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
-								socketsInRoom: otherClients.map((s) => s.id),
-								timestamp: new Date(),
-							} satisfies UsersInRoomChangePayload);
+					if (!collabRoom) continue;
+
+					collabRoom.removeCollaborator(socket.id, socket.data.userId);
+					if (!collabRoom.isEmpty()) {
+						socket.to(roomId).emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
+							type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
+							roomState: collabRoom.getRoomState(),
+							timestamp: new Date(),
+						} satisfies UsersInRoomChangePayload);
+					} else {
+						console.log("Colaboration room deleted:", roomId)
+						this.collaborationRooms.delete(roomId);
 					}
 				}
 			});
