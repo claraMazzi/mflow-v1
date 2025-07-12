@@ -170,10 +170,6 @@ export default function Page() {
 			socket.connect();
 		}
 
-		if (socket.connected) {
-			onConnect();
-		}
-
 		function onConnect() {
 			setIsConnected(true);
 			setTransport(socket.io.engine.transport.name);
