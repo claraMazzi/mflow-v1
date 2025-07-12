@@ -342,7 +342,6 @@ export default function Page() {
 				SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
 				onUsersInRoomChange
 			);
-			socket.disconnect();
 		};
 	}, [session]);
 
