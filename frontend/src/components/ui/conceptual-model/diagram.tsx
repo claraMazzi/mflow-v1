@@ -24,19 +24,11 @@ export default function Diagram({
 	watch,
 	namePrefix,
 	propertyPathPrefix = namePrefix,
-	handleFileUpload,
 }: {
 	register: any;
 	watch: any;
 	namePrefix: Path<ConceptualModel>;
 	propertyPathPrefix?: string;
-	handleFileUpload: ({
-		file,
-		propertyPath,
-	}: {
-		file: File;
-		propertyPath: string;
-	}) => void;
 }) {
 	const [imgSource, setImageSource] = useState<undefined | string>();
 	const imgRef = useRef<null|HTMLImageElement>(null);
@@ -83,16 +75,13 @@ export default function Diagram({
 						})}
 					/>
 				) : (
+					//TODO FIX UPLOAD TO USE THE NEW ENDPOINT
 					<input
 						type="file"
 						accept=".png, .jpg, .jpeg"
 						onChange={(e) => {
 							const files = e.currentTarget.files;
 							if (!files || files.length == 0) return;
-							handleFileUpload({
-								file: files[0],
-								propertyPath: `${propertyPathPrefix}.imageFilePath`,
-							});
 						}}
 					/>
 				)}

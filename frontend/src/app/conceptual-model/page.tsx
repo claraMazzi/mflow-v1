@@ -83,9 +83,6 @@ type Collaborator = Readonly<{
 	hasEditingRights: boolean;
 }>;
 
-//t1 -> U1 S devuelve un token que tiene el timestamp de inicio de la request
-//t2 -> U1 -> Envia el token y con eso el servidor compara
-
 function throttle(func: any, delay: number) {
 	let timeout: NodeJS.Timeout | null = null;
 	return (...args: any) => {
@@ -154,7 +151,6 @@ export default function Page() {
 			});
 		}, MOUSE_POSITION_UPDATE_DELAY)
 	);
-	const tabRef = useRef<HTMLElement>(null);
 
 	const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(
 		new Map()
@@ -384,18 +380,6 @@ export default function Page() {
 		socket.emit("add-item-to-list", { roomId, listPropertyPath, itemType });
 	};
 
-	const handleFileUpload = ({
-		file,
-		propertyPath,
-	}: {
-		file: File;
-		propertyPath: string;
-	}) => {
-		console.log("Uploading File: ", file);
-		const fileExtension = file.name.split(".").pop();
-		socket.emit("upload-file", { roomId, file, propertyPath, fileExtension });
-	};
-
 	const handleRemoveItemFromList = ({
 		e,
 		listPropertyPath,
@@ -518,7 +502,6 @@ export default function Page() {
 						</TabsList>
 						<TabsContent value="objetivo-suposiciones">
 							<input {...customRegisterField({ name: "objective" })} />
-
 							<h2>Suposiciones</h2>
 							<button
 								disabled={!canUserEdit}
@@ -613,7 +596,6 @@ export default function Page() {
 							watch,
 							namePrefix: "structureDiagram",
 							propertyPathPrefix: "structureDiagram",
-							handleFileUpload,
 						}}
 					/>
 					<h2>Entidades</h2>

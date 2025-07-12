@@ -250,65 +250,6 @@ export class Server {
 			);
 
 			socket.on(
-				"upload-file",
-				async ({
-					roomId,
-					file,
-					fileExtension,
-					propertyPath,
-				}: {
-					roomId: string;
-					file: Buffer;
-					fileExtension: string;
-					propertyPath: string;
-				}) => {
-					const { version } = await versionService.getVersionById(roomId);
-
-					const newFilePath = `${process.cwd()}/uploads/${roomId}/conceptual-model/${propertyPath}.${fileExtension}`;
-
-					//Make sure that the directory exists
-					try {
-						await fs.mkdir(path.dirname(newFilePath), { recursive: true });
-					} catch (error) {
-						console.error(error);
-						return;
-					}
-
-					const existingFilePath = getProperty(
-						version.conceptualModel,
-						propertyPath
-					);
-					if (existingFilePath) {
-						try {
-							await fs.unlink(existingFilePath);
-						} catch (error) {
-							console.error(error);
-							return;
-						}
-					}
-
-					try {
-						await fs.writeFile(newFilePath, file);
-					} catch (error) {
-						console.error(error);
-						return;
-					}
-
-					const newFileUrl =
-						envs.WEBSERVICE_URL +
-						`/uploads/${roomId}/conceptual-model/${propertyPath}.${fileExtension}`;
-					setValue((version as any).conceptualModel, propertyPath, newFileUrl);
-
-					version.save();
-
-					io.to(roomId).emit("field-update", {
-						propertyPath: propertyPath,
-						value: newFileUrl,
-					});
-				}
-			);
-
-			socket.on(
 				"add-item-to-list",
 				async ({
 					roomId,
