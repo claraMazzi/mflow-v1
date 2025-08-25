@@ -1,3 +1,5 @@
+import { EditingPrivilegesAlreadyGrantedError, PendingRequestConflictError as PendingEditingRequestConflictError } from "../../domain/errors/sockets.errors";
+
 export class CollaborationRoom {
 	private roomId: string;
 	private userIdToUserInfoMap: Map<
@@ -12,7 +14,7 @@ export class CollaborationRoom {
 	>;
 	private pendingEditingRequests: Map<
 		string,
-		{ requesterUserId: string; editorUserId: String; timeoutId: number }
+		{ requesterUserId: string; editorUserId: String; timeoutId: NodeJS.Timeout }
 	>;
 	private currentEditingUser: string | null;
 
@@ -31,6 +33,50 @@ export class CollaborationRoom {
 		};
 	}
 
+	addEditingRequest(requesterUserId: string, callbackFunction: () => void) {
+		const isEditingUser = this.currentEditingUser;
+
+		if (isEditingUser) {
+			console.log(
+				`An Editing Request was refused for Room: ${this.roomId} - Requester UserId: ${requesterUserId}`
+			);
+			throw new EditingPrivilegesAlreadyGrantedError(this.roomId, requesterUserId);
+		}
+
+		const hasAlreadyMadeARequest =
+			Array.from(this.pendingEditingRequests.values()).filter(
+				(v) => v.requesterUserId === requesterUserId
+			).length !== 0;
+
+		if (hasAlreadyMadeARequest) {
+			console.log(
+				`An Editing Request was refused for Room: ${this.roomId} - Requester UserId: ${requesterUserId}`
+			);
+			throw new PendingEditingRequestConflictError(this.roomId, requesterUserId);
+		}
+
+		const requestId = `${Date.now()}-${requesterUserId}`;
+		const timeoutId = setTimeout(() => {
+			this.removeEditingRequest(requestId);
+			this.assignEditingRightsTo(requesterUserId);
+			callbackFunction();
+		}, 10 * 1000);
+		this.pendingEditingRequests.set(requestId, {
+			requesterUserId,
+			editorUserId: this.currentEditingUser!,
+			timeoutId,
+		});
+
+		return requestId;
+	}
+
+	removeEditingRequest(requestId: string) {
+		const pendingRequest = this.pendingEditingRequests.get(requestId);
+		if (!pendingRequest) return;
+		clearTimeout(pendingRequest.timeoutId);
+		this.pendingEditingRequests.delete(requestId);
+	}
+
 	assignEditingRightsTo(userId: string) {
 		if (userId === this.currentEditingUser) {
 			return;
@@ -40,10 +86,10 @@ export class CollaborationRoom {
 		}
 		this.currentEditingUser = userId;
 		//If the user with editing right changed, then invalidate all editing rights requests
-		this.cancelAllPendingRequest();
+		this.cancelAllPendingRequests();
 	}
 
-	private cancelAllPendingRequest() {
+	private cancelAllPendingRequests() {
 		const pendingRequests = Array.from(this.pendingEditingRequests.values());
 		for (const request of pendingRequests) {
 			clearTimeout(request.timeoutId);
@@ -68,6 +114,15 @@ export class CollaborationRoom {
 		}
 	}
 
+	private removeAllPendingEditingRequestsFor(userId: string) {
+		Array.from(this.pendingEditingRequests.entries())
+			.filter(([k, v]) => v.requesterUserId === userId)
+			.forEach(([k, v]) => {
+				clearTimeout(v.timeoutId);
+				this.pendingEditingRequests.delete(k);
+			});
+	}
+
 	removeCollaborator(socketId: string, userId: string) {
 		if (!this.userIdToUserInfoMap.has(userId)) return;
 
@@ -88,8 +143,9 @@ export class CollaborationRoom {
 		if (this.currentEditingUser === userId) {
 			if (this.isEmpty()) {
 				this.currentEditingUser = null;
-				this.cancelAllPendingRequest();
+				this.cancelAllPendingRequests();
 			} else {
+				this.removeAllPendingEditingRequestsFor(userId);
 				const randomUser =
 					remainingUsers[Math.floor(Math.random() * remainingUsers.length)];
 				this.assignEditingRightsTo(randomUser);

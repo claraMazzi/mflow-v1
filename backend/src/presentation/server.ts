@@ -7,6 +7,10 @@ import { error } from "console";
 import { envs, jwtAdapter } from "../config";
 import path from "path";
 import { CollaborationRoom } from "./collaboration/collaborationRoom";
+import {
+	EditingPrivilegesAlreadyGrantedError,
+	PendingRequestConflictError,
+} from "../domain/errors/sockets.errors";
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
@@ -40,7 +44,6 @@ type InitializeConceptualModelPayload = BaseSocketEventPayload & {
 };
 
 enum SERVER_WS_EVENT_TYPES {
-	FIRST_IN_ROOM = "first-in-room",
 	USERS_IN_ROOM_CHANGE = "users-in-room-change",
 	INITIALIZE_CONCEPTUAL_MODEL = "initialize-conceptual-model",
 }
@@ -135,7 +138,7 @@ export class Server {
 					);
 
 					if (!this.collaborationRooms.has(version.id)) {
-						console.log("New collaboration room created:", version.id)
+						console.log("New collaboration room created:", version.id);
 						this.collaborationRooms.set(
 							version.id,
 							new CollaborationRoom(version.id)
@@ -151,6 +154,9 @@ export class Server {
 
 					await socket.join(payload.roomId);
 
+					console.log(
+						`Collaborator Added: ${socket.id} - ${socket.data.userId}`
+					);
 					collabRoom.addCollaborator(socket.id, socket.data);
 
 					io.to(payload.roomId).emit(
@@ -250,6 +256,60 @@ export class Server {
 			);
 
 			socket.on(
+				"request-editing-privilege",
+				({ roomId }: { roomId: string }) => {
+					const collabRoom = this.collaborationRooms.get(roomId);
+
+					if (!collabRoom) {
+						console.log(
+							`An Editing Request was ignored for Room: ${roomId} - Requester UserId: ${socket.data.userId}`
+						);
+						return;
+					}
+
+					const callbackFunction = () => {
+						socket.to(roomId).emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
+							type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
+							roomState: collabRoom.getRoomState(),
+							timestamp: new Date(),
+						} satisfies UsersInRoomChangePayload);
+					};
+
+					try {
+						const requestId = collabRoom.addEditingRequest(
+							socket.data.userId,
+							callbackFunction
+						);
+
+						socket.to(roomId).emit("editing-request-started", {
+							type: "editing-request-started",
+							requestId,
+							requesterUserId: socket.data.userId,
+							timestamp: new Date(),
+						});
+					} catch (error) {
+						if (
+							error instanceof PendingRequestConflictError ||
+							error instanceof EditingPrivilegesAlreadyGrantedError
+						) {
+							console.error(error.message);
+							socket
+								.to(`user@${socket.data.userId}`)
+								.emit("editing-request-creation-refused", {
+									type: "editing-request-creation-refused",
+									timestamp: new Date(),
+								});
+						} else {
+							console.error(
+								`Unexpected error during Editing Request Creation: ${error}`
+							);
+							throw error;
+						}
+					}
+				}
+			);
+
+			socket.on(
 				"add-item-to-list",
 				async ({
 					roomId,
@@ -325,6 +385,9 @@ export class Server {
 
 					if (!collabRoom) continue;
 
+					console.log(
+						`Collaborator Removed: ${socket.id} - ${socket.data.userId}`
+					);
 					collabRoom.removeCollaborator(socket.id, socket.data.userId);
 					if (!collabRoom.isEmpty()) {
 						socket.to(roomId).emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
@@ -333,7 +396,7 @@ export class Server {
 							timestamp: new Date(),
 						} satisfies UsersInRoomChangePayload);
 					} else {
-						console.log("Colaboration room deleted:", roomId)
+						console.log("Colaboration room deleted:", roomId);
 						this.collaborationRooms.delete(roomId);
 					}
 				}
