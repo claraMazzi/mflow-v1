@@ -1,11 +1,13 @@
-import { DeletionRequestModel, ProjectModel } from "../../data";
+import { DeletionRequestModel, ProjectModel, UserModel } from "../../data";
 import { CustomError } from "../../domain";
 import { CreateDeletionRequestDto } from "../../domain/dtos/project/create-deletion-request.dto";
 import { CreateProjectDto } from "../../domain/dtos/project/create-project.dto";
+import { ShareProjectDto } from "../../domain/dtos/project/share-project.dto";
 import { UpdateProjectDto } from "../../domain/dtos/project/update-project.dto";
 import { DelitionRequestEntity } from "../../domain/entities/delition-request.entity";
 import { ProjectEntity } from "../../domain/entities/project.entity";
 import { EmailService } from "./email.service";
+import { bcryptAdapter, jwtAdapter } from "../../config";
 
 const projectState: {
   created: "CREADO";
@@ -23,8 +25,49 @@ export class ProjectService {
     private readonly frontEndUrl: string
   ) {
     // If you need any dependencies, inject them here (e.g., email service, etc.)
-       
   }
+
+  /**
+   *
+   * cuando reciba el link chequear si la persona que lo envio sigue teniendo acceso.
+   * Solo el owner puede enviar invitaciones -- asi que no es necesario
+   * caducidad: 1 semana. Pasarle solo el userid y projectid.
+   *
+   */
+
+  private sendEmailInvitationLink = async ({
+    email,
+    senderId,
+    projectId,
+  }: {
+    senderId: string;
+    projectId: string;
+    email: string;
+  }) => {
+    const token = await jwtAdapter.generateToken(
+      { senderId: senderId, projectId: projectId },
+      "7d"
+    );
+
+    if (!token) throw CustomError.internalServer("Error getting token");
+    //link de retorno
+    // const link = `${this.webServiceUrl}/auth/validate-email/${token}`;
+    const link = `${this.frontEndUrl}/projects/share/?token=${token}`;
+
+    const html = `<h1>Has sido invitado/a a colaborar en un proyecto!</h1>
+      <p> Hace Click en el siguiente <a href=${link}>link</a> para aceptar la invitación </p>
+      <p><strong>Recordá que en caso de no tener cuenta primero deberás registrarte para poder acceder a la invitación</strong></p>`;
+
+    const options = {
+      to: email,
+      subject: "MFLOW - Invitación a colaborar en un proyecto",
+      htmlBody: html,
+    };
+
+    const isSent = await this.emailService.sendEmail(options);
+    if (!isSent)
+      throw CustomError.internalServer("Error sending sharing email");
+  };
 
   //get user active projects
   async getUserProjects(owner: string) {
@@ -131,22 +174,108 @@ export class ProjectService {
     }
   }
 
-  async shareProject(projectId: string, userId: string) {
-    throw new Error("To be implemented");
+  async sendProjectCollaborationInvitation(shareProjectDto: ShareProjectDto) {
+    //esto tiene que enviar las invitaciones por email
+    //despues necesito otro endpoint que ACEPTE las invitaciones y agregue a los usuarios a la lista de colaboradores del proyecto
+
+    const project = await ProjectModel.findOne({
+      _id: shareProjectDto.projectId,
+    });
+    if (!project) throw CustomError.badRequest("Project does not exists");
+
+    const finalCollaboratorsList = new Set<string>();
+    shareProjectDto.collaborators.forEach(async (email) => {
+      const existUser = await UserModel.findOne({ email: email });
+
+      if (!existUser) {
+        finalCollaboratorsList.add(email);
+        return;
+      }
+
+      if (existUser.id === project.owner.toString()) return; //no enviar al owner
+      if (project.collaborators.includes(existUser.id)) return; //no enviar si ya es colaborador
+      finalCollaboratorsList.add(email);
+    });
+
+    if (!finalCollaboratorsList.size)
+      throw CustomError.badRequest("No new collaborators to invite");
+
+    finalCollaboratorsList.forEach((collaborator: string) => {
+      this.sendEmailInvitationLink({
+        email: collaborator,
+        senderId: shareProjectDto.senderId,
+        projectId: shareProjectDto.projectId,
+      });
+    });
+
+    return {
+      message: "Project shared successfully to new collaborators",
+      request: finalCollaboratorsList,
+    };
+    // const newCollaborators = shareProjectDto.collaborators.filter(
+    //   (collaborator) => !project.collaborators.includes(collaborator)
+    // );
   }
 
-  async requestProjectDeletion(createDelitionRequestDto: CreateDeletionRequestDto) {
+  async addCollaboratorToProject(token: string) {
+    const payload = await jwtAdapter.validateToken(token);
+    if (!payload) throw CustomError.unauthorized("Invalid token");
+
+    const { userId, projectId } = payload as {
+      userId: string;
+      projectId: string;
+    };
+
+    if (!projectId)
+      throw CustomError.internalServer("Project Id does not exists");
+    if (!userId) throw CustomError.internalServer("Owner user not in token");
+
+    const project = await ProjectModel.findOne({ _id: projectId });
+    if (!project) throw CustomError.badRequest("Project does not exists");
+
+    const user = await UserModel.findOne({ _id: userId });
+    if (!user)
+      throw CustomError.internalServer("User must be registered first");
+
+    if (project.owner.toString() === userId)
+      throw CustomError.badRequest("Owner cannot be collaborator");
+    if (project.collaborators.includes(user._id))
+      throw CustomError.badRequest("User is already a collaborator");
+    if (project.state === projectState.deleted)
+      throw CustomError.badRequest("Project does not exists - deleted");
+    try {
+      project.collaborators.push(user._id);
+      await project.save();
+
+      const projectEntity = ProjectEntity.fromObject(project);
+
+      return {
+        message: "User added as collaborator successfully",
+        project: projectEntity,
+      };
+    } catch (error) {
+      throw CustomError.internalServer(`${error}`);
+    }
+  }
+
+  async requestProjectDeletion(
+    createDelitionRequestDto: CreateDeletionRequestDto
+  ) {
     const project = await ProjectModel.findOne({
       _id: createDelitionRequestDto.project,
     });
     if (!project) throw CustomError.badRequest("Project not exists");
 
-    const request = await DeletionRequestModel.findOne({ project: createDelitionRequestDto.project });
-    if (request) throw CustomError.badRequest("Deletion request is alredy created");
+    const request = await DeletionRequestModel.findOne({
+      project: createDelitionRequestDto.project,
+    });
+    if (request)
+      throw CustomError.badRequest("Deletion request is alredy created");
 
-    
     try {
-      const delitionRequest = new DeletionRequestModel(createDelitionRequestDto);
+      const delitionRequest = new DeletionRequestModel(
+        createDelitionRequestDto
+      );
       await delitionRequest.save();
       const delitionRequestEntity =
         DelitionRequestEntity.fromObject(delitionRequest);

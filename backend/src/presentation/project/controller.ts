@@ -4,6 +4,7 @@ import { ProjectService } from "../services"; // Assume a service layer is used 
 import { CreateProjectDto } from "../../domain/dtos/project/create-project.dto";
 import { UpdateProjectDto } from "../../domain/dtos/project/update-project.dto";
 import { CreateDeletionRequestDto } from "../../domain/dtos/project/create-deletion-request.dto";
+import { ShareProjectDto } from "../../domain/dtos/project/share-project.dto";
 
 export class ProjectController {
   constructor(readonly projectService: ProjectService) {}
@@ -111,17 +112,42 @@ export class ProjectController {
   };
 
   // Share a specific project
-  shareProject = (req: Request, res: Response) => {
+  sendProjectCollaborationInvitation = (req: Request, res: Response) => {
     const { projectId } = req.params;
+    const senderId = req.session?.userId ?? "";
+    const { collaborators } = req.body;
+
+    if (!senderId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
     if (!projectId) {
       return res.status(401).json({ error: "No project id provided" });
     }
-    const { userId } = req.body;
+
+    const [error, shareProjectDto] = ShareProjectDto.create({
+      projectId,
+      senderId,
+      collaborators,
+    });
+
+    if (error || !shareProjectDto) return res.status(400).json({ error });
+
     this.projectService
-      .shareProject(projectId, userId)
-      .then(() => res.json({ message: "Project shared successfully" }))
+      .sendProjectCollaborationInvitation(shareProjectDto)
+      .then(() => res.json({ message: "Project collaboration invitations sent successfully" }))
       .catch((error) => this.handleError(error, res));
   };
+
+  addCollaboratorToProject = (req: Request, res: Response) => {
+    const { token } = req.params;
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    this.projectService
+      .addCollaboratorToProject(token)
+      .then((response) => res.json(response))
+      .catch((error) => this.handleError(error, res));
+  }
 
   // Request project deletion
   requestProjectDeletion = (req: Request, res: Response) => {
@@ -135,15 +161,16 @@ export class ProjectController {
       return res.status(401).json({ error: "No project id provided" });
     }
 
-    const {motive} = req.body;
+    const { motive } = req.body;
 
     const [error, createDelitionRequestDto] = CreateDeletionRequestDto.create({
       project: projectId,
       motive: motive,
-      requestingUser: user
+      requestingUser: user,
     });
 
-    if (error || !createDelitionRequestDto) return res.status(400).json({ error });
+    if (error || !createDelitionRequestDto)
+      return res.status(400).json({ error });
 
     this.projectService
       .requestProjectDeletion(createDelitionRequestDto)

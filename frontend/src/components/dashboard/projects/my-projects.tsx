@@ -12,11 +12,13 @@ import { useProjects } from "@hooks/use-projects";
 import { ModifyProjectForm } from "./forms/modify-project-form";
 import { ProjectEntity } from "@src/types/project";
 import { DelitionRequestForm } from "./forms/delition-request-form";
+import { projectPendingDelition } from "@src/config/sharedVariables";
+import cn from "clsx";
 
 const getProjectDecorators = (project: ProjectEntity) => {
   const decorators: ReactNode[] = [];
 
-  if (project.state && project.state === "PENDIENTE DE ELIMINACION") {
+  if (project.state && project.state === projectPendingDelition) {
     decorators.push(
       <div className="font-bold text-xs flex gap-1">
         Estado:
@@ -32,6 +34,18 @@ const MyProjects = () => {
   const router = useRouter();
   const { openModal } = useUI();
   const { projects, isLoading, refreshProjects } = useProjects();
+
+  const handleShareProject = () => { 
+    openModal({
+      name: "fullscreen-modal",
+      title: "Compartir proyecto",
+      size: "md",
+      showCloseButton: false,
+      content: (
+       <>Compartir proyecto</>
+      ),
+    });
+  }
 
   const handleCreateProject = () => {
     openModal({
@@ -94,6 +108,8 @@ const MyProjects = () => {
         ) : projects && projects.length > 0 ? (
           <div className="w-full grid md:grid-cols-2 lg:grid-cols-3 gap-2">
             {projects.map((project, index) => {
+              const isPendingDelition =
+                project.state === projectPendingDelition;
               const popoverOptions = [
                 {
                   content: (
@@ -109,6 +125,9 @@ const MyProjects = () => {
                   content: (
                     <Button
                       variant={"optionList"}
+                      className={cn({
+                        hidden: isPendingDelition,
+                      })}
                       onClick={() => handleModifyProject(project)}
                     >
                       Modificar proyecto
@@ -119,6 +138,9 @@ const MyProjects = () => {
                   content: (
                     <Button
                       variant={"optionList"}
+                      className={cn({
+                        hidden: isPendingDelition,
+                      })}
                       onClick={() => handleDelitionRequest(project)}
                     >
                       Solicitar eliminación

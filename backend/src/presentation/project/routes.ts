@@ -22,21 +22,28 @@ export class ProjectRoutes {
   
     //create
     router.post("/", AuthMiddleware.validateJWT, controller.createProject);
+
     //get projects by user
     router.get("/", AuthMiddleware.validateJWT, controller.getUserProjects);
+
     //getById
     router.get("/:projectId", AuthMiddleware.validateJWT, controller.getProjectById);
+
     //Update project data - name and desc
     router.put("/:projectId", AuthMiddleware.validateJWT, controller.updateProject);
 
     //Request Project Deletion project
     router.post("/:projectId/deletion", AuthMiddleware.validateJWT, controller.requestProjectDeletion);
+    
     //Get delition request details per project
     router.get("/:projectId/deletion", controller.getDeletionDetails);
 
     //Delete project -- verifier only
     router.delete("/:projectId", controller.deleteProject);
 
+    // Sharing routes
+    router.post("/:projectId/share", controller.sendProjectCollaborationInvitation);
+    router.post("/share/:token", controller.addCollaboratorToProject);
 
 
     // // Logic to approve or reject deletion request
@@ -46,8 +53,7 @@ export class ProjectRoutes {
 
 
 
-    // Sharing routes
-    router.post("/:projectId/share", controller.shareProject);
+
 
     // Collaboration routes
     router.post("/:projectId/collaboration", (req, res) => {

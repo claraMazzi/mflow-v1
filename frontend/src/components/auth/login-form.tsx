@@ -15,7 +15,7 @@ import {
 } from "@components/ui/Forms/form";
 import { Input } from "@components/ui/common/input";
 import { startTransition } from "react";
-import { toast } from "sonner"
+import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
 interface FormData {
   email: string;
@@ -27,17 +27,17 @@ export const LoginForm = () => {
     authenticate,
     undefined
   );
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (searchParams.get("reset") === "success") {
       toast("Contraseña actualizada", {
-        description: "Tu contraseña fue actualizada correctamente. Ahora podes loguearte con tu nueva contraseña.",
+        description:
+          "Tu contraseña fue actualizada correctamente. Ahora podes loguearte con tu nueva contraseña.",
         duration: 5000,
-      })
+      });
     }
-  }, [searchParams])
-
+  }, [searchParams]);
 
   const form = useForm<FormData>({
     defaultValues: {
@@ -70,10 +70,7 @@ export const LoginForm = () => {
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(handleSubmit)}
-        className="space-y-6"
-      >
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <h1 className="text-3xl font-medium text-center text-purple-600">
           MFLOW
         </h1>
@@ -123,18 +120,21 @@ export const LoginForm = () => {
           <p className="text-sm text-red-600">{parseErrorMessage()}</p>
         )}
 
-        <Button type="submit" isLoading={isPending}>
-          INICIAR SESION
-        </Button>
+        <div className="flex flex-nowrap justify-center gap-2">
+          <Button type="submit" isLoading={isPending} className="w-full">
+            INICIAR SESION
+          </Button>
 
-        <Button
-          as="a"
-          href="/register"
-          variant="outline"
-          isLoading={isPending}
-        >
-          CREAR CUENTA
-        </Button>
+          <Button
+            as="a"
+            href="/register"
+            variant="outline"
+            isLoading={isPending}
+            className="w-full"
+          >
+            CREAR CUENTA
+          </Button>
+        </div>
       </form>
     </Form>
   );

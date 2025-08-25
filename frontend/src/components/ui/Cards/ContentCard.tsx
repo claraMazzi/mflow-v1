@@ -20,7 +20,7 @@ const ContentCard = ({
 }: ContentCardProps) => {
   return (
     <div className="bg-white flex flex-col justify-between rounded-lg h-full">
-      <div className="p-3">
+      <div className="p-3 flex flex-col gap-2">
         <div className="flex justify-between ">
           <h3 className="text-base font-bold">{title}</h3>
           {options && <OptionsPopover options={options} />}
