@@ -39,7 +39,13 @@ export class CollaborationRoom {
 		};
 	}
 
-	addEditingRequest(requesterUserId: string, callbackFunction: () => void) {
+	addEditingRequest({
+		requesterUserId,
+		callbackFunction,
+	}: {
+		requesterUserId: string;
+		callbackFunction: () => void;
+	}) {
 		const isEditingUser = this.currentEditingUser;
 
 		if (isEditingUser) {
@@ -69,8 +75,8 @@ export class CollaborationRoom {
 
 		const requestId = `${Date.now()}-${requesterUserId}`;
 		const timeoutId = setTimeout(() => {
-			this.removeEditingRequest(requestId);
-			this.assignEditingRightsTo(requesterUserId);
+			this.removeEditingRequest({ requestId });
+			this.assignEditingRightsTo({ userId: requesterUserId });
 			callbackFunction();
 		}, 10 * 1000);
 		this.pendingEditingRequests.set(requestId, {
@@ -82,14 +88,14 @@ export class CollaborationRoom {
 		return requestId;
 	}
 
-	private removeEditingRequest(requestId: string) {
+	private removeEditingRequest({ requestId }: { requestId: string }) {
 		const pendingRequest = this.pendingEditingRequests.get(requestId);
 		if (!pendingRequest) return;
 		clearTimeout(pendingRequest.timeoutId);
 		this.pendingEditingRequests.delete(requestId);
 	}
 
-	assignEditingRightsTo(userId: string) {
+	assignEditingRightsTo({ userId }: { userId: string }) {
 		if (userId === this.currentEditingUser) {
 			return;
 		}
@@ -141,7 +147,7 @@ export class CollaborationRoom {
 			);
 		}
 
-		this.assignEditingRightsTo(request.requesterUserId);
+		this.assignEditingRightsTo({ userId: request.requesterUserId });
 	}
 
 	declineEditingRequest({
@@ -176,14 +182,17 @@ export class CollaborationRoom {
 			);
 		}
 
-		this.removeEditingRequest(requestId);
+		this.removeEditingRequest({ requestId });
 		return request.requesterUserId;
 	}
 
-	addCollaborator(
-		socketId: string,
-		userInfo: { userId: string; name: string; lastName: string; email: string }
-	) {
+	addCollaborator({
+		socketId,
+		userInfo,
+	}: {
+		socketId: string;
+		userInfo: { userId: string; name: string; lastName: string; email: string };
+	}) {
 		const wasEmpty = this.isEmpty();
 		if (!this.userIdToUserInfoMap.has(userInfo.userId)) {
 			this.userIdToUserInfoMap.set(userInfo.userId, {
@@ -193,11 +202,11 @@ export class CollaborationRoom {
 		}
 		this.userIdToUserInfoMap.get(userInfo.userId)!.socketIds.push(socketId);
 		if (wasEmpty) {
-			this.assignEditingRightsTo(userInfo.userId);
+			this.assignEditingRightsTo({ userId: userInfo.userId });
 		}
 	}
 
-	private removeAllPendingEditingRequestsFor(userId: string) {
+	private removeAllPendingEditingRequestsFor({ userId }: { userId: string }) {
 		Array.from(this.pendingEditingRequests.entries())
 			.filter(([k, v]) => v.requesterUserId === userId)
 			.forEach(([k, v]) => {
@@ -206,7 +215,13 @@ export class CollaborationRoom {
 			});
 	}
 
-	removeCollaborator(socketId: string, userId: string) {
+	removeCollaborator({
+		socketId,
+		userId,
+	}: {
+		socketId: string;
+		userId: string;
+	}) {
 		if (!this.userIdToUserInfoMap.has(userId)) return;
 
 		const remainingSocketIds = this.userIdToUserInfoMap
@@ -228,10 +243,10 @@ export class CollaborationRoom {
 				this.currentEditingUser = null;
 				this.cancelAllPendingEditingRequests();
 			} else {
-				this.removeAllPendingEditingRequestsFor(userId);
+				this.removeAllPendingEditingRequestsFor({ userId });
 				const randomUser =
 					remainingUsers[Math.floor(Math.random() * remainingUsers.length)];
-				this.assignEditingRightsTo(randomUser);
+				this.assignEditingRightsTo({ userId: randomUser });
 			}
 		}
 	}

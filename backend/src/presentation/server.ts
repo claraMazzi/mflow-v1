@@ -160,7 +160,10 @@ export class Server {
 					console.log(
 						`Collaborator Added: ${socket.id} - ${socket.data.userId}`
 					);
-					collabRoom.addCollaborator(socket.id, socket.data);
+					collabRoom.addCollaborator({
+						socketId: socket.id,
+						userInfo: socket.data,
+					});
 
 					io.to(payload.roomId).emit(
 						SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
@@ -279,10 +282,10 @@ export class Server {
 					};
 
 					try {
-						const requestId = collabRoom.addEditingRequest(
-							socket.data.userId,
-							callbackFunction
-						);
+						const requestId = collabRoom.addEditingRequest({
+							requesterUserId: socket.data.userId,
+							callbackFunction,
+						});
 
 						socket.to(roomId).emit("editing-request-started", {
 							type: "editing-request-started",
@@ -485,7 +488,10 @@ export class Server {
 					console.log(
 						`Collaborator Removed: ${socket.id} - ${socket.data.userId}`
 					);
-					collabRoom.removeCollaborator(socket.id, socket.data.userId);
+					collabRoom.removeCollaborator({
+						socketId: socket.id,
+						userId: socket.data.userId,
+					});
 					if (!collabRoom.isEmpty()) {
 						socket.to(roomId).emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
 							type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
