@@ -9,8 +9,11 @@ import path from "path";
 import { CollaborationRoom } from "./collaboration/collaborationRoom";
 import {
 	EditingPrivilegesAlreadyGrantedError,
+	EditingPrivilegesRequiredException,
+	EditingRequestNotFoundError,
+	InvalidApprovalAuthorityException,
 	PendingRequestConflictError,
-} from "../domain/errors/sockets.errors";
+} from "../domain/errors/collaborationRoom.errors";
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
@@ -302,6 +305,100 @@ export class Server {
 						} else {
 							console.error(
 								`Unexpected error during Editing Request Creation: ${error}`
+							);
+							throw error;
+						}
+					}
+				}
+			);
+
+			socket.on(
+				"accept-editing-request",
+				({ roomId, requestId }: { roomId: string; requestId: string }) => {
+					const collabRoom = this.collaborationRooms.get(roomId);
+
+					if (!collabRoom) {
+						console.log(
+							`The approval of an editing request was skipped because the specified room ${roomId} didn´t exist.`
+						);
+						return;
+					}
+
+					try {
+						collabRoom.approveEditingRequest({
+							requestId,
+							evaluatorUserId: socket.data.userId,
+						});
+
+						socket.to(roomId).emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
+							type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
+							roomState: collabRoom.getRoomState(),
+							timestamp: new Date(),
+						} satisfies UsersInRoomChangePayload);
+					} catch (error) {
+						if (
+							error instanceof EditingRequestNotFoundError ||
+							error instanceof InvalidApprovalAuthorityException ||
+							error instanceof EditingPrivilegesRequiredException
+						) {
+							console.error(error.message);
+							socket
+								.to(`user@${socket.data.userId}`)
+								.emit("editing-request-approval-failed", {
+									type: "editing-request-approval-failed",
+									timestamp: new Date(),
+								});
+						} else {
+							console.error(
+								`Unexpected error during Editing Request Approval: ${error}`
+							);
+							throw error;
+						}
+					}
+				}
+			);
+
+			socket.on(
+				"decline-editing-request",
+				({ roomId, requestId }: { roomId: string; requestId: string }) => {
+					const collabRoom = this.collaborationRooms.get(roomId);
+
+					if (!collabRoom) {
+						console.log(
+							`The approval of an editing request was skipped because the specified room ${roomId} didn´t exist.`
+						);
+						return;
+					}
+
+					try {
+						const requesterUserId = collabRoom.declineEditingRequest({
+							requestId,
+							evaluatorUserId: socket.data.userId,
+						});
+
+						socket
+							.to(`user@${requesterUserId}`)
+							.emit("editing-request-declined", {
+								type: "editing-request-declined",
+								requestId,
+								timestamp: new Date(),
+							});
+					} catch (error) {
+						if (
+							error instanceof EditingRequestNotFoundError ||
+							error instanceof InvalidApprovalAuthorityException ||
+							error instanceof EditingPrivilegesRequiredException
+						) {
+							console.error(error.message);
+							socket
+								.to(`user@${socket.data.userId}`)
+								.emit("editing-request-refusal-failed", {
+									type: "editing-request-refusal-failed",
+									timestamp: new Date(),
+								});
+						} else {
+							console.error(
+								`Unexpected error during Editing Request Refusal: ${error}`
 							);
 							throw error;
 						}
