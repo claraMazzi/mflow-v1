@@ -85,7 +85,7 @@ export class Server {
 
 		//pongo a la app a escuchar peticiones
 		this.serverListener = this.app.listen(this.port, () => {
-			console.log(`Server running on port ${this.port}`);
+			console.info(`Server running on port ${this.port}`);
 		});
 
 		// Setup Socket IO
@@ -117,7 +117,7 @@ export class Server {
 
 				next();
 			} catch (error) {
-				console.log(error);
+				console.error(error);
 				return next(new Error("Internal server error"));
 			}
 		});
@@ -125,7 +125,7 @@ export class Server {
 		const versionService = new VersionService();
 
 		io.on("connection", async (socket) => {
-			console.log(
+			console.info(
 				`New Socket Connection: ${socket.id} - User: ${socket.data.userId}`
 			);
 
@@ -141,7 +141,7 @@ export class Server {
 					);
 
 					if (!this.collaborationRooms.has(version.id)) {
-						console.log("New collaboration room created:", version.id);
+						console.info("New collaboration room created:", version.id);
 						this.collaborationRooms.set(
 							version.id,
 							new CollaborationRoom(version.id)
@@ -157,7 +157,7 @@ export class Server {
 
 					await socket.join(payload.roomId);
 
-					console.log(
+					console.info(
 						`Collaborator Added: ${socket.id} - ${socket.data.userId}`
 					);
 					collabRoom.addCollaborator({
@@ -225,7 +225,7 @@ export class Server {
 				value: any
 			) => {
 				const parts = parsePropertyPath(conceptualModel, properyPath);
-				console.log("Updated Field Path Parts: ", parts);
+				console.info("Updated Field Path Parts: ", parts);
 				while (
 					parts.length > 1
 					//parts.length > 1 &&
@@ -267,7 +267,7 @@ export class Server {
 					const collabRoom = this.collaborationRooms.get(roomId);
 
 					if (!collabRoom) {
-						console.log(
+						console.info(
 							`An Editing Request was ignored for Room: ${roomId} - Requester UserId: ${socket.data.userId}`
 						);
 						return;
@@ -321,7 +321,7 @@ export class Server {
 					const collabRoom = this.collaborationRooms.get(roomId);
 
 					if (!collabRoom) {
-						console.log(
+						console.debug(
 							`The approval of an editing request was skipped because the specified room ${roomId} didn´t exist.`
 						);
 						return;
@@ -367,7 +367,7 @@ export class Server {
 					const collabRoom = this.collaborationRooms.get(roomId);
 
 					if (!collabRoom) {
-						console.log(
+						console.info(
 							`The approval of an editing request was skipped because the specified room ${roomId} didn´t exist.`
 						);
 						return;
@@ -479,13 +479,13 @@ export class Server {
 			);
 
 			socket.on("disconnecting", async () => {
-				console.log("Socket Disconnected ", socket.id);
+				console.info("Socket Disconnected ", socket.id);
 				for (const roomId of Array.from(socket.rooms)) {
 					const collabRoom = this.collaborationRooms.get(roomId);
 
 					if (!collabRoom) continue;
 
-					console.log(
+					console.info(
 						`Collaborator Removed: ${socket.id} - ${socket.data.userId}`
 					);
 					collabRoom.removeCollaborator({
@@ -499,7 +499,7 @@ export class Server {
 							timestamp: new Date(),
 						} satisfies UsersInRoomChangePayload);
 					} else {
-						console.log("Colaboration room deleted:", roomId);
+						console.info("Colaboration room deleted:", roomId);
 						this.collaborationRooms.delete(roomId);
 					}
 				}

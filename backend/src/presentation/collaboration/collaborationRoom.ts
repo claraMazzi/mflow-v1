@@ -46,10 +46,10 @@ export class CollaborationRoom {
 		requesterUserId: string;
 		callbackFunction: () => void;
 	}) {
-		const isEditingUser = this.currentEditingUser;
+		const isEditingUser = this.currentEditingUser === requesterUserId;
 
 		if (isEditingUser) {
-			console.log(
+			console.info(
 				`An Editing Request was refused for Room: ${this.roomId} - Requester UserId: ${requesterUserId}`
 			);
 			throw new EditingPrivilegesAlreadyGrantedError(
@@ -64,7 +64,7 @@ export class CollaborationRoom {
 			).length !== 0;
 
 		if (hasAlreadyMadeARequest) {
-			console.log(
+			console.info(
 				`An Editing Request was refused for Room: ${this.roomId} - Requester UserId: ${requesterUserId}`
 			);
 			throw new PendingEditingRequestConflictError(
