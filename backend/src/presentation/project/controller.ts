@@ -5,6 +5,7 @@ import { CreateProjectDto } from "../../domain/dtos/project/create-project.dto";
 import { UpdateProjectDto } from "../../domain/dtos/project/update-project.dto";
 import { CreateDeletionRequestDto } from "../../domain/dtos/project/create-deletion-request.dto";
 import { ShareProjectDto } from "../../domain/dtos/project/share-project.dto";
+import { ShareProjectLinkDto } from "../../domain/dtos/project/share-project-link.dto";
 
 export class ProjectController {
   constructor(readonly projectService: ProjectService) {}
@@ -136,6 +137,34 @@ export class ProjectController {
     this.projectService
       .sendProjectCollaborationInvitation(shareProjectDto)
       .then(() => res.json({ message: "Project collaboration invitations sent successfully" }))
+      .catch((error) => this.handleError(error, res));
+  };
+
+   // Share a specific project
+   getProjectSharingLink = (req: Request, res: Response) => {
+    const { projectId } = req.params;
+    const senderId = req.session?.userId ?? "";
+    const { collaborators } = req.body;
+
+    if (!senderId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    if (!projectId) {
+      return res.status(401).json({ error: "No project id provided" });
+    }
+
+    const [error, shareProjectDto] = ShareProjectLinkDto.create({
+      projectId,
+      senderId,
+      collaborators,
+    });
+
+    if (error || !shareProjectDto) return res.status(400).json({ error });
+
+    this.projectService
+      .getProjectSharingLink(shareProjectDto)
+      .then((message) => res.json(message))
       .catch((error) => this.handleError(error, res));
   };
 

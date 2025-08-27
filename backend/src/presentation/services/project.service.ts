@@ -8,6 +8,7 @@ import { DelitionRequestEntity } from "../../domain/entities/delition-request.en
 import { ProjectEntity } from "../../domain/entities/project.entity";
 import { EmailService } from "./email.service";
 import { bcryptAdapter, jwtAdapter } from "../../config";
+import { ShareProjectLinkDto } from "../../domain/dtos/project/share-project-link.dto";
 
 const projectState: {
   created: "CREADO";
@@ -27,14 +28,6 @@ export class ProjectService {
     // If you need any dependencies, inject them here (e.g., email service, etc.)
   }
 
-  /**
-   *
-   * cuando reciba el link chequear si la persona que lo envio sigue teniendo acceso.
-   * Solo el owner puede enviar invitaciones -- asi que no es necesario
-   * caducidad: 1 semana. Pasarle solo el userid y projectid.
-   *
-   */
-
   private sendEmailInvitationLink = async ({
     email,
     senderId,
@@ -45,13 +38,12 @@ export class ProjectService {
     email: string;
   }) => {
     const token = await jwtAdapter.generateToken(
-      { senderId: senderId, projectId: projectId },
+      { senderId: senderId, projectId: projectId, recipient: email },
       "7d"
     );
 
     if (!token) throw CustomError.internalServer("Error getting token");
     //link de retorno
-    // const link = `${this.webServiceUrl}/auth/validate-email/${token}`;
     const link = `${this.frontEndUrl}/projects/share/?token=${token}`;
 
     const html = `<h1>Has sido invitado/a a colaborar en un proyecto!</h1>
@@ -65,6 +57,7 @@ export class ProjectService {
     };
 
     const isSent = await this.emailService.sendEmail(options);
+
     if (!isSent)
       throw CustomError.internalServer("Error sending sharing email");
   };
@@ -175,32 +168,31 @@ export class ProjectService {
   }
 
   async sendProjectCollaborationInvitation(shareProjectDto: ShareProjectDto) {
-    //esto tiene que enviar las invitaciones por email
-    //despues necesito otro endpoint que ACEPTE las invitaciones y agregue a los usuarios a la lista de colaboradores del proyecto
-
     const project = await ProjectModel.findOne({
       _id: shareProjectDto.projectId,
     });
     if (!project) throw CustomError.badRequest("Project does not exists");
 
     const finalCollaboratorsList = new Set<string>();
-    shareProjectDto.collaborators.forEach(async (email) => {
-      const existUser = await UserModel.findOne({ email: email });
 
-      if (!existUser) {
+    for (const email of shareProjectDto.collaborators) {
+      const existUser = await UserModel.findOne({ email });
+    
+      if (!existUser || !project.collaborators.length) {
         finalCollaboratorsList.add(email);
-        return;
+        continue;
       }
-
-      if (existUser.id === project.owner.toString()) return; //no enviar al owner
-      if (project.collaborators.includes(existUser.id)) return; //no enviar si ya es colaborador
+    
+      if (existUser.id === project.owner.toString()) continue;
+      if (project.collaborators.includes(existUser.id)) continue;
+    
       finalCollaboratorsList.add(email);
-    });
+    }
 
     if (!finalCollaboratorsList.size)
       throw CustomError.badRequest("No new collaborators to invite");
 
-    finalCollaboratorsList.forEach((collaborator: string) => {
+    finalCollaboratorsList.forEach((collaborator) => {
       this.sendEmailInvitationLink({
         email: collaborator,
         senderId: shareProjectDto.senderId,
@@ -212,37 +204,59 @@ export class ProjectService {
       message: "Project shared successfully to new collaborators",
       request: finalCollaboratorsList,
     };
-    // const newCollaborators = shareProjectDto.collaborators.filter(
-    //   (collaborator) => !project.collaborators.includes(collaborator)
-    // );
+  }
+
+  async getProjectSharingLink(shareProjectDto:ShareProjectLinkDto) {
+    const {senderId, projectId} = shareProjectDto
+    const project = await ProjectModel.findOne({
+      _id: shareProjectDto.projectId,
+    });
+    if (!project) throw CustomError.badRequest("Project does not exists");
+
+    const token = await jwtAdapter.generateToken(
+      { senderId: senderId, projectId: projectId },
+      "7d"
+    );
+    if (!token) throw CustomError.internalServer("Error getting token");
+    const link = `${this.frontEndUrl}/projects/share/?token=${token}`;
+
+    return {
+      message: "Successfully created project sharing link",
+      request: link,
+    };
   }
 
   async addCollaboratorToProject(token: string) {
     const payload = await jwtAdapter.validateToken(token);
     if (!payload) throw CustomError.unauthorized("Invalid token");
 
-    const { userId, projectId } = payload as {
-      userId: string;
+    const { recipient, senderId, projectId } = payload as {
+      recipient: string;
+      senderId: string;
       projectId: string;
     };
 
     if (!projectId)
       throw CustomError.internalServer("Project Id does not exists");
-    if (!userId) throw CustomError.internalServer("Owner user not in token");
+
+    if (!senderId) throw CustomError.internalServer("Owner user not in token");
 
     const project = await ProjectModel.findOne({ _id: projectId });
     if (!project) throw CustomError.badRequest("Project does not exists");
 
-    const user = await UserModel.findOne({ _id: userId });
+    const user = await UserModel.findOne({ email: recipient });
     if (!user)
       throw CustomError.internalServer("User must be registered first");
 
-    if (project.owner.toString() === userId)
+    if (project.owner._id === user._id)
       throw CustomError.badRequest("Owner cannot be collaborator");
+
     if (project.collaborators.includes(user._id))
       throw CustomError.badRequest("User is already a collaborator");
+
     if (project.state === projectState.deleted)
       throw CustomError.badRequest("Project does not exists - deleted");
+
     try {
       project.collaborators.push(user._id);
       await project.save();

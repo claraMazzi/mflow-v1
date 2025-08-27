@@ -43,6 +43,7 @@ export const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
   }, [state?.success, onSuccess])
 
   const parseErrorMessage = (error: string) => {
+    console.log('Create project error:', error)
     switch (error) {
       case "Invalid credentials.":
         return "Usuario o contraseña no corresponden a un usuario registrado"

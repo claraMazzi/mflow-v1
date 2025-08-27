@@ -72,12 +72,15 @@ export class AuthService {
     const user = await UserModel.findOne({ email: loginUserDto.email });
     //este mensaje para no darle pista al usuario de que es lo que salio mal - por si lo hackean
     if (!user) throw CustomError.badRequest("Email or password don't exist");
+
     const passwordMatch = bcryptAdapter.compare(
       loginUserDto.password,
       user.password
     );
+    console.log('passwordMatch', passwordMatch, 'DTO', loginUserDto, user)
+
     if (!passwordMatch)
-      throw CustomError.badRequest("Email or  password don't exist");
+      throw CustomError.badRequest("Email or password don't exist");
 
     const { password, ...userEntity } = UserEntity.fromObject(user);
 

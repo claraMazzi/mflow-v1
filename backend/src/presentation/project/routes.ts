@@ -42,7 +42,8 @@ export class ProjectRoutes {
     router.delete("/:projectId", controller.deleteProject);
 
     // Sharing routes
-    router.post("/:projectId/share", controller.sendProjectCollaborationInvitation);
+    router.post("/:projectId/share", AuthMiddleware.validateJWT, controller.sendProjectCollaborationInvitation);
+    router.get("/:projectId/share", AuthMiddleware.validateJWT, controller.getProjectSharingLink);
     router.post("/share/:token", controller.addCollaboratorToProject);
 
 
