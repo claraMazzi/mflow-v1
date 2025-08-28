@@ -20,7 +20,12 @@ export class CollaborationRoom {
 	>;
 	private pendingEditingRequests: Map<
 		string,
-		{ requesterUserId: string; editorUserId: String; timeoutId: NodeJS.Timeout }
+		{
+			requesterUserId: string;
+			editorUserId: string;
+			timeoutStartTimestamp: number;
+			timeoutId: NodeJS.Timeout;
+		}
 	>;
 	private currentEditingUser: string | null;
 
@@ -81,11 +86,16 @@ export class CollaborationRoom {
 		}, 10 * 1000);
 		this.pendingEditingRequests.set(requestId, {
 			requesterUserId,
+			timeoutStartTimestamp: Date.now(),
 			editorUserId: this.currentEditingUser!,
 			timeoutId,
 		});
 
-		return requestId;
+		return {
+			requestId,
+			timeoutStartTimestamp: Date.now(),
+			editorUserId: this.currentEditingUser!,
+		};
 	}
 
 	private removeEditingRequest({ requestId }: { requestId: string }) {

@@ -282,14 +282,17 @@ export class Server {
 					};
 
 					try {
-						const requestId = collabRoom.addEditingRequest({
-							requesterUserId: socket.data.userId,
-							callbackFunction,
-						});
+						const { requestId, editorUserId, timeoutStartTimestamp } =
+							collabRoom.addEditingRequest({
+								requesterUserId: socket.data.userId,
+								callbackFunction,
+							});
 
 						socket.to(roomId).emit("editing-request-started", {
 							type: "editing-request-started",
 							requestId,
+							editorUserId,
+							timeoutStartTimestamp,
 							requesterUserId: socket.data.userId,
 							timestamp: new Date(),
 						});
