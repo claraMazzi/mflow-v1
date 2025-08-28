@@ -39,7 +39,7 @@ export const Modal = ({
   closeButtonClass,
   children,
   size = "md",
-  containerClassName = "",
+  containerClassName = "max-h-[90vh] overflow-scroll",
   showCloseButton = true,
   fullScreenOnMobile = false,
 }: ModalProps) => {

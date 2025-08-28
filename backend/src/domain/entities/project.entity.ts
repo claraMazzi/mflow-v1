@@ -1,4 +1,6 @@
+import { Types } from "mongoose";
 import { CustomError } from "../errors/custom.error";
+import { UserEntity } from "./user.entity";
 
 export class ProjectEntity {
   constructor(

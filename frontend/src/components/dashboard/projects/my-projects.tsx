@@ -14,6 +14,7 @@ import { ProjectEntity } from "@src/types/project";
 import { DelitionRequestForm } from "./forms/delition-request-form";
 import { projectPendingDelition } from "@src/config/sharedVariables";
 import cn from "clsx";
+import { ShareProjectForm } from "./forms/share-project-form";
 
 const getProjectDecorators = (project: ProjectEntity) => {
   const decorators: ReactNode[] = [];
@@ -35,14 +36,14 @@ const MyProjects = () => {
   const { openModal } = useUI();
   const { projects, isLoading, refreshProjects } = useProjects();
 
-  const handleShareProject = () => { 
+  const handleShareProject = (project: ProjectEntity) => { 
     openModal({
       name: "fullscreen-modal",
       title: "Compartir proyecto",
       size: "md",
       showCloseButton: false,
       content: (
-       <>Compartir proyecto</>
+       <ShareProjectForm  project={project}/>
       ),
     });
   }
@@ -113,7 +114,7 @@ const MyProjects = () => {
               const popoverOptions = [
                 {
                   content: (
-                    <Button variant={"optionList"}>Compartir proyecto</Button>
+                    <Button variant={"optionList"} onClick={() => handleShareProject(project)}>Compartir proyecto</Button>
                   ),
                 },
                 {

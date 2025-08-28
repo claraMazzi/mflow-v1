@@ -1,6 +1,5 @@
 "use server"
 import { auth } from "@lib/auth" // or wherever your auth config is
-import type { ModifyProjectFormData } from "../forms/modify-project-form"
 
 // Define the state type
 export type ActionState = {

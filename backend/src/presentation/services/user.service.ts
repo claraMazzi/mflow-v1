@@ -6,11 +6,10 @@ export class UserService {
   constructor() {}
 
   async getUserById(id: string) {
-    const user = await UserModel.findOne({ id: id });
+    const user = await UserModel.findOne({ _id: id });
     if (!user) throw CustomError.badRequest("User does not exists");
 
     const { password, ...userEntity } = UserEntity.fromObject(user);
-
     return {
       user: userEntity,
     };
@@ -18,7 +17,7 @@ export class UserService {
 
   async updateUserById({name, lastName, id}: UpdateUserDto) {
 
-    const user = await UserModel.findOne({ id: id });
+    const user = await UserModel.findOne({ _id: id });
     if (!user) throw CustomError.badRequest("User does not exists");
     
     if (!name && !lastName)
@@ -39,7 +38,7 @@ export class UserService {
 
   async deleteUser(id:string) {
 
-    const user = await UserModel.findOne({ id: id });
+    const user = await UserModel.findOne({ _id: id });
     if (!user) throw CustomError.badRequest("User does not exists");
    
     try {

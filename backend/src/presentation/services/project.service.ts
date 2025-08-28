@@ -1,5 +1,5 @@
 import { DeletionRequestModel, ProjectModel, UserModel } from "../../data";
-import { CustomError } from "../../domain";
+import { CustomError, UserEntity } from "../../domain";
 import { CreateDeletionRequestDto } from "../../domain/dtos/project/create-deletion-request.dto";
 import { CreateProjectDto } from "../../domain/dtos/project/create-project.dto";
 import { ShareProjectDto } from "../../domain/dtos/project/share-project.dto";
@@ -9,6 +9,8 @@ import { ProjectEntity } from "../../domain/entities/project.entity";
 import { EmailService } from "./email.service";
 import { bcryptAdapter, jwtAdapter } from "../../config";
 import { ShareProjectLinkDto } from "../../domain/dtos/project/share-project-link.dto";
+import { UserService } from "./user.service";
+import { Types } from "mongoose";
 
 const projectState: {
   created: "CREADO";
@@ -20,6 +22,7 @@ const projectState: {
   deleted: "ELIMINADO",
 };
 export class ProjectService {
+  private userService = new UserService();
   constructor(
     private readonly emailService: EmailService,
     private readonly webServiceUrl: string,
@@ -64,13 +67,16 @@ export class ProjectService {
 
   //get user active projects
   async getUserProjects(owner: string) {
-    const project = await ProjectModel.find({ owner: owner });
+    const projects = await ProjectModel.find({ owner: owner })
+      .populate("collaborators") 
+      .exec();
 
-    if (!project) throw CustomError.badRequest("User has no Projects");
+    if (!projects) throw CustomError.badRequest("User has no Projects");
 
-    const filteredProjects = project
+    const filteredProjects = projects
       .map((p) => ProjectEntity.fromObject(p))
       .filter((item) => item.state !== projectState.deleted);
+    console.log("projects-----", filteredProjects);
 
     if (!filteredProjects.length)
       throw CustomError.badRequest("User has no active Projects");
@@ -82,7 +88,9 @@ export class ProjectService {
   }
 
   async getProjectById(projectId: string) {
-    const project = await ProjectModel.findOne({ _id: projectId });
+    const project = await ProjectModel.findOne({ _id: projectId })
+      .populate("collaborators")
+      .exec();
     if (!project) throw CustomError.badRequest("Project not exists");
 
     if (project.state == projectState.deleted)
@@ -177,15 +185,15 @@ export class ProjectService {
 
     for (const email of shareProjectDto.collaborators) {
       const existUser = await UserModel.findOne({ email });
-    
+
       if (!existUser || !project.collaborators.length) {
         finalCollaboratorsList.add(email);
         continue;
       }
-    
+
       if (existUser.id === project.owner.toString()) continue;
       if (project.collaborators.includes(existUser.id)) continue;
-    
+
       finalCollaboratorsList.add(email);
     }
 
@@ -206,8 +214,8 @@ export class ProjectService {
     };
   }
 
-  async getProjectSharingLink(shareProjectDto:ShareProjectLinkDto) {
-    const {senderId, projectId} = shareProjectDto
+  async getProjectSharingLink(shareProjectDto: ShareProjectLinkDto) {
+    const { senderId, projectId } = shareProjectDto;
     const project = await ProjectModel.findOne({
       _id: shareProjectDto.projectId,
     });
@@ -222,7 +230,7 @@ export class ProjectService {
 
     return {
       message: "Successfully created project sharing link",
-      request: link,
+      shareLink: link,
     };
   }
 
