@@ -76,7 +76,6 @@ export class ProjectService {
     const filteredProjects = projects
       .map((p) => ProjectEntity.fromObject(p))
       .filter((item) => item.state !== projectState.deleted);
-    console.log("projects-----", filteredProjects);
 
     if (!filteredProjects.length)
       throw CustomError.badRequest("User has no active Projects");
@@ -191,7 +190,7 @@ export class ProjectService {
         continue;
       }
 
-      if (existUser.id === project.owner.toString()) continue;
+      if (project.owner.equals(existUser.id)) continue;
       if (project.collaborators.includes(existUser.id)) continue;
 
       finalCollaboratorsList.add(email);
@@ -234,7 +233,7 @@ export class ProjectService {
     };
   }
 
-  async addCollaboratorToProject(token: string) {
+  async addCollaboratorToProject(token: string, requester:string) {
     const payload = await jwtAdapter.validateToken(token);
     if (!payload) throw CustomError.unauthorized("Invalid token");
 
@@ -244,6 +243,8 @@ export class ProjectService {
       projectId: string;
     };
 
+    const recepientEmail = recipient ? recipient : requester;
+
     if (!projectId)
       throw CustomError.internalServer("Project Id does not exists");
 
@@ -252,11 +253,12 @@ export class ProjectService {
     const project = await ProjectModel.findOne({ _id: projectId });
     if (!project) throw CustomError.badRequest("Project does not exists");
 
-    const user = await UserModel.findOne({ email: recipient });
+    const user = await UserModel.findOne({ email: recepientEmail });
+
     if (!user)
       throw CustomError.internalServer("User must be registered first");
 
-    if (project.owner._id === user._id)
+    if (project.owner.equals(user._id))
       throw CustomError.badRequest("Owner cannot be collaborator");
 
     if (project.collaborators.includes(user._id))
@@ -278,6 +280,31 @@ export class ProjectService {
     } catch (error) {
       throw CustomError.internalServer(`${error}`);
     }
+  }
+
+  async getProjectFromInvitationToken(token: string) {
+    const payload = await jwtAdapter.validateToken(token);
+    if (!payload) throw CustomError.unauthorized("Invalid token");
+
+    const { senderId, projectId } = payload as {
+      recipient: string;
+      senderId: string;
+      projectId: string;
+    };
+
+    if (!projectId)
+      throw CustomError.internalServer("Project Id does not exists");
+
+    if (!senderId) throw CustomError.internalServer("Owner user not in token");
+
+    const project = await ProjectModel.findOne({ _id: projectId });
+    if (!project) throw CustomError.badRequest("Project does not exists");
+
+   
+      return {
+        project: project,
+      };
+   
   }
 
   async requestProjectDeletion(

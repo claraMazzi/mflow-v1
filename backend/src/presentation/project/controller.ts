@@ -117,7 +117,6 @@ export class ProjectController {
     const { projectId } = req.params;
     const senderId = req.session?.userId ?? "";
     const { collaborators } = req.body;
-
     if (!senderId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -139,6 +138,17 @@ export class ProjectController {
       .then(() => res.json({ message: "Project collaboration invitations sent successfully" }))
       .catch((error) => this.handleError(error, res));
   };
+
+  getProjectFromInvitationToken = (req: Request, res: Response) => {
+    const { token } = req.params;
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    this.projectService
+      .getProjectFromInvitationToken(token)
+      .then((message) => res.json(message))
+      .catch((error) => this.handleError(error, res));
+  };
+
 
    // Share a specific project
    getProjectSharingLink = (req: Request, res: Response) => {
@@ -170,10 +180,11 @@ export class ProjectController {
 
   addCollaboratorToProject = (req: Request, res: Response) => {
     const { token } = req.params;
+    const { requester } = req.body;
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
     this.projectService
-      .addCollaboratorToProject(token)
+      .addCollaboratorToProject(token, requester)
       .then((response) => res.json(response))
       .catch((error) => this.handleError(error, res));
   }

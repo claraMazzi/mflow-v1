@@ -45,6 +45,7 @@ export class ProjectRoutes {
     router.post("/:projectId/share", AuthMiddleware.validateJWT, controller.sendProjectCollaborationInvitation);
     router.get("/:projectId/share", AuthMiddleware.validateJWT, controller.getProjectSharingLink);
     router.post("/share/:token", controller.addCollaboratorToProject);
+    router.get("/share/:token", controller.getProjectFromInvitationToken);
 
 
     // // Logic to approve or reject deletion request
