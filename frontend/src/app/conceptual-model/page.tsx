@@ -30,6 +30,12 @@ import {
 } from "@src/components/ui/tabs/tabs";
 import { Input } from "@src/components/ui/common/input";
 import { useSession } from "@node_modules/next-auth/react";
+import { Button } from "@src/components/ui/common/button";
+import {
+	ActiveEditingRequest,
+	useEditingRequests,
+} from "@src/hooks/use-request-editing-rights";
+import EditingRequestNotification from "@src/components/ui/conceptual-model/editing-request-notification";
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
@@ -74,7 +80,7 @@ type SocketPosition = Readonly<{
 	currentTab?: string;
 }>;
 
-type Collaborator = Readonly<{
+export type Collaborator = Readonly<{
 	userId: string;
 	name: string;
 	lastName: string;
@@ -111,8 +117,27 @@ function parsePropertyPath(conceptualModel: any, path: string) {
 const MOUSE_POSITION_UPDATE_DELAY = 33; //30 fps
 
 export default function Page() {
-	const [isModelInitialized, setIsModelInitialized] = useState(false);
 	const { data: session } = useSession();
+	const [isConnected, setIsConnected] = useState(false);
+	const [transport, setTransport] = useState("N/A");
+	const [currentTab, setCurrentTab] = useState("objetivo-suposiciones");
+	const [isModelInitialized, setIsModelInitialized] = useState(false);
+	const [roomId, setRoomId] = useState("67d8321cd76cf5bc5bd75c79");
+
+	const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(
+		new Map()
+	);
+	const hasEditingRights = useMemo(() => {
+		if (!session) return false;
+		return !!collaborators.get(session.user.id)?.hasEditingRights;
+	}, [collaborators]);
+
+	const {
+		canUserSendEditingRequest,
+		pendingEditingRequests,
+		handleRequestEditingRights,
+		handleEditingRequestEvaluation,
+	} = useEditingRequests({ roomId, socket, session, hasEditingRights });
 
 	const {
 		register,
@@ -136,11 +161,6 @@ export default function Page() {
 		control,
 	});
 
-	console.log(getValues());
-
-	const [isConnected, setIsConnected] = useState(false);
-	const [transport, setTransport] = useState("N/A");
-	const [currentTab, setCurrentTab] = useState("objetivo-suposiciones");
 	const throttledEmitMouseUpdateFunction = useRef(
 		throttle((roomId: any, mousePosition: any, currentTab: string) => {
 			socket.volatile.emit("client-volatile-broadcast", {
@@ -151,16 +171,6 @@ export default function Page() {
 			});
 		}, MOUSE_POSITION_UPDATE_DELAY)
 	);
-
-	const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(
-		new Map()
-	);
-	const [roomId, setRoomId] = useState("67d8321cd76cf5bc5bd75c79");
-	const canUserEdit = useMemo(() => {
-		if (!session) return false;
-		return !!collaborators.get(session.user.id)?.hasEditingRights;
-	}, [collaborators]);
-
 
 	useEffect(() => {
 		if (session) {
@@ -231,15 +241,18 @@ export default function Page() {
 							});
 						}
 					}
-					
-					newCollaborators.set(userId, { ...existingCollaborator, sockets: newSocketPositions });
+
+					newCollaborators.set(userId, {
+						...existingCollaborator,
+						sockets: newSocketPositions,
+					});
 				}
 				return newCollaborators;
 			});
 		}
 
 		function onUsersInRoomChange({ roomState }: UsersInRoomChangePayload) {
-			console.log("users-in-room-chage: ", roomState)
+			console.log("users-in-room-chage: ", roomState);
 			setCollaborators((prevCollaborators) => {
 				const newCollaborators = new Map<string, Collaborator>();
 				for (const user of roomState.collaborators) {
@@ -286,7 +299,7 @@ export default function Page() {
 			setIsModelInitialized(true);
 		}
 
-		function onItemAddedToList<K extends keyof ConceptualModel>({
+		function onItemAddedToList({
 			listPropertyPath,
 			newItem,
 		}: {
@@ -297,7 +310,7 @@ export default function Page() {
 			setValue(parsedPath, [...getValues(parsedPath), newItem]);
 		}
 
-		function onItemRemovedFromList<K extends keyof ConceptualModel>({
+		function onItemRemovedFromList({
 			listPropertyPath,
 			itemId,
 		}: {
@@ -338,11 +351,12 @@ export default function Page() {
 				SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
 				onUsersInRoomChange
 			);
+			socket.disconnect();
 		};
 	}, [session]);
 
 	const sendPropertyUpdate = (value: any, propertyPath: string) => {
-		if (!canUserEdit) return;
+		if (!hasEditingRights) return;
 		socket.emit("field-update", { roomId, propertyPath, value }); // Emit partial form data
 	};
 
@@ -424,7 +438,7 @@ export default function Page() {
 					sendPropertyUpdate(value, propertyPath);
 				}
 			},
-			readOnly: !canUserEdit,
+			readOnly: !hasEditingRights,
 		};
 
 		return enhancedRegister;
@@ -433,6 +447,28 @@ export default function Page() {
 	return (
 		<div className="flex-grow" onMouseMove={handleMouseMove}>
 			<p>Dashboard Page</p>
+			<div className="flex flex-col absolute top-0 right-0 ">
+				<Button
+					disabled={!canUserSendEditingRequest}
+					onClick={handleRequestEditingRights}
+				>
+					Solicitar el Permiso de Edición
+				</Button>
+				<p>Pending Requests:</p>
+				{pendingEditingRequests
+					.filter((r): r is ActiveEditingRequest => r.status === "pending")
+					.filter((r) => collaborators.get(r.requesterUserId))
+					.map((r) => {
+						return (
+							<EditingRequestNotification
+								key={r.requestId}
+								request={r}
+								collaborator={collaborators.get(r.requesterUserId)!}
+								{...{ handleEditingRequestEvaluation }}
+							/>
+						);
+					})}
+			</div>
 			<p>Status: {isConnected ? "connected" : "disconnected"}</p>
 			<p>Id: {isConnected ? socket.id : "No disponible"}</p>
 			<p>Transport: {transport}</p>
@@ -443,13 +479,15 @@ export default function Page() {
 					return (
 						<li className="ml-5" key={collaborator.userId}>
 							<p>
-								User: {collaborator.userId} - Can Edit: {collaborator.hasEditingRights.toString()}
+								- User: {collaborator.userId} - Can Edit:{" "}
+								{collaborator.hasEditingRights.toString()}
 							</p>
 							<p>
-								{collaborator.name} {collaborator.lastName} - {collaborator.email}
+								{collaborator.name} {collaborator.lastName} -{" "}
+								{collaborator.email}
 							</p>
 							<p>Sockets:</p>
-							<ul> 
+							<ul>
 								{Array.from(collaborator.sockets.values()).map((socket) => {
 									return (
 										<li className="ml-5" key={socket.socketId}>
@@ -460,9 +498,11 @@ export default function Page() {
 												<p className="ml-5"> Current Tab not available</p>
 											)}
 											{socket.mousePosition ? (
-												<p className="ml-5"> Mouse Position:
-													X: {socket.mousePosition.relativeX} Y:{" "}
-													{socket.mousePosition.relativeY}
+												<p className="ml-5">
+													{" "}
+													Mouse Position: X: {
+														socket.mousePosition.relativeX
+													} Y: {socket.mousePosition.relativeY}
 												</p>
 											) : (
 												<p className="ml-5"> Mouse Position not available</p>
@@ -471,6 +511,7 @@ export default function Page() {
 									);
 								})}
 							</ul>
+							<br />
 						</li>
 					);
 				})}
@@ -483,7 +524,12 @@ export default function Page() {
 						{...customRegisterField({ name: "structureDiagram.imageFilePath" })}
 					/>
 					<br />
-					<Tabs orientation="vertical" value={currentTab} onValueChange={setCurrentTab} defaultValue="objetivo-suposiciones">
+					<Tabs
+						orientation="vertical"
+						value={currentTab}
+						onValueChange={setCurrentTab}
+						defaultValue="objetivo-suposiciones"
+					>
 						<TabsList className="flex-col h-auto items-stretch">
 							<TabsTrigger value="objetivo-suposiciones">
 								Objetivo y Suposiciones
@@ -499,7 +545,7 @@ export default function Page() {
 							<input {...customRegisterField({ name: "objective" })} />
 							<h2>Suposiciones</h2>
 							<button
-								disabled={!canUserEdit}
+								disabled={!hasEditingRights}
 								onClick={(e) =>
 									handleAddItemToList({
 										e,
@@ -524,7 +570,7 @@ export default function Page() {
 												})}
 											/>
 											<button
-												disabled={!canUserEdit}
+												disabled={!hasEditingRights}
 												onClick={(e) =>
 													handleRemoveItemFromList({
 														e,
@@ -541,7 +587,7 @@ export default function Page() {
 							</ul>
 							<h2>Simplificaciones</h2>
 							<button
-								disabled={!canUserEdit}
+								disabled={!hasEditingRights}
 								onClick={(e) =>
 									handleAddItemToList({
 										e,
@@ -566,7 +612,7 @@ export default function Page() {
 												})}
 											/>
 											<button
-												disabled={!canUserEdit}
+												disabled={!hasEditingRights}
 												onClick={(e) =>
 													handleRemoveItemFromList({
 														e,
@@ -595,7 +641,7 @@ export default function Page() {
 					/>
 					<h2>Entidades</h2>
 					<button
-						disabled={!canUserEdit}
+						disabled={!hasEditingRights}
 						onClick={(e) =>
 							handleAddItemToList({
 								e,
@@ -618,7 +664,7 @@ export default function Page() {
 										})}
 									/>
 									<button
-										disabled={!canUserEdit}
+										disabled={!hasEditingRights}
 										onClick={(e) =>
 											handleRemoveItemFromList({
 												e,

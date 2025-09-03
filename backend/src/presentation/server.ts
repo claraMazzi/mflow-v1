@@ -3,7 +3,7 @@ import { ProjectModel, UserModel, VersionModel } from "../data";
 import { Server as SocketIO } from "socket.io";
 import { VersionService } from "./services";
 import fs from "fs/promises";
-import { error } from "console";
+import { error, timeStamp } from "console";
 import { envs, jwtAdapter } from "../config";
 import path from "path";
 import { CollaborationRoom } from "./collaboration/collaborationRoom";
@@ -302,12 +302,13 @@ export class Server {
 							error instanceof EditingPrivilegesAlreadyGrantedError
 						) {
 							console.error(error.message);
-							io
-								.to(`user@${socket.data.userId}`)
-								.emit("editing-request-creation-refused", {
+							io.to(`user@${socket.data.userId}`).emit(
+								"editing-request-creation-refused",
+								{
 									type: "editing-request-creation-refused",
 									timestamp: new Date(),
-								});
+								}
+							);
 						} else {
 							console.error(
 								`Unexpected error during Editing Request Creation: ${error}`
@@ -340,6 +341,12 @@ export class Server {
 							`The approval of the editing request: ${requestId} in the room: ${roomId} was successful.`
 						);
 
+						io.to(roomId).emit("editing-request-approved", {
+							type: "editing-request-approved",
+							requestId,
+							timeStamp: new Date(),
+						});
+
 						io.to(roomId).emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
 							type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
 							roomState: collabRoom.getRoomState(),
@@ -352,13 +359,14 @@ export class Server {
 							error instanceof EditingPrivilegesRequiredException
 						) {
 							console.error(error.message);
-							io
-								.to(`user@${socket.data.userId}`)
-								.emit("editing-request-approval-failed", {
+							io.to(`user@${socket.data.userId}`).emit(
+								"editing-request-approval-failed",
+								{
 									requestId,
 									type: "editing-request-approval-failed",
 									timestamp: new Date(),
-								});
+								}
+							);
 						} else {
 							console.error(
 								`Unexpected error during Editing Request Approval: ${error}`
@@ -391,13 +399,11 @@ export class Server {
 							`The refusal of the editing request: ${requestId} in the room: ${roomId} was successful.`
 						);
 
-						io
-							.to(`user@${requesterUserId}`)
-							.emit("editing-request-declined", {
-								type: "editing-request-declined",
-								requestId,
-								timestamp: new Date(),
-							});
+						io.to(`user@${requesterUserId}`).emit("editing-request-declined", {
+							type: "editing-request-declined",
+							requestId,
+							timestamp: new Date(),
+						});
 					} catch (error) {
 						if (
 							error instanceof EditingRequestNotFoundError ||
@@ -405,13 +411,14 @@ export class Server {
 							error instanceof EditingPrivilegesRequiredException
 						) {
 							console.error(error.message);
-							io
-								.to(`user@${socket.data.userId}`)
-								.emit("editing-request-refusal-failed", {
+							io.to(`user@${socket.data.userId}`).emit(
+								"editing-request-refusal-failed",
+								{
 									requestId,
 									type: "editing-request-refusal-failed",
 									timestamp: new Date(),
-								});
+								}
+							);
 						} else {
 							console.error(
 								`Unexpected error during Editing Request Refusal: ${error}`
