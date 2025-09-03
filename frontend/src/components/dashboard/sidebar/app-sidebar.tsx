@@ -54,7 +54,7 @@ export function AppSidebar({
 }: 
 React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession();
-  const { activeRole } = useLayoutState();
+  const { activeRole, activeSidebarOption } = useLayoutState();
   const { setActiveRole } = useLayoutActions();
   const [isLoading, setIsLoading] = useState(true)
 
@@ -101,7 +101,7 @@ React.ComponentProps<typeof Sidebar>) {
             <TeamSwitcher teams={userTeams} onTeamChange={handleTeamChange} activeRole={activeRole}/>
           </SidebarHeader>
           <SidebarContent>
-            <DynamicSidebarContent activeTeam={activeRole} userRoles={roles} activeRole={activeRole} />
+            <DynamicSidebarContent activeTeam={activeRole} userRoles={roles} activeRole={activeRole} activeSidebarOption={activeSidebarOption} />
           </SidebarContent>
           <SidebarFooter>
             <NavUser
