@@ -274,7 +274,7 @@ export class Server {
 					}
 
 					const callbackFunction = () => {
-						socket.to(roomId).emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
+						io.to(roomId).emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
 							type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
 							roomState: collabRoom.getRoomState(),
 							timestamp: new Date(),
@@ -288,7 +288,7 @@ export class Server {
 								callbackFunction,
 							});
 
-						socket.to(roomId).emit("editing-request-started", {
+						io.to(roomId).emit("editing-request-started", {
 							type: "editing-request-started",
 							requestId,
 							editorUserId,
@@ -302,7 +302,7 @@ export class Server {
 							error instanceof EditingPrivilegesAlreadyGrantedError
 						) {
 							console.error(error.message);
-							socket
+							io
 								.to(`user@${socket.data.userId}`)
 								.emit("editing-request-creation-refused", {
 									type: "editing-request-creation-refused",
@@ -325,7 +325,7 @@ export class Server {
 
 					if (!collabRoom) {
 						console.debug(
-							`The approval of an editing request was skipped because the specified room ${roomId} didn´t exist.`
+							`The approval of an editing request was skipped because the specified room ${roomId} didn't exist.`
 						);
 						return;
 					}
@@ -336,7 +336,11 @@ export class Server {
 							evaluatorUserId: socket.data.userId,
 						});
 
-						socket.to(roomId).emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
+						console.debug(
+							`The approval of the editing request: ${requestId} in the room: ${roomId} was successful.`
+						);
+
+						io.to(roomId).emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
 							type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
 							roomState: collabRoom.getRoomState(),
 							timestamp: new Date(),
@@ -348,9 +352,10 @@ export class Server {
 							error instanceof EditingPrivilegesRequiredException
 						) {
 							console.error(error.message);
-							socket
+							io
 								.to(`user@${socket.data.userId}`)
 								.emit("editing-request-approval-failed", {
+									requestId,
 									type: "editing-request-approval-failed",
 									timestamp: new Date(),
 								});
@@ -371,7 +376,7 @@ export class Server {
 
 					if (!collabRoom) {
 						console.info(
-							`The approval of an editing request was skipped because the specified room ${roomId} didn´t exist.`
+							`The refusal of an editing request was skipped because the specified room ${roomId} didn't exist.`
 						);
 						return;
 					}
@@ -382,7 +387,11 @@ export class Server {
 							evaluatorUserId: socket.data.userId,
 						});
 
-						socket
+						console.debug(
+							`The refusal of the editing request: ${requestId} in the room: ${roomId} was successful.`
+						);
+
+						io
 							.to(`user@${requesterUserId}`)
 							.emit("editing-request-declined", {
 								type: "editing-request-declined",
@@ -396,9 +405,10 @@ export class Server {
 							error instanceof EditingPrivilegesRequiredException
 						) {
 							console.error(error.message);
-							socket
+							io
 								.to(`user@${socket.data.userId}`)
 								.emit("editing-request-refusal-failed", {
+									requestId,
 									type: "editing-request-refusal-failed",
 									timestamp: new Date(),
 								});
@@ -496,7 +506,7 @@ export class Server {
 						userId: socket.data.userId,
 					});
 					if (!collabRoom.isEmpty()) {
-						socket.to(roomId).emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
+						io.to(roomId).emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
 							type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
 							roomState: collabRoom.getRoomState(),
 							timestamp: new Date(),

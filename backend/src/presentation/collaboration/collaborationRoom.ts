@@ -15,7 +15,7 @@ export class CollaborationRoom {
 			name: string;
 			lastName: string;
 			email: string;
-			socketIds: string[];
+			socketIds: Set<string>;
 		}
 	>;
 	private pendingEditingRequests: Map<
@@ -37,10 +37,14 @@ export class CollaborationRoom {
 	}
 
 	getRoomState() {
+		const collaboratorsArray = Array.from(
+			this.userIdToUserInfoMap.values()
+		).map((c) => ({ ...c, socketIds: Array.from(c.socketIds.values()) }));
+
 		return {
 			roomId: this.roomId,
 			currentEditingUser: this.currentEditingUser,
-			collaborators: Array.from(this.userIdToUserInfoMap.values()),
+			collaborators: collaboratorsArray,
 		};
 	}
 
@@ -80,6 +84,9 @@ export class CollaborationRoom {
 
 		const requestId = `${Date.now()}-${requesterUserId}`;
 		const timeoutId = setTimeout(() => {
+			console.debug(
+				`Due to timeout, the editing request: ${requestId} in the room: ${this.roomId} was approved.`
+			);
 			this.removeEditingRequest({ requestId });
 			this.assignEditingRightsTo({ userId: requesterUserId });
 			callbackFunction();
@@ -207,10 +214,10 @@ export class CollaborationRoom {
 		if (!this.userIdToUserInfoMap.has(userInfo.userId)) {
 			this.userIdToUserInfoMap.set(userInfo.userId, {
 				...userInfo,
-				socketIds: [],
+				socketIds: new Set<string>(),
 			});
 		}
-		this.userIdToUserInfoMap.get(userInfo.userId)!.socketIds.push(socketId);
+		this.userIdToUserInfoMap.get(userInfo.userId)!.socketIds.add(socketId);
 		if (wasEmpty) {
 			this.assignEditingRightsTo({ userId: userInfo.userId });
 		}
@@ -234,15 +241,12 @@ export class CollaborationRoom {
 	}) {
 		if (!this.userIdToUserInfoMap.has(userId)) return;
 
-		const remainingSocketIds = this.userIdToUserInfoMap
-			.get(userId)!
-			.socketIds.filter((s) => s !== socketId);
+		const collaboratorSocketIds =
+			this.userIdToUserInfoMap.get(userId)!.socketIds;
 
-		if (remainingSocketIds.length !== 0) {
-			this.userIdToUserInfoMap.set(userId, {
-				...this.userIdToUserInfoMap.get(userId)!,
-				socketIds: remainingSocketIds,
-			});
+		collaboratorSocketIds.delete(socketId);
+
+		if (collaboratorSocketIds.size !== 0) {
 			return;
 		}
 
