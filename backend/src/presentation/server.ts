@@ -96,6 +96,28 @@ export class Server {
 			},
 		});
 
+		setInterval(() => {
+			const allActiveSocketIds = new Set<string>();
+
+			// Collect all currently connected socket IDs
+			io.sockets.sockets.forEach((socket) => {
+				allActiveSocketIds.add(socket.id);
+			});
+
+			const roomsToRemove: string[] = [];
+			this.collaborationRooms.forEach((room, roomId) => {
+				room.cleanupStaleConnections(allActiveSocketIds);
+				if (room.isEmpty()) {
+					roomsToRemove.push(roomId);
+				}
+			});
+
+			roomsToRemove.forEach((roomId) => {
+				console.info("Stale collaboration room deleted:", roomId);
+				this.collaborationRooms.delete(roomId);
+			});
+		}, 30000);
+
 		//Socket Authentication Middleware
 		io.use(async (socket, next) => {
 			const sessionToken = socket.handshake.auth.sessionToken;
@@ -519,7 +541,7 @@ export class Server {
 							timestamp: new Date(),
 						} satisfies UsersInRoomChangePayload);
 					} else {
-						console.info("Colaboration room deleted:", roomId);
+						console.info("Collaboration room deleted:", roomId);
 						this.collaborationRooms.delete(roomId);
 					}
 				}

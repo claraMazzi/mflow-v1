@@ -105,6 +105,46 @@ export class CollaborationRoom {
 		};
 	}
 
+	cleanupStaleConnections(activeSocketIds: Set<string>) {
+		const usersToRemove: string[] = []
+		for (const [userId, userInfo] of this.userIdToUserInfoMap.entries()) {
+			const staleSocketIds: string[] = [];
+
+			for (const socketId of userInfo.socketIds) {
+				if (!activeSocketIds.has(socketId)) {
+					staleSocketIds.push(socketId);
+				}
+			}
+
+			staleSocketIds.forEach((socketId) => {
+				userInfo.socketIds.delete(socketId);
+				console.log(`Cleaned up stale socket ${socketId} for user ${userId}`);
+			});
+
+			if (userInfo.socketIds.size === 0) {
+				usersToRemove.push(userId);
+			}
+		}
+
+		usersToRemove.forEach((userId) => {
+			this.userIdToUserInfoMap.delete(userId);
+			console.log(`Removed user ${userId} due to no active connections`);
+
+			if (this.currentEditingUser === userId) {
+				const remainingUsers = Array.from(this.userIdToUserInfoMap.keys());
+				if (this.isEmpty()) {
+					this.currentEditingUser = null;
+					this.cancelAllPendingEditingRequests();
+				} else {
+					this.removeAllPendingEditingRequestsFor({ userId });
+					const randomUser =
+						remainingUsers[Math.floor(Math.random() * remainingUsers.length)];
+					this.assignEditingRightsTo({ userId: randomUser });
+				}
+			}
+		});
+	}
+
 	private removeEditingRequest({ requestId }: { requestId: string }) {
 		const pendingRequest = this.pendingEditingRequests.get(requestId);
 		if (!pendingRequest) return;
