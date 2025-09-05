@@ -353,7 +353,7 @@ export default function Page() {
 			);
 			socket.disconnect();
 		};
-	}, [session]);
+	}, [session?.auth]);
 
 	const sendPropertyUpdate = (value: any, propertyPath: string) => {
 		if (!hasEditingRights) return;
