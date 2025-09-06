@@ -23,7 +23,8 @@ const ModalHead = ({ title }: { title: ModalProps["title"] }) => {
   if (!title) return null
 
   return (
-    <DialogHeader>
+
+    <DialogHeader className="sr-only">
       <DialogTitle className="text-left">{title}</DialogTitle>
     </DialogHeader>
   )
@@ -38,7 +39,7 @@ export const Modal = ({
   closeButtonClass,
   children,
   size = "md",
-  containerClassName = "",
+  containerClassName = "max-h-[90vh] overflow-scroll",
   showCloseButton = true,
   fullScreenOnMobile = false,
 }: ModalProps) => {

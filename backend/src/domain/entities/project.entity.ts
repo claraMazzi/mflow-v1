@@ -1,4 +1,10 @@
 import { CustomError } from "../errors/custom.error";
+import { UserEntity } from "./user.entity";
+
+interface ReducedUserEntity { 
+  email: string,
+  id: string
+}
 
 export class ProjectEntity {
   constructor(
@@ -6,7 +12,7 @@ export class ProjectEntity {
     public name: string,
     public description: string,
     public owner: string,
-    public collaborators: string[],
+    public collaborators: ReducedUserEntity[],
     public state: string,
     public versions: string[]
   ) {}
@@ -25,7 +31,7 @@ export class ProjectEntity {
       name,
       description,
       owner,
-      collaborators,
+      collaborators.map((item: UserEntity) =>({email: item.email, id: item.id})),
       state,
       versions
     );

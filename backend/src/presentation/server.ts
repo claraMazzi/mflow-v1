@@ -1,5 +1,6 @@
 import express, { Router } from "express";
 import { ProjectModel, UserModel, VersionModel } from "../data";
+import { bcryptAdapter } from "../config";
 import { Server as SocketIO } from "socket.io";
 import { VersionService } from "./services";
 import fs from "fs/promises";
@@ -548,6 +549,48 @@ export class Server {
 
 		//Uncomment when needed
 		//this.createTestEntities();
+		// this.seedUsers();
+	}
+
+	private async seedUsers() {
+		const hashedPassword = await bcryptAdapter.hash("123456");
+		
+				const users = [
+					{
+						name: "Ana",
+						lastName: "González",
+						email: "ana.admin@example.com",
+						password: hashedPassword,
+						roles: ["ADMIN"],
+						emailValidated: true,
+					},
+					{
+						name: "Carlos",
+						lastName: "Pérez",
+						email: "carlos.verificador@example.com",
+						password: hashedPassword,
+						roles: ["VERIFICADOR"],
+						emailValidated: false,
+					},
+					{
+						name: "Lucía",
+						lastName: "Martínez",
+						email: "lucia.modelador@example.com",
+						password: hashedPassword,
+						roles: ["MODELADOR"],
+						emailValidated: true,
+					},
+					{
+						name: "Juan",
+						lastName: "Rodríguez",
+						email: "juan.multi@example.com",
+						password: hashedPassword,
+						roles: ["MODELADOR", "VERIFICADOR"],
+						emailValidated: true,
+					},
+				];
+		
+				await UserModel.insertMany(users);
 	}
 
 	private createTestEntities() {

@@ -3,6 +3,9 @@ import { CustomError } from "../../domain";
 import { ProjectService } from "../services"; // Assume a service layer is used for business logic
 import { CreateProjectDto } from "../../domain/dtos/project/create-project.dto";
 import { UpdateProjectDto } from "../../domain/dtos/project/update-project.dto";
+import { CreateDeletionRequestDto } from "../../domain/dtos/project/create-deletion-request.dto";
+import { ShareProjectDto } from "../../domain/dtos/project/share-project.dto";
+import { ShareProjectLinkDto } from "../../domain/dtos/project/share-project-link.dto";
 
 export class ProjectController {
   constructor(readonly projectService: ProjectService) {}
@@ -28,9 +31,28 @@ export class ProjectController {
       .catch((error) => this.handleError(error, res));
   };
 
+  getUserSharedProjects = (req: Request, res: Response) => {
+    const userId = req.session?.userId ?? "";
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    this.projectService
+      .getUserSharedProjects(userId)
+      .then((projects) => res.json(projects))
+      .catch((error) => this.handleError(error, res));
+  };
+
   // Get a specific project
   getProjectById = (req: Request, res: Response) => {
     const { projectId } = req.params;
+    if (!projectId) {
+      return res.status(401).json({ error: "No project id provided" });
+    }
+    const user = req.session?.userId ?? "";
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     this.projectService
       .getProjectById(projectId)
       .then((project) => res.json(project))
@@ -40,7 +62,14 @@ export class ProjectController {
   // Update a specific project
   updateProject = (req: Request, res: Response) => {
     const { projectId } = req.params;
+    if (!projectId) {
+      return res.status(401).json({ error: "No project id provided" });
+    }
     const projectData = req.body;
+    const user = req.session?.userId ?? "";
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
 
     const [error, updateProjectDto] = UpdateProjectDto.create({
       id: projectId,
@@ -58,6 +87,13 @@ export class ProjectController {
   // "DELETE" project --> mark as deleted
   deleteProject = (req: Request, res: Response) => {
     const { projectId } = req.params;
+    if (!projectId) {
+      return res.status(401).json({ error: "No project id provided" });
+    }
+    const user = req.session?.userId ?? "";
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     this.projectService
       .deleteProject(projectId)
       .then((updatedProject) => res.json(updatedProject))
@@ -70,6 +106,9 @@ export class ProjectController {
     const name = projectData.name;
     const description = projectData.description;
     const owner = req.session?.userId ?? "";
+    if (!owner) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
 
     const [error, createProjectDto] = CreateProjectDto.create({
       name: name,
@@ -86,21 +125,107 @@ export class ProjectController {
   };
 
   // Share a specific project
-  shareProject = (req: Request, res: Response) => {
+  sendProjectCollaborationInvitation = (req: Request, res: Response) => {
     const { projectId } = req.params;
-    const { userId } = req.body;
+    const senderId = req.session?.userId ?? "";
+    const { collaborators } = req.body;
+    if (!senderId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    if (!projectId) {
+      return res.status(401).json({ error: "No project id provided" });
+    }
+
+    const [error, shareProjectDto] = ShareProjectDto.create({
+      projectId,
+      senderId,
+      collaborators,
+    });
+
+    if (error || !shareProjectDto) return res.status(400).json({ error });
+
     this.projectService
-      .shareProject(projectId, userId)
-      .then(() => res.json({ message: "Project shared successfully" }))
+      .sendProjectCollaborationInvitation(shareProjectDto)
+      .then(() => res.json({ message: "Project collaboration invitations sent successfully" }))
       .catch((error) => this.handleError(error, res));
   };
+
+  getProjectFromInvitationToken = (req: Request, res: Response) => {
+    const { token } = req.params;
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    this.projectService
+      .getProjectFromInvitationToken(token)
+      .then((message) => res.json(message))
+      .catch((error) => this.handleError(error, res));
+  };
+
+   // Share a specific project
+   getProjectSharingLink = (req: Request, res: Response) => {
+    const { projectId } = req.params;
+    const senderId = req.session?.userId ?? "";
+    const { collaborators } = req.body;
+
+    if (!senderId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    if (!projectId) {
+      return res.status(401).json({ error: "No project id provided" });
+    }
+
+    const [error, shareProjectDto] = ShareProjectLinkDto.create({
+      projectId,
+      senderId,
+      collaborators,
+    });
+
+    if (error || !shareProjectDto) return res.status(400).json({ error });
+
+    this.projectService
+      .getProjectSharingLink(shareProjectDto)
+      .then((message) => res.json(message))
+      .catch((error) => this.handleError(error, res));
+  };
+
+  addCollaboratorToProject = (req: Request, res: Response) => {
+    const { token } = req.params;
+    const { requester } = req.body;
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    this.projectService
+      .addCollaboratorToProject(token, requester)
+      .then((response) => res.json(response))
+      .catch((error) => this.handleError(error, res));
+  }
 
   // Request project deletion
   requestProjectDeletion = (req: Request, res: Response) => {
     const { projectId } = req.params;
+    const user = req.session?.userId ?? "";
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    if (!projectId) {
+      return res.status(401).json({ error: "No project id provided" });
+    }
+
+    const { motive } = req.body;
+
+    const [error, createDelitionRequestDto] = CreateDeletionRequestDto.create({
+      project: projectId,
+      motive: motive,
+      requestingUser: user,
+    });
+
+    if (error || !createDelitionRequestDto)
+      return res.status(400).json({ error });
+
     this.projectService
-      .requestProjectDeletion(projectId)
-      .then(() => res.json({ message: "Deletion request submitted" }))
+      .requestProjectDeletion(createDelitionRequestDto)
+      .then((response) => res.json(response))
       .catch((error) => this.handleError(error, res));
   };
 

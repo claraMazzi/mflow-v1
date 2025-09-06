@@ -15,7 +15,7 @@ import {
 } from "@components/dashboard/sidebar/sidebar";
 import { getMenuItemsByRole } from "@components/dashboard/navigation";
 import { useEffect, useState } from "react";
-
+import cn from "clsx";
 type Team = {
   name: string;
   role: "modelador" | "admin" | "verificador";
@@ -26,10 +26,11 @@ type DynamicSidebarContentProps = {
   activeTeam: Team;
   userRoles?: string[];
   activeRole: string;
+  activeSidebarOption: string;
 };
 
 export function DynamicSidebarContent({
-  activeTeam,
+  activeSidebarOption,
   userRoles,
   activeRole,
 }: DynamicSidebarContentProps) {
@@ -57,7 +58,13 @@ export function DynamicSidebarContent({
               {item.items ? (
                 <>
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuButton>
+                    <SidebarMenuButton
+                      className={cn(
+                        activeSidebarOption === item.title
+                          ? "bg-purple-400 hover:text-white hover:bg-purple-500 text-white"
+                          : ""
+                      )}
+                    >
                       {item.icon}
                       <span>{item.title}</span>
                     </SidebarMenuButton>
@@ -69,8 +76,20 @@ export function DynamicSidebarContent({
                           <SidebarMenuSubButton
                             asChild
                             // onClick={() => onMenuItemClick(`${item.title} - ${subItem.title}`)}
+                            className={cn(
+                              activeSidebarOption === subItem.title
+                                ? "bg-purple-400 hover:bg-purple-500 hover:text-white text-white"
+                                : ""
+                            )}
                           >
-                            <a href={subItem.slug}>
+                            <a
+                              href={subItem.slug}
+                              className={cn(
+                                activeSidebarOption === subItem.title
+                                  ? "bg-purple-400 hover:bg-purple-500 hover:text-white text-white"
+                                  : ""
+                              )}
+                            >
                               {subItem.icon}
 
                               <span>{subItem.title}</span>
@@ -83,10 +102,18 @@ export function DynamicSidebarContent({
                 </>
               ) : (
                 <SidebarMenuButton
-                // onClick={() => onMenuItemClick(item.title)}
+                  // onClick={() => onMenuItemClick(item.title)}
+                  // className={cn(
+                  //   activeSidebarOption === item.title
+                  //     ? "bg-purple-400  hover:bg-purple-500 hover:text-white text-white"
+                  //     : ""
+                  // )}
+                  isActive={activeSidebarOption === item.title}
                 >
-                  {item.icon}
-                  <span>{item.title}</span>
+                  <a href={item.slug} className="flex gap-2">
+                    {item.icon}
+                    <span>{item.title}</span>
+                  </a>
                 </SidebarMenuButton>
               )}
             </SidebarMenuItem>

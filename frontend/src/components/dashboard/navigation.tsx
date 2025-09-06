@@ -38,18 +38,18 @@ export const navigation: SidebarMenu = {
     {
       title: "Compartido conmigo",
       icon: <Share2 />,
-      slug: "/shared-with-me",
+      slug: "/dashboard/shared",
       activeColor: "",
       items: [
         {
           title: "Proyectos",
-          slug: "/shared-with-me/projects",
+          slug: "/dashboard/shared/projects",
           activeColor: "",
           icon: <FolderOpen />,
         },
         {
           title: "Artefactos",
-          slug: "/shared-with-me/artifacts",
+          slug: "/dashboard/shared/artifacts",
           activeColor: "",
           icon: <FolderOpen />,
         },
@@ -109,7 +109,7 @@ export const getActiveSidebarOption = (
   role: string
 ): string => {
   if (pathname === "/dashboard" || pathname === "/dashboard/") {
-    return "/dashboard/";
+    return "Mis Proyectos";
   }
 
   if (!role) {
@@ -120,15 +120,15 @@ export const getActiveSidebarOption = (
 
   // First, try to find a direct match at the top level
   for (const item of menu) {
-    if (pathname.includes(item.slug)) {
-      return item.slug;
+    if (item.slug.includes(pathname)) {
+      return item.title;
     }
 
     // Then, check sub-items if available
     if (item.items) {
       const subItem = item.items.find((sub) => pathname.includes(sub.slug));
       if (subItem) {
-        return subItem.slug;
+        return subItem.title;
       }
     }
   }
