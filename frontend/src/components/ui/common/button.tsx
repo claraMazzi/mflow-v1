@@ -3,7 +3,6 @@ import Link from "next/link"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Loader2, Plus } from 'lucide-react'
-
 import cn from 'clsx'
 
 const buttonVariants = cva(

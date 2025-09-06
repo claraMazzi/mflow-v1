@@ -26,9 +26,9 @@ const propertySchema = new Schema({
 });
 
 const entitySchema = new Schema({
-	nombre: {
+	name: {
 		type: String,
-		required: [true, "El campo nombre de la entidad es obligatorio."],
+		default: "",
 	},
 	scopeDecision: {
 		include: Boolean,
@@ -46,7 +46,7 @@ export const conceptualModelSchema = new Schema(
 	{
 		objective: {
 			type: String,
-			required: [true, "El campo objetivo del diagrama es obligatorio."],
+			default: "",
 		},
 		//The internal id automatically added by mongoose.
 		//https://mongoosejs.com/docs/subdocs.html#altsyntaxarrays
@@ -78,8 +78,6 @@ export const conceptualModelSchema = new Schema(
 		],
         entities: [entitySchema]
 	},
-	//Prevents mongo from generating a default id
-	{ _id: false }
 );
 
 export const correctionSchema = new Schema({
