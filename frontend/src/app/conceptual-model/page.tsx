@@ -135,9 +135,15 @@ export default function Page() {
 	const {
 		canUserSendEditingRequest,
 		pendingEditingRequests,
+		handleCollaboratorsChange,
 		handleRequestEditingRights,
 		handleEditingRequestEvaluation,
-	} = useEditingRequests({ roomId, socket, session, hasEditingRights });
+	} = useEditingRequests({
+		roomId,
+		socket,
+		userId: session?.user.id,
+		hasEditingRights,
+	});
 
 	const {
 		register,
@@ -260,6 +266,14 @@ export default function Page() {
 
 		function onUsersInRoomChange({ roomState }: UsersInRoomChangePayload) {
 			console.log("users-in-room-chage: ", roomState);
+			const previousEditorUserId = collaborators
+				.values()
+				.find((c) => c.hasEditingRights)?.userId;
+			const hasEditorChanged =
+				previousEditorUserId !== roomState.currentEditingUser;
+			const newCollaboratorUserIds = new Set<string>(
+				roomState.collaborators.map((c) => c.userId)
+			);
 			setCollaborators((prevCollaborators) => {
 				const newCollaborators = new Map<string, Collaborator>();
 				for (const user of roomState.collaborators) {
@@ -295,6 +309,10 @@ export default function Page() {
 					});
 				}
 				return newCollaborators;
+			});
+			handleCollaboratorsChange({
+				hasEditorChanged,
+				collaboratorUserIds: newCollaboratorUserIds,
 			});
 		}
 

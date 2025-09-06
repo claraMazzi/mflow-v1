@@ -297,7 +297,12 @@ export class Server {
 						return;
 					}
 
-					const callbackFunction = () => {
+					const callbackFunction = ({ requestId }: { requestId: string }) => {
+						io.to(roomId).emit("editing-request-approved", {
+							type: "editing-request-approved",
+							requestId,
+							timeStamp: new Date(),
+						});
 						io.to(roomId).emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
 							type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
 							roomState: collabRoom.getRoomState(),
@@ -326,13 +331,10 @@ export class Server {
 							error instanceof EditingPrivilegesAlreadyGrantedError
 						) {
 							console.error(error.message);
-							io.to(`user@${socket.data.userId}`).emit(
-								"editing-request-creation-refused",
-								{
-									type: "editing-request-creation-refused",
-									timestamp: new Date(),
-								}
-							);
+							socket.emit("editing-request-creation-refused", {
+								type: "editing-request-creation-refused",
+								timestamp: new Date(),
+							});
 						} else {
 							console.error(
 								`Unexpected error during Editing Request Creation: ${error}`
@@ -383,14 +385,11 @@ export class Server {
 							error instanceof EditingPrivilegesRequiredException
 						) {
 							console.error(error.message);
-							io.to(`user@${socket.data.userId}`).emit(
-								"editing-request-approval-failed",
-								{
-									requestId,
-									type: "editing-request-approval-failed",
-									timestamp: new Date(),
-								}
-							);
+							socket.emit("editing-request-approval-failed", {
+								requestId,
+								type: "editing-request-approval-failed",
+								timestamp: new Date(),
+							});
 						} else {
 							console.error(
 								`Unexpected error during Editing Request Approval: ${error}`
@@ -423,7 +422,7 @@ export class Server {
 							`The refusal of the editing request: ${requestId} in the room: ${roomId} was successful.`
 						);
 
-						io.to(`user@${requesterUserId}`).emit("editing-request-declined", {
+						io.to(roomId).emit("editing-request-declined", {
 							type: "editing-request-declined",
 							requestId,
 							timestamp: new Date(),
@@ -435,14 +434,11 @@ export class Server {
 							error instanceof EditingPrivilegesRequiredException
 						) {
 							console.error(error.message);
-							io.to(`user@${socket.data.userId}`).emit(
-								"editing-request-refusal-failed",
-								{
-									requestId,
-									type: "editing-request-refusal-failed",
-									timestamp: new Date(),
-								}
-							);
+							socket.emit("editing-request-refusal-failed", {
+								requestId,
+								type: "editing-request-refusal-failed",
+								timestamp: new Date(),
+							});
 						} else {
 							console.error(
 								`Unexpected error during Editing Request Refusal: ${error}`

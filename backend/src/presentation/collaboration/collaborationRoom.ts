@@ -53,7 +53,7 @@ export class CollaborationRoom {
 		callbackFunction,
 	}: {
 		requesterUserId: string;
-		callbackFunction: () => void;
+		callbackFunction: ({ requestId }: { requestId: string }) => void;
 	}) {
 		const isEditingUser = this.currentEditingUser === requesterUserId;
 
@@ -89,7 +89,7 @@ export class CollaborationRoom {
 			);
 			this.removeEditingRequest({ requestId });
 			this.assignEditingRightsTo({ userId: requesterUserId });
-			callbackFunction();
+			callbackFunction({ requestId });
 		}, 10 * 1000);
 		this.pendingEditingRequests.set(requestId, {
 			requesterUserId,
@@ -106,7 +106,7 @@ export class CollaborationRoom {
 	}
 
 	cleanupStaleConnections(activeSocketIds: Set<string>) {
-		const usersToRemove: string[] = []
+		const usersToRemove: string[] = [];
 		for (const [userId, userInfo] of this.userIdToUserInfoMap.entries()) {
 			const staleSocketIds: string[] = [];
 
