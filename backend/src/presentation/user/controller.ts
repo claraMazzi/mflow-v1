@@ -47,6 +47,15 @@ export class UserController {
       .catch((error) => this.handleError(error, res));
   };
 
+  getAllUsers = (req: Request, res: Response) => {
+    const adminId = req.session?.userId ?? "";
+
+    this.userService
+      .getAllUsers(adminId)
+      .then((user) => res.json(user))
+      .catch((error) => this.handleError(error, res));
+  };
+
   getUserRoles = (req: Request, res: Response) => {
     throw Error("deleteUser to be implemented");
   };

@@ -37,6 +37,8 @@ export class AuthController {
 
   validateEmail = (req: Request, res: Response) => {
     const { token } = req.params;
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
     this.authService
       .validateEmail(token)
       .then(() => res.json("Email validated"))
@@ -62,7 +64,6 @@ export class AuthController {
 
   passwordRecoverUpdate = (req: Request, res: Response) => {
     const [error, recoverDto] = RecoverPasswordDto.create(req.body);
-console.log('----------------------___ACA', req.body, error);
     if (error) return res.status(400).json({ error });
 
     this.authService

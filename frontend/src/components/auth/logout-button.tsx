@@ -1,9 +1,8 @@
 'use client'
 
 import cn from 'clsx'
-import { getSession, signOut } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { ReactElement, startTransition, useState } from 'react'
+import { signOut } from 'next-auth/react'
+import { ReactElement, useState } from 'react'
 import { Button } from '@components/ui/common/button'
 
 export default function LogoutButton({
@@ -14,18 +13,11 @@ export default function LogoutButton({
   className?: string
 }) {
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   const onClick = async () => {
-    const session = await getSession()
     setLoading(true)
 
-    await signOut({ redirect: false })
-
-
-    startTransition(() => {
-      router.push('/login')
-    })
+    await signOut({  callbackUrl: '/login' })
 
     setLoading(false)
   }

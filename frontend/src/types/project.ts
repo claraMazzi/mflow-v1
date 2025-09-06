@@ -3,7 +3,12 @@ export type ProjectEntity = {
   name: string;
   description: string;
   owner: string;
-  collaborators: string[];
+  collaborators: ReducedUserEntity[];
   state: string;
   versions: string[];
 };
+
+export type ReducedUserEntity = { 
+  id: string;
+  email: string;
+}

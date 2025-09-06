@@ -1,50 +1,63 @@
 import { Router } from "express";
 import { ProjectController } from "./controller";
-import { ProjectService } from "../services";
+import { ProjectService, EmailService } from "../services";
 import { AuthMiddleware } from "../middlewares/auth.middleware";
-// import { AuthController } from "./controller";
-// import { AuthService, EmailService } from "../services";
-// import { envs } from "../../config";
+import { envs } from "../../config";
 
 export class ProjectRoutes {
   static get routes(): Router {
     const router = Router();
-    // const emailService = new EmailService(
-    //   envs.MAILER_SERVICE,
-    //   envs.MAILER_EMAIL,
-    //   envs.MAILER_SECRET_KEY,
-    //   envs.SEND_EMIAL
-    // );
-    // const authService = new AuthService(emailService, envs.WEBSERVICE_URL);
+    const emailService = new EmailService(
+      envs.MAILER_SERVICE,
+      envs.MAILER_EMAIL,
+      envs.MAILER_SECRET_KEY,
+      envs.SEND_EMIAL
+    );
 
-    // const controller = new AuthController(authService);
-    // Definir las rutas
-    // router.post("/login", controller.loginUser);
-    // router.post("/register", controller.registerUser);
-
-    // router.get("/validate-email/:token", controller.validateEmail);
-    const service = new ProjectService();
+    const service = new ProjectService(emailService, envs.WEBSERVICE_URL, envs.FRONTEND_URL);
     const controller = new ProjectController(service);
-    // Projects CRUD routes
-    //get projects by user
-    router.get('/', AuthMiddleware.validateJWT, controller.getUserProjects)
+
+    
+    //--------------------- Projects CRUD routes
+  
     //create
     router.post("/", AuthMiddleware.validateJWT, controller.createProject);
-    //getById
-    router.get("/:projectId", controller.getProjectById);
-    //Update project data - name and desc 
-    router.put("/:projectId", controller.updateProject);
 
-    //Delete project 
+    //get projects by user
+    router.get("/", AuthMiddleware.validateJWT, controller.getUserProjects);
+    router.get("/shared", AuthMiddleware.validateJWT, controller.getUserSharedProjects);
+
+
+    //getById
+    router.get("/:projectId", AuthMiddleware.validateJWT, controller.getProjectById);
+
+    //Update project data - name and desc
+    router.put("/:projectId", AuthMiddleware.validateJWT, controller.updateProject);
+
+    //Request Project Deletion project
+    router.post("/:projectId/deletion", AuthMiddleware.validateJWT, controller.requestProjectDeletion);
+    
+    //Get delition request details per project
+    router.get("/:projectId/deletion", controller.getDeletionDetails);
+
+    //Delete project -- verifier only
     router.delete("/:projectId", controller.deleteProject);
+
+    // Sharing routes
+    router.post("/:projectId/share", AuthMiddleware.validateJWT, controller.sendProjectCollaborationInvitation);
+    router.get("/:projectId/share", AuthMiddleware.validateJWT, controller.getProjectSharingLink);
+    router.post("/share/:token", controller.addCollaboratorToProject);
+    router.get("/share/:token", controller.getProjectFromInvitationToken);
 
 
     // // Logic to approve or reject deletion request
     // router.put("/:projectId/deletion", controller.handleDeletionRequest);
-    
 
-    // Sharing routes
-    router.post("/:projectId/share", controller.shareProject);
+    //----------------------------------------------
+
+
+
+
 
     // Collaboration routes
     router.post("/:projectId/collaboration", (req, res) => {
@@ -54,13 +67,11 @@ export class ProjectRoutes {
       );
     });
 
-    router.delete("/:projectId/collaboration/:userId", controller.removeCollaborator);
-
-    // Deletion request routes
-    router.post("/:projectId/deletion/request", controller.requestProjectDeletion);
-
-    router.get("/:projectId/deletion", controller.getDeletionDetails);
-
+    //remove collaborator
+    router.delete(
+      "/:projectId/collaboration/:userId",
+      controller.removeCollaborator
+    );
 
     // Verification routes
     router.get("/:projectId/verification", controller.getVerificationStatus);
@@ -94,15 +105,12 @@ export class ProjectRoutes {
       res.send(`Create a new model in project ID: ${req.params.projectId}`);
     });
 
-    router.post(
-      "/:projectId/models/:modelId/collaboration",
-      (req, res) => {
-        // Logic to collaborate on a model within a project
-        res.send(
-          `Collaborate on model with ID: ${req.params.modelId} in project ID: ${req.params.projectId}`
-        );
-      }
-    );
+    router.post("/:projectId/models/:modelId/collaboration", (req, res) => {
+      // Logic to collaborate on a model within a project
+      res.send(
+        `Collaborate on model with ID: ${req.params.modelId} in project ID: ${req.params.projectId}`
+      );
+    });
 
     router.delete(
       "/:projectId/models/:modelId/collaboration/:userId",

@@ -19,8 +19,10 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Add your protected routes here
-    '/dashboard/:path*',
-    '/profile/:path*',
+    // '/dashboard/:path*',
+    // '/profile/:path*',
+    '(protected)/:path*',
+    
     // Exclude authentication routes
     '/((?!api|_next/static|_next/image|favicon.ico|login|register).*)',
   ],

@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutState } from "@components/global/Context";
-import MyProjects from "./modelador/my-projects";
+import MyProjects from "./projects/my-projects";
 
 const DashboardContent = () => {
   const { activeRole } = useLayoutState();
