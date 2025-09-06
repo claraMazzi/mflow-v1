@@ -1,9 +1,26 @@
-import React from 'react'
+"use client";
+
+import ProjectList from "@src/components/dashboard/projects/project-list";
+import { useSharedProjects } from "@src/hooks/use-projects";
+import React from "react";
 
 const Page = () => {
-  return (
-    <div>Page</div>
-  )
-}
+  const { projects, isLoading, refreshProjects } = useSharedProjects();
 
-export default Page
+  return (
+    <div className="w-full flex flex-col gap-4">
+      <div className="flex w-full justify-between border-b border-accent-100 py-2">
+        <h1 className="text-2xl font-bold">Mis proyectos compartidos</h1>
+      </div>
+      <ProjectList
+        projects={projects || []}
+        isLoading={isLoading}
+        refreshProjects={refreshProjects}
+        isSharing
+
+      />
+    </div>
+  );
+};
+
+export default Page;

@@ -103,14 +103,17 @@ export function DynamicSidebarContent({
               ) : (
                 <SidebarMenuButton
                   // onClick={() => onMenuItemClick(item.title)}
-                  className={cn(
-                    activeSidebarOption === item.title
-                      ? "bg-purple-400  hover:bg-purple-500 hover:text-white text-white"
-                      : ""
-                  )}
+                  // className={cn(
+                  //   activeSidebarOption === item.title
+                  //     ? "bg-purple-400  hover:bg-purple-500 hover:text-white text-white"
+                  //     : ""
+                  // )}
+                  isActive={activeSidebarOption === item.title}
                 >
-                  {item.icon}
-                  <span>{item.title}</span>
+                  <a href={item.slug} className="flex gap-2">
+                    {item.icon}
+                    <span>{item.title}</span>
+                  </a>
                 </SidebarMenuButton>
               )}
             </SidebarMenuItem>

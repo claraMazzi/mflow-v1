@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { UserService } from "../services";
 import { UserController } from "./controller";
+import { AuthMiddleware } from "../middlewares/auth.middleware";
 
 export class UserRoutes {
   static get routes(): Router {
@@ -25,6 +26,7 @@ export class UserRoutes {
 
     router.get('/:id', controller.getUserById);
     router.put('/', controller.updateUserById);
+    router.get('/', AuthMiddleware.validateAdminRole, controller.getAllUsers);
     
      //solo lo puede llamar un admin
     router.delete('/:id', controller.deleteUser);
@@ -32,6 +34,7 @@ export class UserRoutes {
     router.put('/:id/roles', controller.updateUserRole); //actualizar el rol de un usuario
     router.post('/invite', controller.inviteUserWithRole); //enviar el mail con la invitacion con rol
     router.put('/invite', controller.updateUserRoleWithInvitation); //si tiene un usuario creado hay que actualizar los roles de ese usuario y mandarlo a login, sino mandar a create account - aceptar o rechazar la invitacion 
+
 
 
     return router;

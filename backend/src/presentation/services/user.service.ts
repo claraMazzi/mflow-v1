@@ -15,6 +15,20 @@ export class UserService {
     };
   }
 
+  async getAllUsers(id: string) {
+    const users = await UserModel.find({ _id: { $ne: id } });
+
+    if (!users) throw CustomError.badRequest("No Users to query");
+
+    const usersEntity = users.map((user) => {
+      const { password, ...userEntity } = UserEntity.fromObject(user);
+      return userEntity;
+    });
+    return {
+      users: usersEntity,
+    };
+  }
+
   async updateUserById({name, lastName, id}: UpdateUserDto) {
 
     const user = await UserModel.findOne({ _id: id });

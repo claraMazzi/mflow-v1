@@ -25,6 +25,8 @@ export class ProjectRoutes {
 
     //get projects by user
     router.get("/", AuthMiddleware.validateJWT, controller.getUserProjects);
+    router.get("/shared", AuthMiddleware.validateJWT, controller.getUserSharedProjects);
+
 
     //getById
     router.get("/:projectId", AuthMiddleware.validateJWT, controller.getProjectById);

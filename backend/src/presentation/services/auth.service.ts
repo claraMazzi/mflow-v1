@@ -77,7 +77,6 @@ export class AuthService {
       loginUserDto.password,
       user.password
     );
-    console.log('passwordMatch', passwordMatch, 'DTO', loginUserDto, user)
 
     if (!passwordMatch)
       throw CustomError.badRequest("Email or password don't exist");

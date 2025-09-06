@@ -68,10 +68,30 @@ export class ProjectService {
   //get user active projects
   async getUserProjects(owner: string) {
     const projects = await ProjectModel.find({ owner: owner })
-      .populate("collaborators") 
+      .populate("collaborators")
       .exec();
 
     if (!projects) throw CustomError.badRequest("User has no Projects");
+
+    const filteredProjects = projects
+      .map((p) => ProjectEntity.fromObject(p))
+      .filter((item) => item.state !== projectState.deleted);
+
+    if (!filteredProjects.length)
+      throw CustomError.badRequest("User has no active Projects");
+
+    return {
+      count: filteredProjects.length,
+      projects: filteredProjects,
+    };
+  }
+  //get user active shared projects
+  async getUserSharedProjects(userId: string) {
+    const projects = await ProjectModel.find({ collaborators: userId })
+      .populate("collaborators")
+      .exec();
+
+    if (!projects) throw CustomError.badRequest("User has no shared Projects");
 
     const filteredProjects = projects
       .map((p) => ProjectEntity.fromObject(p))
@@ -233,7 +253,7 @@ export class ProjectService {
     };
   }
 
-  async addCollaboratorToProject(token: string, requester:string) {
+  async addCollaboratorToProject(token: string, requester: string) {
     const payload = await jwtAdapter.validateToken(token);
     if (!payload) throw CustomError.unauthorized("Invalid token");
 
@@ -300,11 +320,9 @@ export class ProjectService {
     const project = await ProjectModel.findOne({ _id: projectId });
     if (!project) throw CustomError.badRequest("Project does not exists");
 
-   
-      return {
-        project: project,
-      };
-   
+    return {
+      project: project,
+    };
   }
 
   async requestProjectDeletion(

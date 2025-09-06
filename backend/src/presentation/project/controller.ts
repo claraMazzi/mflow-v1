@@ -31,6 +31,18 @@ export class ProjectController {
       .catch((error) => this.handleError(error, res));
   };
 
+  getUserSharedProjects = (req: Request, res: Response) => {
+    const userId = req.session?.userId ?? "";
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    this.projectService
+      .getUserSharedProjects(userId)
+      .then((projects) => res.json(projects))
+      .catch((error) => this.handleError(error, res));
+  };
+
   // Get a specific project
   getProjectById = (req: Request, res: Response) => {
     const { projectId } = req.params;
@@ -148,7 +160,6 @@ export class ProjectController {
       .then((message) => res.json(message))
       .catch((error) => this.handleError(error, res));
   };
-
 
    // Share a specific project
    getProjectSharingLink = (req: Request, res: Response) => {
