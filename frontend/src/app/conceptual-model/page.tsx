@@ -211,8 +211,7 @@ export default function Page() {
 			socketId: string;
 			userId: string;
 			currentTab: string;
-			mousePosition: { relativeX: number; relativeY: number };
-			timestamp: Date;
+			mousePosition?: { relativeX: number; relativeY: number };
 		}) {
 			setCollaborators((prevCollaborators) => {
 				const newCollaborators = new Map<string, Collaborator>();
@@ -229,12 +228,20 @@ export default function Page() {
 					for (const socketId of existingCollaborator.sockets.keys()) {
 						const existingSocketPosition =
 							existingCollaborator.sockets.get(socketId)!;
+
 						if (socketId === payload.socketId) {
-							newSocketPositions.set(socketId, {
-								...existingSocketPosition,
-								mousePosition: payload.mousePosition,
-								currentTab: payload.currentTab,
-							});
+							if (payload.mousePosition) {
+								newSocketPositions.set(socketId, {
+									...existingSocketPosition,
+									mousePosition: payload.mousePosition,
+									currentTab: payload.currentTab,
+								});
+							} else {
+								newSocketPositions.set(socketId, {
+									...existingSocketPosition,
+									currentTab: payload.currentTab,
+								});
+							}
 						} else {
 							newSocketPositions.set(socketId, {
 								...existingSocketPosition,
@@ -374,6 +381,15 @@ export default function Page() {
 		};
 
 		throttledEmitMouseUpdateFunction.current(roomId, mousePosition, currentTab);
+	};
+
+	const handleCurrentTabChange = (newTab: string) => {
+		setCurrentTab(newTab);
+		socket.volatile.emit("client-volatile-broadcast", {
+			roomId,
+			e: newTab,
+			timestamp: new Date(),
+		});
 	};
 
 	const handleAddItemToList = ({
@@ -520,14 +536,11 @@ export default function Page() {
 				<p>Loading Model</p>
 			) : (
 				<form className="flex flex-col">
-					<input
-						{...customRegisterField({ name: "structureDiagram.imageFilePath" })}
-					/>
 					<br />
 					<Tabs
 						orientation="vertical"
 						value={currentTab}
-						onValueChange={setCurrentTab}
+						onValueChange={handleCurrentTabChange}
 						defaultValue="objetivo-suposiciones"
 					>
 						<TabsList className="flex-col h-auto items-stretch">

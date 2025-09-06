@@ -200,18 +200,20 @@ export class Server {
 
 			socket.on(
 				"client-volatile-broadcast",
-				(payload: {
+				({
+					roomId,
+					currentTab,
+					mousePosition,
+				}: {
 					roomId: string;
 					currentTab: string;
-					mousePosition: { relativeX: number; relativeY: number };
-					timestamp: Date;
+					mousePosition?: { relativeX: number; relativeY: number };
 				}) => {
-					socket.to(payload.roomId).emit("server-volatile-broadcast", {
+					socket.to(roomId).emit("server-volatile-broadcast", {
 						socketId: socket.id,
 						userId: socket.data.userId,
-						currentTab: payload.currentTab,
-						mousePosition: payload.mousePosition,
-						timestamp: payload.timestamp,
+						currentTab: currentTab,
+						mousePosition: mousePosition,
 					});
 				}
 			);
