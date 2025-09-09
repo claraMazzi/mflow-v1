@@ -16,57 +16,30 @@ import {
 import { TooltipProvider } from "@components/ui/tooltip";
 import { Team } from "#types/common";
 import { useSession } from "next-auth/react";
-import { getUserRolesTeamItems } from "../navigation";
+import { getActiveSidebarOption, getUserRolesTeamItems } from "../navigation";
 import { useLayoutActions, useLayoutState } from "@components/global/Context";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@components/ui/common/skeleton";
+import { usePathname } from "next/navigation";
 
-// This is sample data.
-const data = {
-  user: {
-    name: "John Doe",
-    email: "john@example.com",
-    avatar: "/avatars/john-doe.jpg",
-  },
-  teams: [
-    {
-      name: "Modelador Team",
-      role: "modelador",
-      logo: FolderOpen,
-    },
-    {
-      name: "Admin Team",
-      role: "admin",
-      logo: Users,
-    },
-    {
-      name: "Verificador Team",
-      role: "verificador",
-      logo: Share2,
-    },
-  ] as Team[],
-};
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 
-export function AppSidebar({
-  ...props
-}: 
-React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession();
   const { activeRole, activeSidebarOption } = useLayoutState();
-  const { setActiveRole } = useLayoutActions();
-  const [isLoading, setIsLoading] = useState(true)
+  const { setActiveRole, setActiveSidebarOption } = useLayoutActions();
+  const [isLoading, setIsLoading] = useState(true);
 
+  const pathname = usePathname();
   useEffect(() => {
-    setIsLoading(false)
-  
-  }, [])
+    setIsLoading(false);
+  }, []);
 
-  if (isLoading)  {
-    return <Skeleton className='h-screen w-64' />
+  if (isLoading) {
+    return <Skeleton className="h-screen w-64" />;
   }
-  
+
   if (!session) {
     return <></>;
   }
@@ -78,10 +51,10 @@ React.ComponentProps<typeof Sidebar>) {
   const roles = session?.user.roles;
   const userTeams = getUserRolesTeamItems(roles);
 
-
   const handleTeamChange = (role: string) => {
     setActiveRole(role);
-  }
+    setActiveSidebarOption(getActiveSidebarOption(role, pathname));
+  };
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -98,10 +71,19 @@ React.ComponentProps<typeof Sidebar>) {
       >
         <Sidebar collapsible="icon" {...props}>
           <SidebarHeader>
-            <TeamSwitcher teams={userTeams} onTeamChange={handleTeamChange} activeRole={activeRole}/>
+            <TeamSwitcher
+              teams={userTeams}
+              onTeamChange={handleTeamChange}
+              activeRole={activeRole}
+            />
           </SidebarHeader>
           <SidebarContent>
-            <DynamicSidebarContent activeTeam={activeRole} userRoles={roles} activeRole={activeRole} activeSidebarOption={activeSidebarOption} />
+            <DynamicSidebarContent
+              activeTeam={activeRole}
+              userRoles={roles}
+              activeRole={activeRole}
+              activeSidebarOption={activeSidebarOption}
+            />
           </SidebarContent>
           <SidebarFooter>
             <NavUser

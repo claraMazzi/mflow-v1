@@ -26,6 +26,7 @@ export class UserService {
     });
     return {
       users: usersEntity,
+      count: usersEntity.length,
     };
   }
 
