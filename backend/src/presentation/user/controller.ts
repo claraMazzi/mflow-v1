@@ -7,6 +7,7 @@ import {
   UpdateUserDto,
 } from "../../domain";
 import { UserService } from "../services";
+import { UpdateUserRolesrDto } from "../../domain/dtos/user/update-user-roles.dto";
 
 export class UserController {
   constructor(readonly userService: UserService) {}
@@ -60,8 +61,32 @@ export class UserController {
     throw Error("deleteUser to be implemented");
   };
 
-  updateUserRole = (req: Request, res: Response) => {
-    throw Error("deleteUser to be implemented");
+  updateUserRolesById = (req: Request, res: Response) => {
+
+    const { id:userId } = req.params;
+    const userData = req.body;
+    const adminId = req.session?.userId ?? "";
+
+    if (adminId === userId)
+      return res
+        .status(400)
+        .json({ error: "You can't update your own roles" });
+
+    if (!userId) {
+      return res.status(401).json({ error: "No User id provided" });
+    }
+
+    const [error, updateUserRolesDto] = UpdateUserRolesrDto.create({
+      id: userId,
+      ...userData,
+    });
+
+    if (error || !updateUserRolesDto) return res.status(400).json({ error });
+
+    this.userService
+      .updateUserRolesById(updateUserRolesDto)
+      .then((updatedUser) => res.json(updatedUser))
+      .catch((error) => this.handleError(error, res));
   };
 
   inviteUserWithRole = (req: Request, res: Response) => {

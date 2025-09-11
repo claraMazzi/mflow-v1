@@ -26,12 +26,16 @@ export class UserRoutes {
 
     router.get('/:id', controller.getUserById);
     router.put('/', controller.updateUserById);
-    router.get('/', AuthMiddleware.validateAdminRole, controller.getAllUsers);
     
-     //solo lo puede llamar un admin
+    
+    //ADMIN ONLY 
+    router.get('/', AuthMiddleware.validateAdminRole, controller.getAllUsers);
+    router.put('/:id/roles', AuthMiddleware.validateAdminRole, controller.updateUserRolesById); //actualizar el rol de un usuario
+    
+
+
     router.delete('/:id', controller.deleteUser);
-    router.get('/:id/roles', controller.getUserRoles);
-    router.put('/:id/roles', controller.updateUserRole); //actualizar el rol de un usuario
+    // router.get('/:id/roles', controller.getUserRoles);
     router.post('/invite', controller.inviteUserWithRole); //enviar el mail con la invitacion con rol
     router.put('/invite', controller.updateUserRoleWithInvitation); //si tiene un usuario creado hay que actualizar los roles de ese usuario y mandarlo a login, sino mandar a create account - aceptar o rechazar la invitacion 
 

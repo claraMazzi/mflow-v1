@@ -4,37 +4,11 @@ import { Button } from "@components/ui/common/button";
 import { User } from "#types/user";
 import { Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Skeleton } from "@src/components/ui/skeleton";
+import { Skeleton } from "@components/ui/skeleton";
+import { useUsers } from "@hooks/use-users";
 
 export default function UserManager() {
-  // const users = await getUsers()
-
-  const [users, setUsers] = useState<User[]>();
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchUsers = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await getUsers();
-      console.log('RESP', response)
-      if (response.data && response.data.count > 0) {
-        setUsers(response.data.users);
-      } else {
-        setUsers([]);
-      }
-    } catch (err) {
-      setError("Failed to fetch projects");
-      console.error("Error fetching projects:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  const { users, isLoading, refreshUsers } = useUsers();
 
   if (isLoading) {
     return <Skeleton className="h-screen w-full" />;
@@ -68,7 +42,7 @@ export default function UserManager() {
           Invitar usuarios{" "}
         </Button>
       </div>
-      <UserManagementTable users={users} />
+      <UserManagementTable users={users} refreshUsers={refreshUsers} />
     </div>
   );
 }

@@ -90,12 +90,11 @@ const ProjectList = ({
       ),
     });
   };
+  if (isLoading) return <Skeleton className="w-full h-96" />;
 
   return (
     <div>
-      {isLoading ? (
-        <Skeleton className="w-full h-96" />
-      ) : projects && projects.length > 0 ? (
+      {projects && projects.length > 0 ? (
         <div className="w-full grid md:grid-cols-2 lg:grid-cols-3 gap-2">
           {projects.map((project, index) => {
             const isPendingDelition = project.state === projectPendingDelition;

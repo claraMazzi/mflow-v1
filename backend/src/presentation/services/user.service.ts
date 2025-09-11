@@ -1,6 +1,7 @@
 import { bcryptAdapter } from "../../config";
 import { UserModel } from "../../data";
 import { CustomError, PasswordUpdateDto, UpdateUserDto, UserEntity } from "../../domain";
+import { UpdateUserRolesrDto } from "../../domain/dtos/user/update-user-roles.dto";
 
 export class UserService {
   constructor() {}
@@ -46,6 +47,29 @@ export class UserService {
         if (lastName) user.lastName = lastName;
 
         user.save();
+    } catch (error) {
+        throw CustomError.internalServer(`${error}`);
+    }
+  }
+
+  async updateUserRolesById({roles, id}: UpdateUserRolesrDto) {
+
+    const user = await UserModel.findOne({ _id: id });
+    if (!user) throw CustomError.badRequest("User does not exists");
+
+    if (!roles || !Array.isArray(roles) || !roles.length)
+      throw CustomError.badRequest("No data sent to update");
+
+    if (roles.length === user.roles.length && roles.every((role, index) => role === user.roles[index]))
+      throw CustomError.badRequest("No data was updated");
+
+    try {
+        user.roles = roles;
+        user.save();
+        return { 
+          user: UserEntity.fromObject(user),
+          message: "User roles updated successfully"
+        }
     } catch (error) {
         throw CustomError.internalServer(`${error}`);
     }

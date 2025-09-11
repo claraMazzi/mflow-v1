@@ -10,15 +10,18 @@ import {
   TableRow,
 } from "@components/ui/table";
 import { Edit } from "lucide-react";
+import { useUI } from "@components/ui/context";
+import { ModifyUserForm } from "./forms/modify-user-form";
 
 interface UserManagementTableProps {
   users?: User[];
+  refreshUsers : () => void;
 }
 
 const getRoleBadgeVariant = (role: string) => {
   switch (role) {
     case "MODELADOR":
-      return "bg-bordo-100 text-bordo-500 border border-bordo-500 hover:bg-bordo-200";
+      return "bg-bordo-100 !text-bordo-500 border border-bordo-500 hover:bg-bordo-200";
     case "ADMIN":
     case "ADMINISTRADOR":
       return "bg-blue-100 !text-blue-500 border border-blue-500 hover:bg-blue-200";
@@ -42,8 +45,27 @@ const getRoleDisplayName = (role: string) => {
   }
 };
 
-export function UserManagementTable({ users }: UserManagementTableProps) {
-  if (!users || !users.length) return <p>No users found.</p>;
+export function UserManagementTable({ users, refreshUsers }: UserManagementTableProps) {
+  const { openModal } = useUI();
+
+  const handleModifyUser = (user: User) => {
+    openModal({
+      name: "fullscreen-modal",
+      title: "Modificar Usuario",
+      size: "md",
+      showCloseButton: false,
+      content: (
+        <ModifyUserForm
+          onSuccess={() => {
+            refreshUsers();
+          }}
+          user={user}
+        />
+      ),
+    });
+  };
+
+  if (!users || !users.length) return <p>No se han encontrado usuarios.</p>;
   return (
     <div className="rounded-md border">
       <Table>
@@ -90,6 +112,7 @@ export function UserManagementTable({ users }: UserManagementTableProps) {
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 !p-0 hover:bg-muted"
+                  onClick={() => handleModifyUser(user)}
                 >
                   <Edit className="h-4 w-4"  />
                   <span className="sr-only">Editar roles de {user.name}</span>
