@@ -9,7 +9,6 @@ import { ProjectEntity } from "../../domain/entities/project.entity";
 import { EmailService } from "./email.service";
 import { bcryptAdapter, jwtAdapter } from "../../config";
 import { ShareProjectLinkDto } from "../../domain/dtos/project/share-project-link.dto";
-import { UserService } from "./user.service";
 import { Types } from "mongoose";
 
 const projectState: {
@@ -22,7 +21,6 @@ const projectState: {
   deleted: "ELIMINADO",
 };
 export class ProjectService {
-  private userService = new UserService();
   constructor(
     private readonly emailService: EmailService,
     private readonly webServiceUrl: string,
@@ -47,7 +45,7 @@ export class ProjectService {
 
     if (!token) throw CustomError.internalServer("Error getting token");
     //link de retorno
-    const link = `${this.frontEndUrl}/projects/share/?token=${token}`;
+    const link = `${this.frontEndUrl}/share/projects/?token=${token}`;
 
     const html = `<h1>Has sido invitado/a a colaborar en un proyecto!</h1>
       <p> Hace Click en el siguiente <a href=${link}>link</a> para aceptar la invitación </p>

@@ -7,7 +7,8 @@ import {
   UpdateUserDto,
 } from "../../domain";
 import { UserService } from "../services";
-import { UpdateUserRolesrDto } from "../../domain/dtos/user/update-user-roles.dto";
+import { UpdateUserRolesDto } from "../../domain/dtos/user/update-user-roles.dto";
+import { UpdateUsersRolesDto } from "../../domain/dtos/user/update-users-roles.dto";
 
 export class UserController {
   constructor(readonly userService: UserService) {}
@@ -62,21 +63,18 @@ export class UserController {
   };
 
   updateUserRolesById = (req: Request, res: Response) => {
-
-    const { id:userId } = req.params;
+    const { id: userId } = req.params;
     const userData = req.body;
     const adminId = req.session?.userId ?? "";
 
     if (adminId === userId)
-      return res
-        .status(400)
-        .json({ error: "You can't update your own roles" });
+      return res.status(400).json({ error: "You can't update your own roles" });
 
     if (!userId) {
       return res.status(401).json({ error: "No User id provided" });
     }
 
-    const [error, updateUserRolesDto] = UpdateUserRolesrDto.create({
+    const [error, updateUserRolesDto] = UpdateUserRolesDto.create({
       id: userId,
       ...userData,
     });
@@ -89,11 +87,52 @@ export class UserController {
       .catch((error) => this.handleError(error, res));
   };
 
-  inviteUserWithRole = (req: Request, res: Response) => {
-    throw Error("deleteUser to be implemented");
+  inviteUsersWithRole = (req: Request, res: Response) => {
+    // throw Error("deleteUser to be implemented");
+    const adminId = req.session?.userId ?? "";
+    const usersData = req.body;
+
+    if (!usersData) {
+      return res.status(401).json({ error: "No Users data provided" });
+    }
+
+    if (!Array.isArray(usersData)) {
+      return res.status(400).json({ error: "Users data should be an array" });
+    }
+
+    const [error, updateUserRolesDto] = UpdateUsersRolesDto.create({
+      users: usersData,
+    });
+
+    if (error || !updateUserRolesDto) return res.status(400).json({ error });
+   
+    this.userService
+    .inviteUsersWithRole(updateUserRolesDto, adminId)
+    .then((updatedUser) => res.json(updatedUser))
+    .catch((error) => this.handleError(error, res));
   };
 
   updateUserRoleWithInvitation = (req: Request, res: Response) => {
-    throw Error("deleteUser to be implemented");
+    const { token } = req.params;
+    const { requester } = req.body;
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    this.userService
+    .updateUserRoleWithInvitation(token, requester)
+    .then((updatedUser) => res.json(updatedUser))
+    .catch((error) => this.handleError(error, res));
+
+  };
+
+  getUserRolesFromInvitation = (req: Request, res: Response) => {
+    const { token } = req.params;
+
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    this.userService
+    .getUserRolesFromInvitation(token)
+    .then((roles) => res.json(roles))
+    .catch((error) => this.handleError(error, res));
+
   };
 }

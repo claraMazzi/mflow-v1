@@ -73,6 +73,17 @@ export const InviteUserForm = ({ onSuccess, onClose }: InviteUserFormProps) => {
   const handleAddInvitation = () => {
     const formData = form.getValues();
     if (formData.email && formData.roles.length > 0) {
+      const emailExists = pendingInvitations.some(
+        (invitation) => invitation.email === formData.email
+      );
+      if (emailExists) {
+        form.setError("email", {
+          type: "manual",
+          message: "Ya existe una invitación para este email",
+        });
+        return;
+      }
+      
       setPendingInvitations((prev) => [
         ...prev,
         { email: formData.email, roles: [...formData.roles] },
@@ -272,7 +283,7 @@ export const InviteUserForm = ({ onSuccess, onClose }: InviteUserFormProps) => {
                   variant="ghost"
                   size="sm"
                   onClick={() => handleRemoveInvitation(index)}
-                  className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                  className="h-8 w-8 !p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

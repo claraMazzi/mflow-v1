@@ -14,29 +14,47 @@ export class ProjectRoutes {
       envs.SEND_EMIAL
     );
 
-    const service = new ProjectService(emailService, envs.WEBSERVICE_URL, envs.FRONTEND_URL);
+    const service = new ProjectService(
+      emailService,
+      envs.WEBSERVICE_URL,
+      envs.FRONTEND_URL
+    );
     const controller = new ProjectController(service);
 
-    
     //--------------------- Projects CRUD routes
-  
+
     //create
     router.post("/", AuthMiddleware.validateJWT, controller.createProject);
 
     //get projects by user
     router.get("/", AuthMiddleware.validateJWT, controller.getUserProjects);
-    router.get("/shared", AuthMiddleware.validateJWT, controller.getUserSharedProjects);
-
+    router.get(
+      "/shared",
+      AuthMiddleware.validateJWT,
+      controller.getUserSharedProjects
+    );
 
     //getById
-    router.get("/:projectId", AuthMiddleware.validateJWT, controller.getProjectById);
+    router.get(
+      "/:projectId",
+      AuthMiddleware.validateJWT,
+      controller.getProjectById
+    );
 
     //Update project data - name and desc
-    router.put("/:projectId", AuthMiddleware.validateJWT, controller.updateProject);
+    router.put(
+      "/:projectId",
+      AuthMiddleware.validateJWT,
+      controller.updateProject
+    );
 
     //Request Project Deletion project
-    router.post("/:projectId/deletion", AuthMiddleware.validateJWT, controller.requestProjectDeletion);
-    
+    router.post(
+      "/:projectId/deletion",
+      AuthMiddleware.validateJWT,
+      controller.requestProjectDeletion
+    );
+
     //Get delition request details per project
     router.get("/:projectId/deletion", controller.getDeletionDetails);
 
@@ -44,20 +62,23 @@ export class ProjectRoutes {
     router.delete("/:projectId", controller.deleteProject);
 
     // Sharing routes
-    router.post("/:projectId/share", AuthMiddleware.validateJWT, controller.sendProjectCollaborationInvitation);
-    router.get("/:projectId/share", AuthMiddleware.validateJWT, controller.getProjectSharingLink);
+    router.post(
+      "/:projectId/share",
+      AuthMiddleware.validateJWT,
+      controller.sendProjectCollaborationInvitation
+    );
+    router.get(
+      "/:projectId/share",
+      AuthMiddleware.validateJWT,
+      controller.getProjectSharingLink
+    );
     router.post("/share/:token", controller.addCollaboratorToProject);
     router.get("/share/:token", controller.getProjectFromInvitationToken);
-
 
     // // Logic to approve or reject deletion request
     // router.put("/:projectId/deletion", controller.handleDeletionRequest);
 
     //----------------------------------------------
-
-
-
-
 
     // Collaboration routes
     router.post("/:projectId/collaboration", (req, res) => {

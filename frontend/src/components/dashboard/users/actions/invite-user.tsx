@@ -7,6 +7,8 @@ export type ActionState = {
   success?: boolean;
   data?: any;
 };
+
+
 export async function inviteUsers(prevState: ActionState, formData: FormData): Promise<ActionState> {
     const apiBaseUrl = process.env.API_BASE_URL
     const apiToken = process.env.API_TOKEN
@@ -110,3 +112,80 @@ export async function inviteUsers(prevState: ActionState, formData: FormData): P
       }
     }
   }
+  
+
+  export const getUserRolesFromInviteRequest = async (
+    token: string
+  ): Promise<ActionState> => {
+    try {
+      // NextAuth v5 uses auth() instead of getServerSession
+      const session = await auth();
+  
+      if (!session?.user) {
+        return { error: "Not authenticated" };
+      }
+  
+      // Call external API directly
+      const response = await fetch(
+        `${process.env.API_URL}/api/users/invite/${token}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.auth}`,
+          },
+        }
+      );
+  
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return { error: errorData.error || "User new roles get failed" };
+      }
+  
+      const data = await response.json();
+  
+      return data;
+    } catch (error) {
+      console.error("Get user new roles error:", error);
+      return { error: "Something went wrong." };
+    }
+  };
+  
+  export const updateUserRoleWithInvitation = async (
+      prevState: ActionState,
+  
+    token: string
+  ): Promise<ActionState> => {
+    try {
+      // NextAuth v5 uses auth() instead of getServerSession
+      const session = await auth();
+  
+      if (!session?.user) {
+        return { error: "Not authenticated" };
+      }
+  
+      // Call external API directly
+      const response = await fetch(
+        `${process.env.API_URL}/api/users/invite/${token}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.auth}`,
+          },
+        }
+      );
+  
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return { error: errorData.error || "User new roles get failed" };
+      }
+  
+      const data = await response.json();
+  
+      return data;
+    } catch (error) {
+      console.error("Get user new roles error:", error);
+      return { error: "Something went wrong." };
+    }
+  };

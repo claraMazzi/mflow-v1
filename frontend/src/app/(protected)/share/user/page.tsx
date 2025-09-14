@@ -1,7 +1,6 @@
 import React from "react";
-import { ProjectInvitationForm } from "@src/components/dashboard/projects/forms/project-invitation-form";
-import { ProjectEntity } from "@src/types/project";
-import { getProjectFromShareRequest } from "@src/components/dashboard/projects/actions/share-project";
+import { getUserRolesFromInviteRequest } from "@components/dashboard/users/actions/invite-user";
+import { UserInvitationForm } from "@components/dashboard/users/forms/user-invitation-form";
 
 export default async function AcceptInvitation({
   searchParams,
@@ -21,13 +20,14 @@ export default async function AcceptInvitation({
       </div>
     );
 
-  const data = (await getProjectFromShareRequest(token)) as {
-    project: ProjectEntity;
+  const data = (await getUserRolesFromInviteRequest(token)) as {
+    roles: string[];
   };
   return (
     <div className="min-h-screen flex items-center justify-center bg-purple-300 p-4">
       <div className="w-full max-w-md bg-white shadow-md rounded-md p-8 border border-gray-200">
-        <ProjectInvitationForm project={data.project} token={token} />
+        {/* <ProjectInvitationForm project={data.project} token={token} /> */}
+        <UserInvitationForm roles={data.roles} token={token} />
       </div>
     </div>
   );
