@@ -224,8 +224,8 @@ export class Server {
 					socket.to(roomId).emit("server-volatile-broadcast", {
 						socketId: socket.id,
 						userId: socket.data.userId,
-						currentTab: currentTab,
-						mousePosition: mousePosition,
+						currentTab,
+						mousePosition,
 					});
 				}
 			);

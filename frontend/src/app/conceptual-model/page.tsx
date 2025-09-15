@@ -126,7 +126,7 @@ function parsePropertyPath(conceptualModel: ConceptualModel, path: string) {
 			if (!(part in current)) {
 				return undefined;
 			}
-			parsedPath.push(part)
+			parsedPath.push(part);
 			current = current[part];
 		}
 	}
@@ -424,7 +424,7 @@ export default function Page() {
 		setCurrentTab(newTab);
 		socket.volatile.emit("client-volatile-broadcast", {
 			roomId,
-			e: newTab,
+			currentTab: newTab,
 			timestamp: new Date(),
 		});
 	};
