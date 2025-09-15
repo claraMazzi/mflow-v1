@@ -38,24 +38,24 @@ export class UserRoutes {
     ); //actualizar el rol de un usuario
 
     router.delete("/:id", controller.deleteUser);
-    // router.get('/:id/roles', controller.getUserRoles);
 
+    //send invite mail with invitation token
     router.post(
       "/invite",
       AuthMiddleware.validateAdminRole,
       controller.inviteUsersWithRole
-    ); //enviar el mail con la invitacion con rol
+    ); 
 
-    router.put(
-      "/invite/:token",
-      AuthMiddleware.validateJWT,
-      controller.updateUserRoleWithInvitation
-    ); //si tiene un usuario creado hay que actualizar los roles de ese usuario y mandarlo a login, sino mandar a create account - aceptar o rechazar la invitacion
+    //user is not registered
+
+    // router.put( //accept invitation with role 
+    //   "/invite/:token",
+    //   controller.updateUserRoleWithInvitation
+    // ); 
 
     router.get(
       "/invite/:token",
-      AuthMiddleware.validateJWT,
-      controller.getUserRolesFromInvitation
+      controller.getUserDataFromInvitation
     ); 
 
     return router;

@@ -21,10 +21,10 @@ export class UserService {
     senderId,
   }: {
     senderId: string;
-    user: UserEntity;
+    user: UpdateUsersRolesDto;
   }) => {
     const token = await jwtAdapter.generateToken(
-      { senderId: senderId, userId: user.id, roles: user.roles },
+      { senderId: senderId, userEmail: user.email, roles: user.roles },
       "7d"
     );
 
@@ -133,27 +133,19 @@ export class UserService {
   async inviteUsersWithRole(dto: UpdateUsersRolesDto[], senderId: string) {
     await Promise.all(
       dto.map(async (userData) => {
-        const { roles: userNewRoles, email } = userData;
+        const { email } = userData;
 
-        const user = await UserModel.findOne({ email: email });
-        if (!user) throw CustomError.badRequest("User does not exist");
+        const adminUser = await UserModel.findOne({ _id: senderId });
+     
+        if(!adminUser)
+          throw CustomError.badRequest("Admin user does not exists");
 
-        if (user.id === senderId)
+        if (adminUser.email === email)
           throw CustomError.badRequest("You can't update your own roles");
 
-        const newRoles = userNewRoles.filter((role, index) => {
-          const roleExist = user.roles.find((r) => r === role);
-          if (roleExist) return false;
-          else return true;
-        });
-
-        if (!newRoles || !newRoles.length) return;
-
-        const userEntity = UserEntity.fromObject(user);
-        const newEntity = { ...userEntity, roles: [...newRoles] };
-
+      
         await this.sendEmailInvitationLink({
-          user: newEntity,
+          user: userData,
           senderId,
         });
       })
@@ -164,60 +156,60 @@ export class UserService {
     };
   }
 
-  async updateUserRoleWithInvitation(token: string, requester: string) {
+  // async updateUserRoleWithInvitation(token: string, requester: string) {
+  //   const payload = await jwtAdapter.validateToken(token);
+  //   if (!payload) throw CustomError.unauthorized("Invalid token");
+
+  //   const { senderId, userEmail, roles } = payload as {
+  //     userEmail: string;
+  //     senderId: string;
+  //     roles: string[];
+  //   };
+
+  //   if (!userEmail || !senderId) throw CustomError.internalServer("Not valid token");
+
+  //   const user = await UserModel.findOne({ email: userEmail });
+
+
+  //   if (!user) { 
+
+  //     // try {
+  //     //   user.roles.push(...roles);
+  //     //   await user.save();
+  
+  //     //   const userEntity = UserEntity.fromObject(user);
+  
+  //     //   return {
+  //     //     success: true,
+  //     //     message: "User roles updated successfully",
+  //     //     user: userEntity,
+  //     //   };
+  //     // } catch (error) {
+  //     //   throw CustomError.internalServer(`${error}`);
+  //     // }
+  //   }
+
+
+  //   if (user)
+  //     throw CustomError.internalServer("User is already registered in the platform try update roles instead");
+
+    
+  // }
+
+
+  async getUserDataFromInvitation (token: string) {
     const payload = await jwtAdapter.validateToken(token);
     if (!payload) throw CustomError.unauthorized("Invalid token");
 
-    const { senderId, userId, roles } = payload as {
-      userId: string;
+    const { senderId, userEmail, roles } = payload as {
+      userEmail: string;
       senderId: string;
       roles: string[];
     };
-
-    if (!userId || !senderId) throw CustomError.internalServer("Not valid token");
-
-    const user = await UserModel.findOne({ _id: userId });
-
-    if (!user)
-      throw CustomError.internalServer("User must be registered first");
-
-    if (user._id.equals(senderId))
-      throw CustomError.badRequest("Sender cannot be the recipient");
-
-    const rolesExist = user.roles.find((role) => roles.includes(role));
-
-    if (rolesExist)
-      throw CustomError.badRequest("User already has these roles");
-
-    try {
-      user.roles.push(...roles);
-      await user.save();
-
-      const userEntity = UserEntity.fromObject(user);
-
-      return {
-        success: true,
-        message: "User roles updated successfully",
-        user: userEntity,
-      };
-    } catch (error) {
-      throw CustomError.internalServer(`${error}`);
-    }
-  }
-
-
-  async getUserRolesFromInvitation (token: string) {
-    const payload = await jwtAdapter.validateToken(token);
-    if (!payload) throw CustomError.unauthorized("Invalid token");
-
-    const { senderId, userId, roles } = payload as {
-      userId: string;
-      senderId: string;
-      roles: string[];
-    };
-    if (!userId || !senderId) throw CustomError.internalServer("Not valid token");
+    if (!userEmail || !senderId) throw CustomError.internalServer("Not valid token");
 
     return {
+      email: userEmail,
       roles: roles,
     };
 

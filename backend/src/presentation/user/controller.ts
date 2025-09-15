@@ -112,25 +112,26 @@ export class UserController {
     .catch((error) => this.handleError(error, res));
   };
 
-  updateUserRoleWithInvitation = (req: Request, res: Response) => {
+  // updateUserRoleWithInvitation = (req: Request, res: Response) => {
+  //   const { token } = req.params;
+  //   const { requester } = req.body;
+  //   //get the create account form
+  //   if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+  //   this.userService
+  //   .updateUserRoleWithInvitation(token, requester)
+  //   .then((updatedUser) => res.json(updatedUser))
+  //   .catch((error) => this.handleError(error, res));
+
+  // };
+
+  getUserDataFromInvitation = (req: Request, res: Response) => {
     const { token } = req.params;
-    const { requester } = req.body;
+
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
     this.userService
-    .updateUserRoleWithInvitation(token, requester)
-    .then((updatedUser) => res.json(updatedUser))
-    .catch((error) => this.handleError(error, res));
-
-  };
-
-  getUserRolesFromInvitation = (req: Request, res: Response) => {
-    const { token } = req.params;
-
-    if (!token) return res.status(401).json({ error: "Unauthorized" });
-
-    this.userService
-    .getUserRolesFromInvitation(token)
+    .getUserDataFromInvitation(token)
     .then((roles) => res.json(roles))
     .catch((error) => this.handleError(error, res));
 
