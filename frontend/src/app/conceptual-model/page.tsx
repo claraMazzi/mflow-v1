@@ -101,17 +101,36 @@ function throttle(func: any, delay: number) {
 	};
 }
 
-function parsePropertyPath(conceptualModel: any, path: string) {
+function parsePropertyPath(conceptualModel: ConceptualModel, path: string) {
 	const pathParts = path.split(".");
-	for (let i = 0; i < pathParts.length - 1; i++) {
-		if (Array.isArray(conceptualModel[pathParts[i]])) {
-			pathParts[i + 1] = conceptualModel[pathParts[i]].findIndex(
-				(e: any) => e._id === pathParts[i + 1]
+	const parsedPath = [];
+	let current: any = conceptualModel;
+
+	for (const part of pathParts) {
+		const containsListItemKey = part.includes(":");
+		if (containsListItemKey) {
+			const [listProperty, itemId] = part.split(":");
+			if (!(listProperty in current) || !Array.isArray(current[listProperty])) {
+				return undefined;
+			}
+			const itemIndex = current[listProperty].findIndex(
+				(e: any) => e._id === itemId
 			);
+			if (itemIndex === -1) {
+				return undefined;
+			}
+			parsedPath.push(listProperty);
+			parsedPath.push(itemIndex);
+			current = current[listProperty][itemIndex];
+		} else {
+			if (!(part in current)) {
+				return undefined;
+			}
+			parsedPath.push(part)
+			current = current[part];
 		}
-		conceptualModel = conceptualModel[pathParts[i]];
 	}
-	return pathParts.join(".");
+	return parsedPath.join(".");
 }
 
 const MOUSE_POSITION_UPDATE_DELAY = 33; //30 fps
@@ -331,7 +350,7 @@ export default function Page() {
 			listPropertyPath: string;
 			newItem: any;
 		}) {
-			const parsedPath: any = parsePropertyPath(getValues, listPropertyPath);
+			const parsedPath: any = parsePropertyPath(getValues(), listPropertyPath);
 			setValue(parsedPath, [...getValues(parsedPath), newItem]);
 		}
 
@@ -342,7 +361,7 @@ export default function Page() {
 			listPropertyPath: Path<ConceptualModel>;
 			itemId: string;
 		}) {
-			const parsedPath: any = parsePropertyPath(getValues, listPropertyPath);
+			const parsedPath: any = parsePropertyPath(getValues(), listPropertyPath);
 			const currentValue = getValues(listPropertyPath);
 			if (Array.isArray(currentValue)) {
 				setValue(parsedPath, [...currentValue.filter((s) => s._id !== itemId)]);
@@ -597,7 +616,7 @@ export default function Page() {
 											<input
 												{...customRegisterField({
 													name: `assumptions.${index}.description`,
-													propertyPath: `assumptions.${field._id}.description`,
+													propertyPath: `assumptions:${field._id}.description`,
 												})}
 											/>
 											<button
@@ -639,7 +658,7 @@ export default function Page() {
 											<input
 												{...customRegisterField({
 													name: `simplifications.${index}.description`,
-													propertyPath: `simplifications.${field._id}.description`,
+													propertyPath: `simplifications:${field._id}.description`,
 												})}
 											/>
 											<button
@@ -691,7 +710,7 @@ export default function Page() {
 									<input
 										{...customRegisterField({
 											name: `entities.${index}.name`,
-											propertyPath: `entities.${field._id}.name`,
+											propertyPath: `entities:${field._id}.name`,
 										})}
 									/>
 									<button

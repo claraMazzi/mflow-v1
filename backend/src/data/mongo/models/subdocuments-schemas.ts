@@ -1,21 +1,22 @@
-import { Schema } from "mongoose";
+import { InferSchemaType, Schema } from "mongoose";
 
 export const diagramSchema = new Schema(
 	{
 		usesPlantText: Boolean,
 		plantTextCode: String,
-		imageFilePath: String,
+		plantTextUrl: String,
+		imageFileUrl: String,
 	},
 	//Prevents mongo from generating a default id
 	{ _id: false }
 );
 
 const propertySchema = new Schema({
-    nombre: {
+	nombre: {
 		type: String,
 		required: [true, "El campo nombre de la propiedad es obligatorio."],
 	},
-    detailLevelDecision: {
+	detailLevelDecision: {
 		include: Boolean,
 		justification: String,
 		argumentType: {
@@ -39,46 +40,43 @@ const entitySchema = new Schema({
 		},
 	},
 	dynamicDiagram: diagramSchema,
-    properties: [propertySchema],
+	properties: [propertySchema],
 });
 
-export const conceptualModelSchema = new Schema(
-	{
-		objective: {
-			type: String,
-			default: "",
-		},
-		//The internal id automatically added by mongoose.
-		//https://mongoosejs.com/docs/subdocs.html#altsyntaxarrays
-		simplifications: [{ description: String }],
-		assumptions: [{ description: String }],
-		structureDiagram: diagramSchema,
-		flowDiagram: diagramSchema,
-		inputs: [
-			{
-				description: {
-					type: String,
-					required: [
-						true,
-						"El campo descripción de la entrada es obligatorio.",
-					],
-				},
-				entity: Schema.Types.ObjectId,
-				type: { type: String, enum: ["PARAMETRO", "FACTOR EXPERIMENTAL"] },
-			},
-		],
-		outputs: [
-			{
-				description: {
-					type: String,
-					required: [true, "El campo descripción de la salida es obligatorio."],
-				},
-				entity: Schema.Types.ObjectId,
-			},
-		],
-        entities: [entitySchema]
+export const conceptualModelSchema = new Schema({
+	objective: {
+		type: String,
+		default: "",
 	},
-);
+	//The internal id automatically added by mongoose.
+	//https://mongoosejs.com/docs/subdocs.html#altsyntaxarrays
+	simplifications: [{ description: String }],
+	assumptions: [{ description: String }],
+	structureDiagram: diagramSchema,
+	flowDiagram: diagramSchema,
+	inputs: [
+		{
+			description: {
+				type: String,
+				required: [true, "El campo descripción de la entrada es obligatorio."],
+			},
+			entity: Schema.Types.ObjectId,
+			type: { type: String, enum: ["PARAMETRO", "FACTOR EXPERIMENTAL"] },
+		},
+	],
+	outputs: [
+		{
+			description: {
+				type: String,
+				required: [true, "El campo descripción de la salida es obligatorio."],
+			},
+			entity: Schema.Types.ObjectId,
+		},
+	],
+	entities: [entitySchema],
+});
+
+export type ConceptualModel = InferSchemaType<typeof conceptualModelSchema>;
 
 export const correctionSchema = new Schema({
 	description: String,
