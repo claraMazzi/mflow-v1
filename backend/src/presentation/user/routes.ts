@@ -15,21 +15,15 @@ export class UserRoutes {
     );
     // const authService = new AuthService(emailService, envs.WEBSERVICE_URL);
 
-    // router.post("/login", controller.loginUser);
-    // router.post("/register", controller.registerUser);
-
-    // router.get("/validate-email/:token", controller.validateEmail);
     const service = new UserService(envs.FRONTEND_URL, emailService);
-    // const controller = new UserController(service);
     const controller = new UserController(service);
 
-    // Definir las rutas
-
-    router.get("/:id", controller.getUserById);
-    router.put("/", controller.updateUserById);
-
     //ADMIN ONLY
-    router.get("/", AuthMiddleware.validateAdminRole, controller.getAllUsers);
+    router.get(
+      "/all",
+      AuthMiddleware.validateAdminRole,
+      controller.getAllUsers
+    );
 
     router.put(
       "/:id/roles",
@@ -44,19 +38,14 @@ export class UserRoutes {
       "/invite",
       AuthMiddleware.validateAdminRole,
       controller.inviteUsersWithRole
-    ); 
+    );
 
-    //user is not registered
+    router.get("/invite/:token", controller.getUserDataFromInvitation);
 
-    // router.put( //accept invitation with role 
-    //   "/invite/:token",
-    //   controller.updateUserRoleWithInvitation
-    // ); 
-
-    router.get(
-      "/invite/:token",
-      controller.getUserDataFromInvitation
-    ); 
+    // COMMON ROUTES
+    router.get("/", AuthMiddleware.validateJWT, controller.getLoggedUser);
+    router.put("/", AuthMiddleware.validateJWT, controller.updateUserById);
+    router.get("/:id", AuthMiddleware.validateJWT, controller.getUserById);
 
     return router;
   }

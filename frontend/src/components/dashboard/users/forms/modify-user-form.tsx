@@ -1,6 +1,6 @@
 "use client";
 
-import { modifyUserRoles, type ActionState } from "../actions/modify-user";
+import { type ActionState } from "../actions/modify-user";
 import { useActionState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@components/ui/common/button";
@@ -14,7 +14,10 @@ import {
 } from "@components/ui/Forms/form";
 import { Input } from "@components/ui/common/input";
 import { Checkbox } from "@components/ui/common/checkbox";
-import { useUI } from "@src/components/ui/context";
+import { useUI } from "@components/ui/context";
+import { User } from "#types/user";
+import { Badge } from "@components/ui/common/badge";
+import { getRoleBadgeVariant, getRoleDisplayName } from "@lib/utils";
 
 export type ModifyUserFormData = {
   id: string;
@@ -27,12 +30,16 @@ export type ModifyUserFormData = {
 interface ModifyUserFormProps {
   onSuccess?: () => void;
   onClose?: () => void;
-  user: {
-    id: string;
-    name: string;
-    lastName: string;
-    email: string;
-    roles: string[];
+  formActionCallback: (
+    state: ActionState,
+    formData: FormData
+  ) => Promise<ActionState> | ActionState;
+  user: User;
+  disableFieldsMapping: {
+    name: boolean;
+    lastName: boolean;
+    email: boolean;
+    roles: boolean;
   };
 }
 
@@ -44,14 +51,16 @@ const initialState: ActionState = {
 export const ModifyUserForm = ({
   onSuccess,
   onClose,
+  formActionCallback,
   user,
+  disableFieldsMapping,
 }: ModifyUserFormProps) => {
   const [state, formAction, isPending] = useActionState(
-    modifyUserRoles,
+    formActionCallback,
     initialState
   );
 
-  const {closeModal} = useUI()
+  const { closeModal } = useUI();
 
   const form = useForm<ModifyUserFormData>({
     defaultValues: {
@@ -59,11 +68,10 @@ export const ModifyUserForm = ({
       name: user.name,
       lastName: user.lastName,
       email: user.email,
-      roles: user.roles || [],
+      roles: user.roles || ["MODELADOR"],
     },
     mode: "onBlur",
   });
-  
 
   useEffect(() => {
     if (state?.success && onSuccess) {
@@ -103,7 +111,7 @@ export const ModifyUserForm = ({
   return (
     <Form {...form}>
       <form action={formAction} className="p-4 space-y-6">
-      <h2 className="text-3xl font-medium text-center">Editar usuario</h2>
+        <h2 className="text-3xl font-medium text-center">Editar usuario</h2>
 
         <input type="hidden" name="id" value={user.id} />
 
@@ -124,7 +132,7 @@ export const ModifyUserForm = ({
                     {...field}
                     type="text"
                     placeholder={user.name}
-                    disabled
+                    disabled={disableFieldsMapping.name}
                     className="border-2 border-blue-200 focus:border-blue-400"
                   />
                 </FormControl>
@@ -145,7 +153,12 @@ export const ModifyUserForm = ({
                   Apellido <span className="text-red-500">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input {...field} type="text" placeholder={user.lastName} disabled />
+                  <Input
+                    {...field}
+                    type="text"
+                    placeholder={user.lastName}
+                    disabled={disableFieldsMapping.lastName}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -172,7 +185,7 @@ export const ModifyUserForm = ({
                     {...field}
                     type="email"
                     placeholder="juanignacioalbani@gmail.com"
-                    disabled
+                    disabled={disableFieldsMapping.email}
                   />
                 </FormControl>
                 <FormMessage />
@@ -183,107 +196,128 @@ export const ModifyUserForm = ({
 
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Roles</h3>
-          <FormField
-            control={form.control}
-            name="roles"
-            rules={{
-              validate: (value) => {
-                console.log('VALUE', value)
-                if (!value || value.length === 0) {
-                  return "Debe seleccionar al menos un rol"
-                }
-                return true
-              },
-            }}
-            render={({ field }) => (
-              <FormItem>
-                <div className="flex gap-6">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="admin"
-                      name="roles"
-                      value="ADMIN" 
-                      checked={field.value?.includes("ADMIN")}
-                      onCheckedChange={(checked) => {
-                        const currentRoles = field.value || [];
-                        if (checked) {
-                          field.onChange([
-                            ...currentRoles.filter((r) => r !== "ADMIN"),
-                            "ADMIN",
-                          ]);
-                        } else {
-                          field.onChange(
-                            currentRoles.filter((r) => r !== "ADMIN")
-                          );
-                        }
-                      }}
-                      className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                    />
-                    <label htmlFor="admin" className="text-sm font-medium">
-                      Administrador
-                    </label>
-                  </div>
+          {disableFieldsMapping.roles ? (
+             <div className="flex flex-wrap gap-1">
+              {user.roles.map((role) => {
+                return (
+                <Badge
+                  key={role}
+                  color="black"
+                  className={getRoleBadgeVariant(role)}
+                >
+                  {getRoleDisplayName(role)}
+                </Badge>
+              )})}
+            </div>
+          ) : (
+            <FormField
+              control={form.control}
+              name="roles"
+              rules={{
+                validate: (value) => {
+                  if (!value || value.length === 0) {
+                    return "Debe seleccionar al menos un rol";
+                  }
+                  return true;
+                },
+              }}
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex gap-6">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="admin"
+                        name="roles"
+                        value="ADMIN"
+                        disabled={disableFieldsMapping.roles}
+                        checked={field.value?.includes("ADMIN")}
+                        onCheckedChange={(checked) => {
+                          const currentRoles = field.value || [];
+                          if (checked) {
+                            field.onChange([
+                              ...currentRoles.filter((r) => r !== "ADMIN"),
+                              "ADMIN",
+                            ]);
+                          } else {
+                            field.onChange(
+                              currentRoles.filter((r) => r !== "ADMIN")
+                            );
+                          }
+                        }}
+                        className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                      />
+                      <label htmlFor="admin" className="text-sm font-medium">
+                        Administrador
+                      </label>
+                    </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="verificador"
-                      name="roles"
-                      value="VERIFICADOR" 
-                      checked={field.value?.includes("VERIFICADOR")}
-                      onCheckedChange={(checked) => {
-                        const currentRoles = field.value || [];
-                        if (checked) {
-                          field.onChange([
-                            ...currentRoles.filter((r) => r !== "VERIFICADOR"),
-                            "VERIFICADOR",
-                          ]);
-                        } else {
-                          field.onChange(
-                            currentRoles.filter((r) => r !== "VERIFICADOR")
-                          );
-                        }
-                      }}
-                      className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                    />
-                    <label
-                      htmlFor="verificador"
-                      className="text-sm font-medium"
-                    >
-                      Verificador
-                    </label>
-                  </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="verificador"
+                        name="roles"
+                        value="VERIFICADOR"
+                        disabled={disableFieldsMapping.roles}
+                        checked={field.value?.includes("VERIFICADOR")}
+                        onCheckedChange={(checked) => {
+                          const currentRoles = field.value || [];
+                          if (checked) {
+                            field.onChange([
+                              ...currentRoles.filter(
+                                (r) => r !== "VERIFICADOR"
+                              ),
+                              "VERIFICADOR",
+                            ]);
+                          } else {
+                            field.onChange(
+                              currentRoles.filter((r) => r !== "VERIFICADOR")
+                            );
+                          }
+                        }}
+                        className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                      />
+                      <label
+                        htmlFor="verificador"
+                        className="text-sm font-medium"
+                      >
+                        Verificador
+                      </label>
+                    </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="modelador"
-                      name="roles"
-                      value="MODELADOR" 
-                      disabled
-                      checked={field.value?.includes("MODELADOR")}
-                      onCheckedChange={(checked) => {
-                        const currentRoles = field.value || [];
-                        if (checked) {
-                          field.onChange([
-                            ...currentRoles.filter((r) => r !== "MODELADOR"),
-                            "MODELADOR",
-                          ]);
-                        } else {
-                          field.onChange(
-                            currentRoles.filter((r) => r !== "MODELADOR")
-                          );
-                        }
-                      }}
-                      className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                    />
-                    <label htmlFor="modelador" className="text-sm font-medium">
-                      Modelador
-                    </label>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="modelador"
+                        name="roles"
+                        value="MODELADOR"
+                        disabled
+                        checked={field.value?.includes("MODELADOR")}
+                        onCheckedChange={(checked) => {
+                          const currentRoles = field.value || [];
+                          if (checked) {
+                            field.onChange([
+                              ...currentRoles.filter((r) => r !== "MODELADOR"),
+                              "MODELADOR",
+                            ]);
+                          } else {
+                            field.onChange(
+                              currentRoles.filter((r) => r !== "MODELADOR")
+                            );
+                          }
+                        }}
+                        className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                      />
+                      <label
+                        htmlFor="modelador"
+                        className="text-sm font-medium"
+                      >
+                        Modelador
+                      </label>
+                    </div>
                   </div>
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
         </div>
 
         {state?.error && (
@@ -296,7 +330,8 @@ export const ModifyUserForm = ({
           <Button
             type="submit"
             className="uppercase bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-lg font-medium"
-            disabled={isPending || !form.formState.isValid}          >
+            disabled={isPending || !form.formState.isValid}
+          >
             {isPending ? "Guardando..." : "Guardar Cambios"}
           </Button>
         </div>

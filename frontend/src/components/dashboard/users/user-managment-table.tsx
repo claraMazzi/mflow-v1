@@ -12,40 +12,18 @@ import {
 import { Edit } from "lucide-react";
 import { useUI } from "@components/ui/context";
 import { ModifyUserForm } from "./forms/modify-user-form";
+import { modifyUserRoles } from "@components/dashboard/users/actions/modify-user";
+import { getRoleBadgeVariant, getRoleDisplayName } from "@lib/utils";
 
 interface UserManagementTableProps {
   users?: User[];
-  refreshUsers : () => void;
+  refreshUsers: () => void;
 }
 
-const getRoleBadgeVariant = (role: string) => {
-  switch (role) {
-    case "MODELADOR":
-      return "bg-bordo-100 !text-bordo-500 border border-bordo-500 hover:bg-bordo-200";
-    case "ADMIN":
-    case "ADMINISTRADOR":
-      return "bg-blue-100 !text-blue-500 border border-blue-500 hover:bg-blue-200";
-    case "VERIFICADOR":
-      return "bg-green-100 !text-green-800 border border-green-500 hover:bg-green-200";
-    default:
-      return "bg-gray-100 text-gray-800 hover:bg-gray-200";
-  }
-};
-
-const getRoleDisplayName = (role: string) => {
-  switch (role) {
-    case "ADMIN":
-      return "Administrador";
-    case "MODELADOR":
-      return "Modelador";
-    case "VERIFICADOR":
-      return "Verificador";
-    default:
-      return role;
-  }
-};
-
-export function UserManagementTable({ users, refreshUsers }: UserManagementTableProps) {
+export function UserManagementTable({
+  users,
+  refreshUsers,
+}: UserManagementTableProps) {
   const { openModal } = useUI();
 
   const handleModifyUser = (user: User) => {
@@ -59,6 +37,13 @@ export function UserManagementTable({ users, refreshUsers }: UserManagementTable
           onSuccess={() => {
             refreshUsers();
           }}
+          disableFieldsMapping={{
+            name: true,
+            lastName: true,
+            email: true,
+            roles: false,
+          }}
+          formActionCallback={modifyUserRoles}
           user={user}
         />
       ),
@@ -91,9 +76,7 @@ export function UserManagementTable({ users, refreshUsers }: UserManagementTable
               <TableCell className="font-medium">
                 {user.name} {user.lastName}
               </TableCell>
-              <TableCell className="">
-                {user.email}
-              </TableCell>
+              <TableCell className="">{user.email}</TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">
                   {user.roles.map((role) => (
@@ -114,7 +97,7 @@ export function UserManagementTable({ users, refreshUsers }: UserManagementTable
                   className="h-8 w-8 !p-0 hover:bg-muted"
                   onClick={() => handleModifyUser(user)}
                 >
-                  <Edit className="h-4 w-4"  />
+                  <Edit className="h-4 w-4" />
                   <span className="sr-only">Editar roles de {user.name}</span>
                 </Button>
               </TableCell>

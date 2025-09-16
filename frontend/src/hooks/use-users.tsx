@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect, useCallback } from "react"
-import { getUsers } from "@components/dashboard/users/actions/get-users"
+import { getAllActiveUsers } from "@components/dashboard/users/actions/get-users"
 import { User } from "#types/user"
 
 export const useUsers = () => {
@@ -12,7 +12,7 @@ export const useUsers = () => {
     try {
       setIsLoading(true)
       setError(null)
-      const response = await getUsers()
+      const response = await getAllActiveUsers()
       if (response.data && response.data.count > 0) {
         setUser(response.data.users)
       } else {

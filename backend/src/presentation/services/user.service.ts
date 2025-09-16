@@ -156,46 +156,6 @@ export class UserService {
     };
   }
 
-  // async updateUserRoleWithInvitation(token: string, requester: string) {
-  //   const payload = await jwtAdapter.validateToken(token);
-  //   if (!payload) throw CustomError.unauthorized("Invalid token");
-
-  //   const { senderId, userEmail, roles } = payload as {
-  //     userEmail: string;
-  //     senderId: string;
-  //     roles: string[];
-  //   };
-
-  //   if (!userEmail || !senderId) throw CustomError.internalServer("Not valid token");
-
-  //   const user = await UserModel.findOne({ email: userEmail });
-
-
-  //   if (!user) { 
-
-  //     // try {
-  //     //   user.roles.push(...roles);
-  //     //   await user.save();
-  
-  //     //   const userEntity = UserEntity.fromObject(user);
-  
-  //     //   return {
-  //     //     success: true,
-  //     //     message: "User roles updated successfully",
-  //     //     user: userEntity,
-  //     //   };
-  //     // } catch (error) {
-  //     //   throw CustomError.internalServer(`${error}`);
-  //     // }
-  //   }
-
-
-  //   if (user)
-  //     throw CustomError.internalServer("User is already registered in the platform try update roles instead");
-
-    
-  // }
-
 
   async getUserDataFromInvitation (token: string) {
     const payload = await jwtAdapter.validateToken(token);
