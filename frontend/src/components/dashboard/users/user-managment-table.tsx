@@ -82,8 +82,7 @@ export function UserManagementTable({
                   {user.roles.map((role) => (
                     <Badge
                       key={role}
-                      color="black"
-                      className={getRoleBadgeVariant(role)}
+                      color={getRoleBadgeVariant(role)}
                     >
                       {getRoleDisplayName(role)}
                     </Badge>

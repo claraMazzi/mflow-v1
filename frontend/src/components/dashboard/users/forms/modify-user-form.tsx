@@ -2,7 +2,7 @@
 
 import { type ActionState } from "../actions/modify-user";
 import { useActionState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, UseFormReturn } from "react-hook-form";
 import { Button } from "@components/ui/common/button";
 import {
   Form,
@@ -27,8 +27,9 @@ export type ModifyUserFormData = {
   roles: string[];
 };
 
+
 interface ModifyUserFormProps {
-  onSuccess?: () => void;
+  onSuccess?: (form?: ModifyUserFormData) => void;
   onClose?: () => void;
   formActionCallback: (
     state: ActionState,
@@ -75,17 +76,19 @@ export const ModifyUserForm = ({
 
   useEffect(() => {
     if (state?.success && onSuccess) {
-      onSuccess();
+      console.log('prev')
+      onSuccess(form.getValues());
     }
   }, [state?.success, onSuccess]);
 
   const parseErrorMessage = (error: string) => {
+    console.log('errormess', error)
     switch (error) {
       case "Invalid credentials.":
         return "Usuario o contraseña no corresponden a un usuario registrado";
       case "Not authenticated":
         return "Debes iniciar sesión para modificar un usuario";
-      case "Data not updated":
+      case "No updated data":
         return "Debe modificar algún campo para poder actualizarlo";
       case "Something went wrong.":
       default:
@@ -202,8 +205,7 @@ export const ModifyUserForm = ({
                 return (
                 <Badge
                   key={role}
-                  color="black"
-                  className={getRoleBadgeVariant(role)}
+                  color={getRoleBadgeVariant(role)}
                 >
                   {getRoleDisplayName(role)}
                 </Badge>

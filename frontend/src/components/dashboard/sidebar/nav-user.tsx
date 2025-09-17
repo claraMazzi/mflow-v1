@@ -21,7 +21,7 @@ import LogoutButton from "@components/auth/logout-button";
 import { getLoggedUser } from "@components/dashboard/users/actions/get-users";
 import { User } from "#types/user";
 import { useState, useEffect } from "react";
-import { ModifyUserForm } from "@components/dashboard/users/forms/modify-user-form";
+import { ModifyUserForm, ModifyUserFormData } from "@components/dashboard/users/forms/modify-user-form";
 import { modifyUserData } from "@components/dashboard/users/actions/modify-user";
 import { useSession } from "next-auth/react";
 
@@ -50,15 +50,22 @@ export function NavUser({
     fetchUserData();
   }, []);
 
-  const udpateSession = async (user:User) =>{ 
-    if(user)
-    await update({
-      user: {
-        ...session?.user,
-        name: user.name,
-        lastName: user?.lastName,
-      },
-    });
+  const updateSession = async (form: ModifyUserFormData) =>{
+    console.log('update', form)
+
+      await update({
+        user: {
+          ...session?.user,
+          name: form.name,
+          lastName: form?.lastName,
+        },
+      });
+  }
+
+  const onSuccess = (form?: ModifyUserFormData) =>{ 
+    console.log('on success', form)
+    if (form)
+    updateSession(form)
   }
 
   const handleEditUser = () => {
@@ -80,7 +87,7 @@ export function NavUser({
           }}
           formActionCallback={modifyUserData}
           user={userDetails}
-          onSuccess={udpateSession}
+          onSuccess={onSuccess}
         />
       ),
     });

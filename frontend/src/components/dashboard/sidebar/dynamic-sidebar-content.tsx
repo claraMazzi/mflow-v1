@@ -90,7 +90,7 @@ export function DynamicSidebarContent({
                                   : ""
                               )}
                             >
-                              {subItem.icon}
+                              <div className="w-12">{subItem.icon}</div>
 
                               <span>{subItem.title}</span>
                             </a>
@@ -102,16 +102,11 @@ export function DynamicSidebarContent({
                 </>
               ) : (
                 <SidebarMenuButton
-                  // onClick={() => onMenuItemClick(item.title)}
-                  // className={cn(
-                  //   activeSidebarOption === item.title
-                  //     ? "bg-purple-400  hover:bg-purple-500 hover:text-white text-white"
-                  //     : ""
-                  // )}
                   isActive={activeSidebarOption === item.title}
                 >
                   <a href={item.slug} className="flex gap-2">
-                    {item.icon}
+                    <div className="">{item.icon}</div>
+
                     <span>{item.title}</span>
                   </a>
                 </SidebarMenuButton>

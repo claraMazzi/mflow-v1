@@ -105,6 +105,11 @@ export const getActiveSidebarOption = (
   pathname: string,
   role: string
 ): string => {
+
+  if (!role) {
+    return "";
+  }
+  
   if (pathname === "/dashboard" || pathname === "/dashboard/") {
     switch (role) {
       case "modelador":
@@ -118,11 +123,11 @@ export const getActiveSidebarOption = (
     }
   }
 
-  if (!role) {
-    return "";
-  }
-
   const menu = getMenuItemsByRole(role);
+
+  if (pathname == '') { 
+    return menu[0].title
+  }
 
   // First, try to find a direct match at the top level
   for (const item of menu) {

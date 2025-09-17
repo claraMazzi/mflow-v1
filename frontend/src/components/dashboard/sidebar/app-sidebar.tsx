@@ -20,8 +20,7 @@ import { getActiveSidebarOption, getUserRolesTeamItems } from "../navigation";
 import { useLayoutActions, useLayoutState } from "@components/global/Context";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@components/ui/common/skeleton";
-import { usePathname } from "next/navigation";
-
+import { useRouter } from "@node_modules/next/navigation";
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 
@@ -30,8 +29,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { activeRole, activeSidebarOption } = useLayoutState();
   const { setActiveRole, setActiveSidebarOption } = useLayoutActions();
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
-  const pathname = usePathname();
   useEffect(() => {
     setIsLoading(false);
   }, []);
@@ -53,7 +52,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const handleTeamChange = (role: string) => {
     setActiveRole(role);
-    setActiveSidebarOption(getActiveSidebarOption(role, pathname));
+    setActiveSidebarOption(getActiveSidebarOption("", role));
+    router.push("/dashboard");
   };
 
   return (

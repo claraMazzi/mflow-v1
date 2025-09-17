@@ -38,42 +38,20 @@ export async function modifyUserData(
     if (!accessToken) {
       return { error: "No access token available" };
     }
-    const response = await fetch(
-      `${process.env.API_URL}/api/users/`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          name,
-          lastName
-        }),
-      }
-    );
+    const response = await fetch(`${process.env.API_URL}/api/users/`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        name,
+        lastName,
+      }),
+    });
 
     if (!response.ok) {
-      const errorText = await response.text();
-
-      if (response.status === 401) {
-        return {
-          error: "No autenticado",
-          success: false,
-        };
-      }
-
-      if (response.status === 400) {
-        return {
-          error: "Datos no actualizados",
-          success: false,
-        };
-      }
-
-      return {
-        error: "Algo salió mal.",
-        success: false,
-      };
+      return await response.json();
     }
 
     return {
@@ -86,7 +64,6 @@ export async function modifyUserData(
     };
   }
 }
-
 
 export async function modifyUserRoles(
   prevState: ActionState,
