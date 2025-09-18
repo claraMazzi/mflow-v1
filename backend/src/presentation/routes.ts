@@ -5,24 +5,16 @@ import { UploadRoutes } from "./upload/routes";
 import { ProjectRoutes } from "./project/routes";
 import { CollaborationRoom } from "./collaboration/collaborationRoom";
 import { Server as SocketIO } from "socket.io";
+import { SocketServer } from "./socket-server";
 
 export class AppRoutes {
-	private socketServer: SocketIO;
-	private activeCollaborationRooms: Map<string, CollaborationRoom>;
+	private socketServer: SocketServer;
 	private uploadRoutes: UploadRoutes;
 
-	constructor({
-		socketServer,
-		activeCollaborationRooms,
-	}: {
-		socketServer: SocketIO;
-		activeCollaborationRooms: Map<string, CollaborationRoom>;
-	}) {
+	constructor({ socketServer }: { socketServer: SocketServer }) {
 		this.socketServer = socketServer;
-		this.activeCollaborationRooms = activeCollaborationRooms;
 		this.uploadRoutes = new UploadRoutes({
 			socketServer,
-			activeCollaborationRooms,
 		});
 	}
 

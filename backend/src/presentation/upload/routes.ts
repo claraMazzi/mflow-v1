@@ -10,21 +10,18 @@ import { Server as SocketIO } from "socket.io";
 import { CollaborationRoom } from "../collaboration/collaborationRoom";
 import { existsSync } from "fs";
 import { VersionModel } from "../../data";
-import { setValue } from "../../types/socket-events";
+import { getProperty, setValue } from "../../types/socket-events";
+import { SocketServer } from "../socket-server";
+import { Diagram } from "../../data/mongo/models/subdocuments-schemas";
+import { AnyNaptrRecord } from "dns";
+import path from "path";
+import { randomUUID } from "crypto";
 
 export class UploadRoutes {
-	private socketServer: SocketIO;
-	private activeCollaborationRooms: Map<string, CollaborationRoom>;
+	private socketServer: SocketServer;
 
-	constructor({
-		socketServer,
-		activeCollaborationRooms,
-	}: {
-		socketServer: SocketIO;
-		activeCollaborationRooms: Map<string, CollaborationRoom>;
-	}) {
+	constructor({ socketServer }: { socketServer: SocketServer }) {
 		this.socketServer = socketServer;
-		this.activeCollaborationRooms = activeCollaborationRooms;
 	}
 
 	get routes(): Router {
@@ -48,7 +45,7 @@ export class UploadRoutes {
 		const versionStorage = multer.diskStorage({
 			destination: function (
 				req: Request,
-				file: File,
+				file: Express.Multer.File,
 				cb: (error: Error | null, destination: string) => void
 			) {
 				const versionId = req.params.versionId;
@@ -58,6 +55,10 @@ export class UploadRoutes {
 				}
 
 				cb(null, `${baseUploadDirectory}/${versionId}/conceptual-model`);
+			},
+			filename: (req: Request, file: Express.Multer.File, cb: any) => {
+				const uniqueName = `${randomUUID()}${path.extname(file.originalname)}`;
+				cb(null, uniqueName);
 			},
 		});
 
@@ -83,13 +84,13 @@ export class UploadRoutes {
 		});
 
 		const versionAccessMiddleware = new CheckVersionAccessMiddleware({
-			activeCollaborationRooms: this.activeCollaborationRooms,
+			socketServer: this.socketServer,
 		});
 
 		router.post(
-			"uploads/:versionId",
+			"uploads/:versionId/diagrams",
 			AuthMiddleware.validateJWT,
-			(req, res, next) => {
+			async (req, res, next) => {
 				const versionId = req.params.versionId;
 				const propertyPath = req.body.propertyPath;
 
@@ -99,6 +100,32 @@ export class UploadRoutes {
 
 				if (!propertyPath) {
 					return res.status(400).json({ error: "No property path provided." });
+				}
+
+				const version = await VersionModel.findById(versionId).exec();
+
+				if (!version) {
+					return res.status(400).json({ error: "Version not found." });
+				}
+
+				const property = getProperty(version.conceptualModel, propertyPath) as
+					| Diagram
+					| undefined;
+
+				if (!property) {
+					return res.status(400).json({
+						error: "The specified property path wasn't found in the version.",
+					});
+				}
+
+				if (
+					!("imageFileUrl" in propertyPath) ||
+					property["imageFileUrl"] !== null
+				) {
+					return res.status(409).json({
+						error:
+							"There is an image file already present in the specified path.",
+					});
 				}
 
 				next();
@@ -138,15 +165,14 @@ export class UploadRoutes {
 				}
 
 				const newImageUrl = `uploads/${newVersionImage.id}`;
+				const imageUrlPropertyPath = `${propertyPath}.imageFileUrl`;
 
-				setValue(version.conceptualModel!, propertyPath, "newImage");
+				setValue(version.conceptualModel!, imageUrlPropertyPath, newImageUrl);
 				await version.save();
 
-				this.socketServer.emit(versionId);
-
-				this.socketServer.to(versionId).emit("field-update", {
-					propertyPath: propertyPath,
+				this.socketServer.emitFieldUpdate(versionId, {
 					value: newImageUrl,
+					propertyPath: imageUrlPropertyPath,
 				});
 
 				return res.send(200);

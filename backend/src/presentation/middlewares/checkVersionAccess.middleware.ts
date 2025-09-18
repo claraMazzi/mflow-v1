@@ -6,16 +6,14 @@ import { CollaborationRoom } from "../collaboration/collaborationRoom";
 import { version } from "os";
 import { Server as SocketIO } from "socket.io";
 import mongoose from "mongoose";
+import { Socket } from "dgram";
+import { SocketServer } from "../socket-server";
 
 export class CheckVersionAccessMiddleware {
-	private activeCollaborationRooms: Map<string, CollaborationRoom>;
+	private socketServer: SocketServer;
 
-	constructor({
-		activeCollaborationRooms,
-	}: {
-		activeCollaborationRooms: Map<string, CollaborationRoom>;
-	}) {
-		this.activeCollaborationRooms = activeCollaborationRooms;
+	constructor({ socketServer }: { socketServer: SocketServer }) {
+		this.socketServer = socketServer;
 	}
 
 	checkIsEditorInCollaborationRoom(
@@ -27,16 +25,17 @@ export class CheckVersionAccessMiddleware {
 			const userId = req.session?.userId!;
 			const versionId = req.params.versionId;
 
-			const collabRoom = this.activeCollaborationRooms.get(versionId);
+			const roomState = this.socketServer.getCollaborationRoomState({
+				roomId: versionId,
+			});
 
-			if (!collabRoom) {
+			if (!roomState) {
 				return res.status(404).json({
 					error:
 						"The collaboration room for the specified version is not currently active.",
 				});
 			}
 
-			const roomState = collabRoom.getRoomState();
 			if (roomState.currentEditingUser !== userId) {
 				return res.status(403).json({
 					error:

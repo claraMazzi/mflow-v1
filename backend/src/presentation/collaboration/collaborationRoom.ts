@@ -105,7 +105,7 @@ export class CollaborationRoom {
 		};
 	}
 
-	cleanupStaleConnections(activeSocketIds: Set<string>): boolean {
+	cleanUpStaleConnections(activeSocketIds: Set<string>): boolean {
 		let hasRoomChanged = false;
 		const usersToRemove: string[] = [];
 		for (const [userId, userInfo] of this.userIdToUserInfoMap.entries()) {
