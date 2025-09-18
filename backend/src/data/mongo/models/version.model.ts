@@ -25,7 +25,13 @@ const versionSchema = new Schema(
 			ref: "Revision",
 		},
 		todoItems: [todoItemSchema],
-		conceptualModel: conceptualModelSchema,
+		conceptualModel: {
+			type: conceptualModelSchema,
+			required: [
+				true,
+				"The conceptual model must be initialized when the version is created.",
+			],
+		},
 		//Uncomment later if needed
 		/*comments : {
 			type: [Schema.Types.ObjectId],

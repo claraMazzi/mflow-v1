@@ -5,11 +5,16 @@ export const diagramSchema = new Schema(
 		usesPlantText: Boolean,
 		plantTextCode: String,
 		plantTextUrl: String,
-		imageFileUrl: String,
+		imageFileUrl: {
+			type: String,
+			default: null,
+		},
 	},
 	//Prevents mongo from generating a default id
 	{ _id: false }
 );
+
+export type Diagram = InferSchemaType<typeof diagramSchema>;
 
 const propertySchema = new Schema({
 	nombre: {
