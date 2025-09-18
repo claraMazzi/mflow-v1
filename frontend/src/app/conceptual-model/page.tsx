@@ -147,9 +147,9 @@ export default function Page() {
 		new Map()
 	);
 	const hasEditingRights = useMemo(() => {
-		if (!session) return false;
+		if (!session?.user.id) return false;
 		return !!collaborators.get(session.user.id)?.hasEditingRights;
-	}, [collaborators]);
+	}, [collaborators, session?.user.id]);
 
 	const {
 		canUserSendEditingRequest,
@@ -592,6 +592,7 @@ export default function Page() {
 							</TabsTrigger>
 						</TabsList>
 						<TabsContent value="objetivo-suposiciones">
+							<label>Objetivo del Modelo Conceptual: </label>
 							<input {...customRegisterField({ name: "objective" })} />
 							<h2>Suposiciones</h2>
 							<button
