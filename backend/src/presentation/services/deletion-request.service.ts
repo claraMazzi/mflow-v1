@@ -32,7 +32,9 @@ export class DeletionRequestService {
         .exec();
 
       const deletionRequestEntities = deletionRequests.map((request) =>
-        DelitionRequestEntity.fromObject(request)
+    console.log('getAllDeletionRequests', request)
+//TODO: MAPP CORRERCTLY -- CREATE PROJECT IN DATA BASE 
+        // DelitionRequestEntity.fromObject(request)
       );
 
       return {

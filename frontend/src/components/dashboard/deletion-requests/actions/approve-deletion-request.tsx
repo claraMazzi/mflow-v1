@@ -1,6 +1,7 @@
-"use client";
+"use server"; 
 
 import { ApproveDeletionRequestData } from "#types/deletion-request";
+import { auth } from "@lib/auth";
 
 export type ActionState = {
   success?: boolean;
@@ -12,11 +13,17 @@ export const approveDeletionRequest = async (
   data: ApproveDeletionRequestData
 ): Promise<ActionState> => {
   try {
-    const response = await fetch(`/api/deletion-requests/${data.deletionRequestId}/approve`, {
+    const session = await auth();
+    if (!session?.user) {
+      return { error: "Not authenticated" }
+    }
+
+    const response = await fetch(`${process.env.API_URL}/api/deletion-requests/${data.deletionRequestId}/approve`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-      },
+        Authorization: `Bearer ${session?.auth}`,
+          },
       body: JSON.stringify({
         reviewer: data.reviewer,
       }),
