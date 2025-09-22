@@ -1,4 +1,4 @@
-import { Schema, model } from "mongoose";
+import { InferSchemaType, Schema, model } from "mongoose";
 
 const versionImageSchema = new Schema(
 	{
@@ -28,13 +28,19 @@ const versionImageSchema = new Schema(
 			type: String,
 			required: [true, "La ruta donde está guardada la imagen es obligatoria."],
 		},
+		url: {
+			type: String,
+			required: [true, "La url para acceder a la imagen no puede ser nula."],
+		},
 		version: {
-			type: [Schema.Types.ObjectId],
+			type: Schema.Types.ObjectId,
 			ref: "Version",
-            required: [true, "La imagen debe estar asociada con una versión."]
+			required: [true, "La imagen debe estar asociada con una versión."],
 		},
 	},
 	{ timestamps: true }
 );
+
+export type VersionImage = InferSchemaType<typeof versionImageSchema>;
 
 export const VersionImageModel = model("VersionImage", versionImageSchema);

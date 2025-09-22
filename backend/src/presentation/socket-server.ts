@@ -12,6 +12,8 @@ import { VersionService } from "./services";
 import { jwtAdapter } from "../config";
 import { UserModel } from "../data";
 import { getProperty, setValue } from "../types/socket-events";
+import { ConceptualModel } from "../data/mongo/models/subdocuments-schemas";
+import { VersionImage } from "../data/mongo/models/version-image.model";
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
@@ -41,7 +43,10 @@ type UsersInRoomChangePayload = BaseSocketEventPayload & {
 
 type InitializeConceptualModelPayload = BaseSocketEventPayload & {
 	type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL;
-	conceptualModel: any;
+	conceptualModel: ConceptualModel;
+	imageInfos: (Pick<VersionImage, "originalFilename" | "url"> & {
+		id: string;
+	})[];
 };
 
 enum SERVER_WS_EVENT_TYPES {
@@ -196,7 +201,7 @@ export class SocketServer {
 	// Event Handler Methods
 	private async handleJoinRoom(socket: Socket, payload: JoinRoomEventPayload) {
 		//TODO: ADD CHECK OF VALIDITY BEFORE ADDING THE SOCKET TO THE ROOM
-		const { version } = await this.versionService.getVersionById(
+		const { version } = await this.versionService.getVersionByIdWithImages(
 			payload.roomId
 		);
 
@@ -210,7 +215,8 @@ export class SocketServer {
 		const collabRoom = this.activeCollaborationRooms.get(version.id)!;
 
 		this.emitInitializeConceptualModel(socket, {
-			conceptualModel: { ...(version as any).toObject().conceptualModel },
+			conceptualModel: version.conceptualModel,
+			imageInfos: version.imageInfos,
 		});
 
 		await socket.join(payload.roomId);
@@ -526,13 +532,52 @@ export class SocketServer {
 
 	public emitInitializeConceptualModel(
 		socket: Socket,
-		payload: { conceptualModel: any }
+		{
+			conceptualModel,
+			imageInfos,
+		}: {
+			conceptualModel: ConceptualModel;
+			imageInfos: (Pick<VersionImage, "originalFilename" | "url"> & {
+				id: string;
+			})[];
+		}
 	) {
 		socket.emit(SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL, {
 			type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
 			timestamp: new Date(),
-			conceptualModel: payload.conceptualModel,
+			conceptualModel,
+			imageInfos,
 		} satisfies InitializeConceptualModelPayload);
+	}
+
+	public emitImageFileAdded(
+		socket: Socket,
+		{
+			imageId,
+		}: {
+			imageId: string;
+		}
+	) {
+		socket.emit("image-added", {
+			type: "image-added",
+			timestamp: new Date(),
+			imageId,
+		});
+	}
+
+	public emitImageFileRemoved (
+		socket: Socket,
+		{
+			imageId,
+		}: {
+			imageId: string;
+		}
+	) {
+		socket.emit("image-removed", {
+			type: "image-removed",
+			timestamp: new Date(),
+			imageId,
+		});
 	}
 
 	public emitFieldUpdate(

@@ -1,12 +1,13 @@
-import { InferSchemaType, Schema } from "mongoose";
+import { InferSchemaType, Schema, SchemaType } from "mongoose";
 
 export const diagramSchema = new Schema(
 	{
 		usesPlantText: Boolean,
 		plantTextCode: String,
-		plantTextUrl: String,
-		imageFileUrl: {
-			type: String,
+		plantTextToken: String,
+		imageFileId: {
+			type: Schema.Types.ObjectId,
+			ref: "VersionImage",
 			default: null,
 		},
 	},

@@ -119,8 +119,8 @@ export class UploadRoutes {
 				}
 
 				if (
-					!("imageFileUrl" in propertyPath) ||
-					property["imageFileUrl"] !== null
+					!("imageFileId" in propertyPath) ||
+					property["imageFileId"] !== null
 				) {
 					return res.status(409).json({
 						error:

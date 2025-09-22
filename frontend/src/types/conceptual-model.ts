@@ -1,8 +1,8 @@
 type Diagram = {
 	usesPlantText: boolean;
 	plantTextCode: string;
-	plantTextUrl: string;
-	imageFileUrl: string;
+	plantTextToken: string;
+	imageFileId: string;
 };
 
 type Property = {
