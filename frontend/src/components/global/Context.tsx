@@ -1,5 +1,5 @@
 "use client"
-
+import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation"
 import { type ReactElement, createContext, useContext, useEffect, useReducer } from "react"
 import { getActiveSidebarOption } from "@components/dashboard/navigation"
@@ -36,14 +36,6 @@ function layoutReducer(state: any, action: any) {
   }
 }
 
-const getInitialActiveRole = () => {
-  if (typeof window !== "undefined") {
-    const storedRole = localStorage.getItem("activeRole")
-    return storedRole || "MODELADOR"
-  }
-  return "MODELADOR"
-}
-
 const useLayoutState = () => {
   const state = useContext(LayoutStateContext)
 
@@ -78,8 +70,17 @@ const useLayoutActions = () => {
   }
 }
 
+const getInitialActiveRole = () => {
+  if (typeof window !== "undefined") {
+    const storedRole = localStorage.getItem("activeRole")
+    return storedRole || "MODELADOR"
+  }
+  return "MODELADOR"
+}
+
 const LayoutProvider = ({ children }: { children: ReactElement }) => {
   const pathname = usePathname()
+  const { data: session, status } = useSession()
 
   const [state, dispatch] = useReducer(layoutReducer, {
     activeRole: getInitialActiveRole(),
@@ -87,12 +88,38 @@ const LayoutProvider = ({ children }: { children: ReactElement }) => {
     sidebarState: "expanded",
   })
 
+  // Handle role management based on session state
+  useEffect(() => {
+    if (status === "loading") return // Still loading
+
+    if (status === "unauthenticated") {
+      // User logged out - clear stored role
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("activeRole")
+      }
+      dispatch({ type: "setActiveRole", role: "MODELADOR" })
+    } else if (status === "authenticated" && session?.user?.roles) {
+      // User logged in - validate stored role or set to MODELADOR
+      const storedRole = localStorage.getItem("activeRole")
+      const userHasStoredRole = session.user.roles.find((role: string) => role.toUpperCase() === storedRole?.toUpperCase())
+      
+      if (userHasStoredRole) {
+        // User has the stored role, keep it
+        dispatch({ type: "setActiveRole", role: storedRole })
+      } else {
+        // User doesn't have stored role or no stored role, set to MODELADOR
+        localStorage.setItem("activeRole", "MODELADOR")
+        dispatch({ type: "setActiveRole", role: "MODELADOR" })
+      }
+    }
+  }, [session, status])
+
   useEffect(() => {
     dispatch({
       type: "setActiveSidebarOption",
       id: getActiveSidebarOption(pathname, state.activeRole),
     })
-  }, [pathname])
+  }, [pathname, state.activeRole])
 
   useEffect(() => {
     const sidebarState = state.isSidebarOpen ? "expanded" : "collapsed"

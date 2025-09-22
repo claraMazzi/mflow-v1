@@ -1,14 +1,11 @@
 "use client";
 
-import { Plus } from "lucide-react";
 import { Button } from "@components/ui/common/button";
 import React, { ReactNode } from "react";
 import ContentCard from "@components/ui/Cards/ContentCard";
 import { Skeleton } from "@components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { useUI } from "@components/ui/context";
-import { CreateProjectForm } from "./forms/create-project-form";
-import { useProjects } from "@hooks/use-projects";
 import { ModifyProjectForm } from "./forms/modify-project-form";
 import { ProjectEntity } from "@src/types/project";
 import { DelitionRequestForm } from "./forms/delition-request-form";

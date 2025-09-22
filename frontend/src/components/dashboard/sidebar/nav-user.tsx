@@ -23,6 +23,8 @@ import { User } from "#types/user";
 import { useState, useEffect } from "react";
 import { ModifyUserForm, ModifyUserFormData } from "@components/dashboard/users/forms/modify-user-form";
 import { modifyUserData } from "@components/dashboard/users/actions/modify-user";
+import { DeleteUserForm } from "@components/dashboard/users/forms/delete-user-form";
+import { deleteUserData } from "@components/dashboard/users/actions/delete-user";
 import { useSession } from "next-auth/react";
 
 export function NavUser({
@@ -34,7 +36,7 @@ export function NavUser({
   email: string;
   avatar: string;
 }) {
-  const { openModal } = useUI();
+  const { openModal, closeModal } = useUI();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [userDetails, setuserDetails] = useState<User>();
   const { data: session, update } = useSession();
@@ -68,6 +70,13 @@ export function NavUser({
     updateSession(form)
   }
 
+  const onDeleteSuccess = () => {
+    // Close the modal and redirect to logout or home
+    closeModal();
+    // You might want to redirect to logout or show a message
+    window.location.href = '/login';
+  }
+
   const handleEditUser = () => {
     if (userDetails){
       setDropdownOpen(false);
@@ -93,6 +102,26 @@ export function NavUser({
     });
 
 }
+  };
+
+  const handleDeleteUser = () => {
+    if (userDetails) {
+      setDropdownOpen(false);
+
+      openModal({
+        name: "fullscreen-modal",
+        title: "Eliminar Usuario",
+        size: "md",
+        showCloseButton: false,
+        content: (
+          <DeleteUserForm
+            user={userDetails}
+            formActionCallback={deleteUserData}
+            onSuccess={onDeleteSuccess}
+          />
+        ),
+      });
+    }
   };
 
   return (
@@ -145,7 +174,7 @@ export function NavUser({
                 <Sparkles />
                 Editar usuario
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDeleteUser}>
                 <X />
                 Eliminar cuenta
               </DropdownMenuItem>

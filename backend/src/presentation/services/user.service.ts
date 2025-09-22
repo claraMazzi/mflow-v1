@@ -50,7 +50,7 @@ export class UserService {
   };
 
   async getUserById(id: string) {
-    const user = await UserModel.findOne({ _id: id });
+    const user = await UserModel.findOne({ _id: id, deletedAt: null });
     if (!user) throw CustomError.badRequest("User does not exists");
 
     const { password, ...userEntity } = UserEntity.fromObject(user);
@@ -60,7 +60,7 @@ export class UserService {
   }
 
   async getAllUsers(id: string) {
-    const users = await UserModel.find({ _id: { $ne: id } });
+    const users = await UserModel.find({ _id: { $ne: id }, deletedAt: null });
 
     if (!users) throw CustomError.badRequest("No Users to query");
 
@@ -75,7 +75,7 @@ export class UserService {
   }
 
   async updateUserById({ name, lastName, id }: UpdateUserDto) {
-    const user = await UserModel.findOne({ _id: id });
+    const user = await UserModel.findOne({ _id: id, deletedAt: null });
     if (!user) throw CustomError.badRequest("User does not exists");
 
     if (!name && !lastName)
@@ -95,7 +95,7 @@ export class UserService {
   }
 
   async updateUserRolesById({ roles, id }: UpdateUserRolesDto) {
-    const user = await UserModel.findOne({ _id: id });
+    const user = await UserModel.findOne({ _id: id, deletedAt: null });
     if (!user) throw CustomError.badRequest("User does not exists");
 
     if (!roles || !Array.isArray(roles) || !roles.length)
@@ -120,11 +120,12 @@ export class UserService {
   }
 
   async deleteUser(id: string) {
-    const user = await UserModel.findOne({ _id: id });
+    const user = await UserModel.findOne({ _id: id, deletedAt: null });
     if (!user) throw CustomError.badRequest("User does not exists");
 
     try {
-      await UserModel.deleteOne({ id: id });
+      user.deletedAt = new Date();
+      await user.save();
     } catch (error) {
       throw CustomError.internalServer(`${error}`);
     }
@@ -135,7 +136,7 @@ export class UserService {
       dto.map(async (userData) => {
         const { email } = userData;
 
-        const adminUser = await UserModel.findOne({ _id: senderId });
+        const adminUser = await UserModel.findOne({ _id: senderId, deletedAt: null });
      
         if(!adminUser)
           throw CustomError.badRequest("Admin user does not exists");
@@ -179,7 +180,7 @@ export class UserService {
 
   public passwordUpdate = async (recoverDto: PasswordUpdateDto) => {
     //1. verificar que no exista ese correo en la BD
-    const user = await UserModel.findOne({ email: recoverDto.email });
+    const user = await UserModel.findOne({ email: recoverDto.email, deletedAt: null });
 
     console.log(user, recoverDto.email);
     if (!user) throw CustomError.badRequest("User doesn't exists");

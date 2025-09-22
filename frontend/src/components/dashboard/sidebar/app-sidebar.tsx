@@ -1,8 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { FolderOpen, Share2, Users } from "lucide-react";
-
 import { DynamicSidebarContent } from "./dynamic-sidebar-content";
 import { TeamSwitcher } from "./team-switcher";
 import { NavUser } from "./nav-user";
@@ -14,7 +12,6 @@ import {
   SidebarRail,
 } from "@components/dashboard/sidebar/sidebar";
 import { TooltipProvider } from "@components/ui/tooltip";
-import { Team } from "#types/common";
 import { useSession } from "next-auth/react";
 import { getActiveSidebarOption, getUserRolesTeamItems } from "../navigation";
 import { useLayoutActions, useLayoutState } from "@components/global/Context";
@@ -33,6 +30,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   useEffect(() => {
     setIsLoading(false);
+    console.log('activeRole', activeRole);
   }, []);
 
   if (isLoading) {

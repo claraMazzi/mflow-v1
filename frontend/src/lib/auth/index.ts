@@ -104,8 +104,12 @@ export const authConfig: NextAuthConfig = {
       }
 
       if (session.user) {
-        session.user.name = token.name as string;
-        (session.user as any).lastName = (token as any).lastName as string;
+        if (token.name) {
+          session.user.name = token.name as string;
+        }
+        if ((token as any).lastName) {
+          (session.user as any).lastName = (token as any).lastName as string;
+        }
       }
   
       return session;
