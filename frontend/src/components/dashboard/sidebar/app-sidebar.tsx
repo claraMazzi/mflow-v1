@@ -30,7 +30,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   useEffect(() => {
     setIsLoading(false);
-    console.log('activeRole', activeRole);
   }, []);
 
   if (isLoading) {

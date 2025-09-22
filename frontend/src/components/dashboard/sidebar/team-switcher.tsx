@@ -20,7 +20,6 @@ type TeamSwitcherProps = {
 }
 
 export function TeamSwitcher({ teams, activeRole, onTeamChange }: TeamSwitcherProps) {
-  console.log('active', teams, activeRole)
   const [activeTeam, setActiveTeam] = useState<Team>(teams.find(team => team.role.toUpperCase() === activeRole.toUpperCase()) ?? teams[0])
   const handleTeamChange = (team: Team) => {
 

@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import { Button } from "@components/ui/common/button";
 import { useUI } from "@components/ui/context";
 import { User } from "#types/user";
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle, Check} from "lucide-react";
 
 interface DeleteUserFormProps {
   onSuccess?: () => void;
@@ -54,7 +54,7 @@ export const DeleteUserForm = ({
     return (
       <div className="flex flex-col gap-4 justify-center p-6 items-center">
         <div className="flex items-center gap-2 text-green-600">
-          <X className="h-6 w-6" />
+          <Check className="h-6 w-6" />
           <h2 className="font-medium text-lg">
             Usuario eliminado exitosamente
           </h2>
