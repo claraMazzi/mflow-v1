@@ -36,6 +36,7 @@ import {
 	useEditingRequests,
 } from "@src/hooks/use-request-editing-rights";
 import EditingRequestNotification from "@src/components/ui/conceptual-model/editing-request-notification";
+import { useSocketConnection } from "@src/hooks/use-socket-connection";
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
@@ -137,8 +138,11 @@ const MOUSE_POSITION_UPDATE_DELAY = 33; //30 fps
 
 export default function Page() {
 	const { data: session } = useSession();
-	const [isConnected, setIsConnected] = useState(false);
-	const [transport, setTransport] = useState("N/A");
+	const { isConnected: isSocketConnected, transport } = useSocketConnection({
+		socket,
+		sessionToken: session?.auth,
+	});
+
 	const [currentTab, setCurrentTab] = useState("objetivo-suposiciones");
 	const [isModelInitialized, setIsModelInitialized] = useState(false);
 	const [roomId, setRoomId] = useState("67d8321cd76cf5bc5bd75c79");
@@ -198,30 +202,12 @@ export default function Page() {
 	);
 
 	useEffect(() => {
-		if (session) {
-			socket.auth = {
-				sessionToken: session.auth,
-			};
-			socket.connect();
-		}
-
-		function onConnect() {
-			setIsConnected(true);
-			setTransport(socket.io.engine.transport.name);
-
-			socket.io.engine.on("upgrade", (transport) => {
-				setTransport(transport.name);
-			});
+		if (isSocketConnected) {
 			socket.emit(CLIENT_WS_EVENT_TYPES.JOIN_ROOM, {
 				type: CLIENT_WS_EVENT_TYPES.JOIN_ROOM,
 				roomId: roomId,
 				timestamp: new Date(),
 			} satisfies JoinRoomEventPayload);
-		}
-
-		function onDisconnect() {
-			setIsConnected(false);
-			setTransport("N/A");
 		}
 
 		function onFieldUpdate(payload: { propertyPath: any; value: any }) {
@@ -368,8 +354,6 @@ export default function Page() {
 			}
 		}
 
-		socket.on("connect", onConnect);
-		socket.on("disconnect", onDisconnect);
 		socket.on("field-update", onFieldUpdate);
 		socket.on("item-added-to-list", onItemAddedToList);
 		socket.on("item-removed-from-list", onItemRemovedFromList);
@@ -381,9 +365,7 @@ export default function Page() {
 		socket.on(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, onUsersInRoomChange);
 
 		return () => {
-			socket.off("connect", onConnect);
 			socket.off("field-update", onFieldUpdate);
-			socket.off("disconnect", onDisconnect);
 			socket.off("item-added-to-list", onItemAddedToList);
 			socket.off("item-removed-from-list", onItemRemovedFromList);
 			socket.off("server-volatile-broadcast", onServerVolatileBroadcast);
@@ -395,9 +377,8 @@ export default function Page() {
 				SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
 				onUsersInRoomChange
 			);
-			socket.disconnect();
 		};
-	}, [session?.auth]);
+	}, [isSocketConnected]);
 
 	const sendPropertyUpdate = (value: any, propertyPath: string) => {
 		if (!hasEditingRights) return;
@@ -522,8 +503,8 @@ export default function Page() {
 						);
 					})}
 			</div>
-			<p>Status: {isConnected ? "connected" : "disconnected"}</p>
-			<p>Id: {isConnected ? socket.id : "No disponible"}</p>
+			<p>Status: {isSocketConnected ? "connected" : "disconnected"}</p>
+			<p>Id: {isSocketConnected ? socket.id : "No disponible"}</p>
 			<p>Transport: {transport}</p>
 			<p>Current Room: {roomId}</p>
 			<h1>Collaborators:</h1>
