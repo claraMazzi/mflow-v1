@@ -41,8 +41,6 @@ export class UserController {
   updateUserById = (req: Request, res: Response) => {
     const id  = req.session?.userId ?? "";
 
-    console.log('ACAAAA', {...req.body, id})
-
     const [error, updateUserDto] = UpdateUserDto.create({...req.body, id});
 
     if (error) return res.status(400).json({ error });
