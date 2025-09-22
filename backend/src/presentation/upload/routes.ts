@@ -153,9 +153,9 @@ export class UploadRoutes {
 					filename,
 					originalFilename: originalname,
 					sizeInBytes: size,
-					path,
 					mimeType: mimetype,
 				});
+				newVersionImage.url = `uploads/${newVersionImage.id}`;
 				await newVersionImage.save();
 
 				const version = await VersionModel.findById(versionId).exec();
@@ -164,15 +164,23 @@ export class UploadRoutes {
 					return res.status(400).json({ error: "Version not found." });
 				}
 
-				const newImageUrl = `uploads/${newVersionImage.id}`;
-				const imageUrlPropertyPath = `${propertyPath}.imageFileUrl`;
+				const imageIdPropertyPath = `${propertyPath}.imageFileId`;
 
-				setValue(version.conceptualModel!, imageUrlPropertyPath, newImageUrl);
+				setValue(
+					version.conceptualModel!,
+					imageIdPropertyPath,
+					newVersionImage.id
+				);
 				await version.save();
 
+				this.socketServer.emitImageFileAdded(versionId, {
+					id: newVersionImage.id,
+					url: newVersionImage.url,
+					originalFilename: newVersionImage.originalFilename,
+				});
 				this.socketServer.emitFieldUpdate(versionId, {
-					value: newImageUrl,
-					propertyPath: imageUrlPropertyPath,
+					value: newVersionImage.id,
+					propertyPath: imageIdPropertyPath,
 				});
 
 				return res.send(200);

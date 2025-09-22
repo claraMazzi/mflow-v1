@@ -551,29 +551,23 @@ export class SocketServer {
 	}
 
 	public emitImageFileAdded(
-		socket: Socket,
-		{
-			imageId,
-		}: {
-			imageId: string;
+		roomId: string,
+		imageInfo: Pick<VersionImage, "originalFilename" | "url"> & {
+			id: string;
 		}
 	) {
-		socket.emit("image-added", {
+		this.socketServer.to(roomId).emit("image-added", {
 			type: "image-added",
 			timestamp: new Date(),
-			imageId,
+			imageInfo,
 		});
 	}
 
-	public emitImageFileRemoved (
-		socket: Socket,
-		{
-			imageId,
-		}: {
-			imageId: string;
-		}
+	public emitImageFileRemoved(
+		roomId: string,
+		{ imageId }: { imageId: string }
 	) {
-		socket.emit("image-removed", {
+		this.socketServer.to(roomId).emit("image-removed", {
 			type: "image-removed",
 			timestamp: new Date(),
 			imageId,
