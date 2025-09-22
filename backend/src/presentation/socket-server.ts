@@ -384,7 +384,7 @@ export class SocketServer {
 		}
 
 		try {
-			const requesterUserId = collabRoom.declineEditingRequest({
+			collabRoom.declineEditingRequest({
 				requestId: payload.requestId,
 				evaluatorUserId: socket.data.userId,
 			});

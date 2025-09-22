@@ -244,7 +244,6 @@ export class CollaborationRoom {
 		}
 
 		this.removeEditingRequest({ requestId });
-		return request.requesterUserId;
 	}
 
 	addCollaborator({
