@@ -10,7 +10,7 @@ import {
 	useMemo,
 } from "react";
 import { io } from "socket.io-client";
-import { socket } from "../../socket";
+import { socket } from "../../../socket";
 import { lightningCssTransform } from "next/dist/build/swc/generated-native";
 import { set, string } from "zod";
 import {
