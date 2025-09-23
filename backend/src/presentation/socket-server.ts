@@ -44,7 +44,10 @@ type UsersInRoomChangePayload = BaseSocketEventPayload & {
 type InitializeConceptualModelPayload = BaseSocketEventPayload & {
 	type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL;
 	conceptualModel: ConceptualModel;
-	imageInfos: (Pick<VersionImage, "originalFilename" | "url"> & {
+	imageInfos: (Pick<
+		VersionImage,
+		"originalFilename" | "url" | "createdAt" | "sizeInBytes"
+	> & {
 		id: string;
 	})[];
 };
@@ -186,7 +189,7 @@ export class SocketServer {
 					roomsToRemove.push(roomId);
 				} else {
 					if (hasRoomChanged) {
-						this.emitUsersInRoomChange({ roomId, collabRoom: room });
+						this.emitUsersInRoomChange(roomId, { collabRoom: room });
 					}
 				}
 			});
@@ -227,8 +230,7 @@ export class SocketServer {
 			userInfo: socket.data,
 		});
 
-		this.emitUsersInRoomChange({
-			roomId: payload.roomId,
+		this.emitUsersInRoomChange(payload.roomId, {
 			collabRoom,
 		});
 	}
@@ -285,7 +287,7 @@ export class SocketServer {
 
 		const callbackFunction = ({ requestId }: { requestId: string }) => {
 			this.emitEditingRequestApproved(payload.roomId, { requestId });
-			this.emitUsersInRoomChange({ roomId: payload.roomId, collabRoom });
+			this.emitUsersInRoomChange(payload.roomId, { collabRoom });
 		};
 
 		try {
@@ -347,7 +349,7 @@ export class SocketServer {
 				requestId: payload.requestId,
 			});
 
-			this.emitUsersInRoomChange({ roomId: payload.roomId, collabRoom });
+			this.emitUsersInRoomChange(payload.roomId, { collabRoom });
 		} catch (error) {
 			if (
 				error instanceof EditingRequestNotFoundError ||
@@ -505,7 +507,7 @@ export class SocketServer {
 				userId: socket.data.userId,
 			});
 			if (!collabRoom.isEmpty()) {
-				this.emitUsersInRoomChange({ roomId, collabRoom });
+				this.emitUsersInRoomChange(roomId, { collabRoom });
 			} else {
 				console.info("Collaboration room deleted:", roomId);
 				this.activeCollaborationRooms.delete(roomId);
@@ -514,13 +516,14 @@ export class SocketServer {
 	}
 
 	// Emit Event Methods
-	public emitUsersInRoomChange({
-		roomId,
-		collabRoom,
-	}: {
-		roomId: string;
-		collabRoom: CollaborationRoom;
-	}) {
+	public emitUsersInRoomChange(
+		roomId: string,
+		{
+			collabRoom,
+		}: {
+			collabRoom: CollaborationRoom;
+		}
+	) {
 		this.socketServer
 			.to(roomId)
 			.emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
@@ -537,7 +540,10 @@ export class SocketServer {
 			imageInfos,
 		}: {
 			conceptualModel: ConceptualModel;
-			imageInfos: (Pick<VersionImage, "originalFilename" | "url"> & {
+			imageInfos: (Pick<
+				VersionImage,
+				"originalFilename" | "url" | "createdAt" | "sizeInBytes"
+			> & {
 				id: string;
 			})[];
 		}

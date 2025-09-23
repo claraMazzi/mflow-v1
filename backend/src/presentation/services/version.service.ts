@@ -28,7 +28,10 @@ export class VersionService {
 
 	async getVersionByIdWithImages(id: string): Promise<{
 		version: Version & { id: string } & {
-			imageInfos: (Pick<VersionImage, "originalFilename" | "url"> & {
+			imageInfos: (Pick<
+				VersionImage,
+				"originalFilename" | "url" | "createdAt" | "sizeInBytes"
+			> & {
 				id: string;
 			})[];
 		};
@@ -39,7 +42,7 @@ export class VersionService {
 			},
 			{
 				$lookup: {
-					from: "VersionImage",
+					from: "versionimages",
 					localField: "_id",
 					foreignField: "version",
 					as: "imageInfos",
@@ -49,7 +52,9 @@ export class VersionService {
 								_id: 0,
 								id: { $toString: "_id" },
 								url: 1,
+								sizeInBytes: 1,
 								originalFilename: 1,
+								createdAt: 1,
 							},
 						},
 					],
