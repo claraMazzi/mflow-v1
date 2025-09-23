@@ -13,6 +13,7 @@ async function main() {
   });
   const server = new Server({
     port: envs.PORT,
+    frontEndURL: envs.FRONTEND_URL,
   });
   server.start();
 }

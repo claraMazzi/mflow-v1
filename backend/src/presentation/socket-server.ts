@@ -62,10 +62,10 @@ export class SocketServer {
 	private activeCollaborationRooms: Map<string, CollaborationRoom>;
 	private versionService: VersionService;
 
-	constructor({ serverListener }: { serverListener: Server }) {
+	constructor({ serverListener, frontEndURL }: { serverListener: Server, frontEndURL: string }) {
 		this.socketServer = new SocketIO(serverListener, {
 			cors: {
-				origin: "http://localhost:3000",
+				origin: frontEndURL,
 				methods: ["GET", "POST"],
 			},
 		});

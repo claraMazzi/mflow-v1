@@ -8,30 +8,26 @@ import { error, timeStamp } from "console";
 import { envs, jwtAdapter } from "../config";
 import path from "path";
 import { CollaborationRoom } from "./collaboration/collaborationRoom";
-import {
-	EditingPrivilegesAlreadyGrantedError,
-	EditingPrivilegesRequiredException,
-	EditingRequestNotFoundError,
-	InvalidApprovalAuthorityException,
-	PendingRequestConflictError,
-} from "../domain/errors/collaborationRoom.errors";
 import { AppRoutes } from "./routes";
 import { getProperty, setValue } from "../types/socket-events";
 import { SocketServer } from "./socket-server";
 
 interface Options {
 	port?: number;
+	frontEndURL?: string;
 }
 export class Server {
 	private app = express();
 	private port: number;
+	private frontEndURL: string;
 	private routes: Router | null;
 	private serverListener: any;
 	private socketServer: SocketServer | null;
 	private activeCollaborationRooms: Map<string, CollaborationRoom>;
 
 	constructor(options: Options) {
-		const { port } = options;
+		const { port, frontEndURL } = options;
+		this.frontEndURL = frontEndURL ?? "http://localhost:3001";
 		this.port = port ?? 3000;
 		this.activeCollaborationRooms = new Map();
 		this.routes = null;
@@ -57,6 +53,7 @@ export class Server {
 
 		this.socketServer = new SocketServer({
 			serverListener: this.serverListener,
+			frontEndURL: this.frontEndURL,
 		});
 
 		// Setup App Routes
@@ -68,7 +65,7 @@ export class Server {
 		this.app.use(this.routes);
 
 		//Uncomment when needed
-		//this.createTestEntities();
+		this.createTestEntities();
 		// this.seedUsers();
 	}
 
@@ -113,17 +110,19 @@ export class Server {
 		await UserModel.insertMany(users);
 	}
 
-	private createTestEntities() {
+	private async createTestEntities() {
 		//Warning! - Drops all collections to allow for a fresh start
-		UserModel.collection.drop();
-		ProjectModel.collection.drop();
+		 UserModel.collection.drop();
+		 ProjectModel.collection.drop();
 		VersionModel.collection.drop();
+
+		const hashedPassword = await bcryptAdapter.hash("123456");
 
 		const user = new UserModel({
 			name: "Juan",
 			lastName: "Albani",
 			email: "juanalbani48@gmail.com",
-			password: "hola123",
+			password: hashedPassword,
 			emailValidated: true,
 			roles: ["MODELADOR"],
 		});
