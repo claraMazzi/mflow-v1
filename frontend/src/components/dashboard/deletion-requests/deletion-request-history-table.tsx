@@ -1,6 +1,5 @@
 import type { DeletionRequest } from "#types/deletion-request";
 import { Badge, StaticColor } from "@components/ui/common/badge";
-import { Button } from "@components/ui/common/button";
 import {
   Table,
   TableBody,
@@ -9,25 +8,18 @@ import {
   TableHeader,
   TableRow,
 } from "@components/ui/table";
-import { Edit } from "lucide-react";
-import { useUI } from "@components/ui/context";
-import { ManageDeletionRequestModal } from "./forms/manage-deletion-request-modal";
 
-interface DeletionRequestManagementTableProps {
+interface DeletionRequestHistoryTableProps {
   deletionRequests: DeletionRequest[];
-  refreshDeletionRequests: () => void;
 }
 
-export function DeletionRequestManagementTable({
+export function DeletionRequestHistoryTable({
   deletionRequests,
-  refreshDeletionRequests,
-}: DeletionRequestManagementTableProps) {
-  const { openModal } = useUI();
-
-  // Filter pending requests and sort by date (oldest to newest)
-  const pendingRequests = deletionRequests
-    .filter(request => request.state === "PENDIENTE")
-    .sort((a, b) => new Date(a.registeredAt).getTime() - new Date(b.registeredAt).getTime());
+}: DeletionRequestHistoryTableProps) {
+  // Filter approved and denied requests and sort by review date (newest to oldest)
+  const historyRequests = deletionRequests
+    .filter(request => request.state === "ACEPTADA" || request.state === "RECHAZADA")
+    .sort((a, b) => new Date(b.reviewedAt).getTime() - new Date(a.reviewedAt).getTime());
 
   // Format date to dd/MM/yy
   const formatDate = (dateString: string) => {
@@ -40,8 +32,6 @@ export function DeletionRequestManagementTable({
 
   const getStateBadgeVariant = (state: string): StaticColor => {
     switch (state) {
-      case "PENDIENTE":
-        return "light-blue";
       case "ACEPTADA":
         return "light-green";
       case "RECHAZADA":
@@ -53,8 +43,6 @@ export function DeletionRequestManagementTable({
 
   const getStateDisplayName = (state: string) => {
     switch (state) {
-      case "PENDIENTE":
-        return "Pendiente";
       case "ACEPTADA":
         return "Aceptada";
       case "RECHAZADA":
@@ -64,34 +52,20 @@ export function DeletionRequestManagementTable({
     }
   };
 
-  const handleManageDeletionRequest = (deletionRequest: DeletionRequest) => {
-    openModal({
-      name: "fullscreen-modal",
-      title: "Gestionar Solicitud de Eliminación",
-      size: "lg",
-      showCloseButton: false,
-      content: (
-        <ManageDeletionRequestModal
-          deletionRequest={deletionRequest}
-          onSuccess={() => {
-            refreshDeletionRequests();
-          }}
-        />
-      ),
-    });
-  };
-
-  if (!pendingRequests || !pendingRequests.length) {
-    return <p>No se han encontrado solicitudes de eliminación pendientes.</p>;
+  if (!historyRequests || !historyRequests.length) {
+    return <p>No se han encontrado solicitudes de eliminación procesadas.</p>;
   }
 
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader className="bg-gray-200 hover:bg-gray-200">
-          <TableRow >
+          <TableRow>
             <TableHead className="font-semibold text-foreground">
               Fecha de Solicitud
+            </TableHead>
+            <TableHead className="font-semibold text-foreground">
+              Fecha de Resolución
             </TableHead>
             <TableHead className="font-semibold text-foreground">
               Nombre del Proyecto
@@ -108,16 +82,19 @@ export function DeletionRequestManagementTable({
             <TableHead className="font-semibold text-foreground">
               Estado
             </TableHead>
-            <TableHead className="font-semibold text-foreground text-center">
-              Gestionar
+            <TableHead className="font-semibold text-foreground">
+              Revisado por
             </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className="bg-white">
-          {pendingRequests.map((deletionRequest) => (
+          {historyRequests.map((deletionRequest) => (
             <TableRow key={deletionRequest.id} className="hover:bg-muted/30">
               <TableCell className="font-medium">
                 {formatDate(deletionRequest.registeredAt)}
+              </TableCell>
+              <TableCell className="font-medium">
+                {formatDate(deletionRequest.reviewedAt)}
               </TableCell>
               <TableCell className="font-medium">
                 {deletionRequest.project.name}
@@ -138,18 +115,8 @@ export function DeletionRequestManagementTable({
                   {getStateDisplayName(deletionRequest.state)}
                 </Badge>
               </TableCell>
-              <TableCell className="text-center flex justify-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 !p-0 hover:bg-muted"
-                  onClick={() => handleManageDeletionRequest(deletionRequest)}
-                >
-                  <Edit className="h-4 w-4" />
-                  <span className="sr-only">
-                    Gestionar solicitud de {deletionRequest.project.name}
-                  </span>
-                </Button>
+              <TableCell>
+                {deletionRequest.reviewer?.name || "N/A"}
               </TableCell>
             </TableRow>
           ))}

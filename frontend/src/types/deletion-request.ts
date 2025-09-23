@@ -4,7 +4,12 @@ export type DeletionRequest = {
     id: string;
     name: string;
     description: string;
-    owner: string;
+    owner: { id: string; name: string; email: string };
+    collaborators: {
+      id: string;
+      name: string;
+      email: string;
+    }[];
   };
   requestingUser: {
     id: string;
@@ -17,7 +22,7 @@ export type DeletionRequest = {
     email: string;
   };
   motive: string;
-  state: 'PENDIENTE' | 'ACEPTADA' | 'RECHAZADA';
+  state: "PENDIENTE" | "ACEPTADA" | "RECHAZADA";
   reviewedAt: string;
   registeredAt: string;
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { createProject, type ActionState } from "../actions/create-project";
+import { type ActionState } from "../actions/create-project";
 import { useActionState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@components/ui/common/button";
@@ -16,7 +16,6 @@ import { Input } from "@components/ui/common/input";
 import { Textarea } from "@components/ui/common/textarea";
 import { useUI } from "@components/ui/context";
 import { ProjectEntity } from "#types/project";
-import { modifyProject } from "../actions/modify-project";
 import { requestProjectDelition } from "../actions/request-project-delition";
 
 export type ModifyProjectFormData = {
@@ -101,7 +100,7 @@ export const DelitionRequestForm = ({
             rules={{
               required: "id is required",
             }}
-            render={({ field }) => (
+            render={({  }) => (
               <FormItem>
                 <FormControl>
                   <Input
@@ -124,7 +123,7 @@ export const DelitionRequestForm = ({
             required: true,
             maxLength: 200,
           }}
-          render={({ field }) => (
+          render={({  }) => (
             <FormItem>
               <div className="flex flex-col gap-2">
                 <FormLabel className="!font-bold">Motivo de la solicitud <span className="text-sm text-red-600"> *</span></FormLabel>

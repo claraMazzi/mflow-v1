@@ -26,15 +26,20 @@ export class DeletionRequestService {
   async getAllDeletionRequests() {
     try {
       const deletionRequests = await DeletionRequestModel.find()
-        .populate('project', 'name description owner')
+        .populate({
+          path: 'project',
+          select: 'name description owner collaborators',
+          populate: [
+            { path: 'owner', select: 'email name' },
+            { path: 'collaborators', select: 'email name' }
+          ]
+        })
         .populate('requestingUser', 'email name')
         .populate('reviewer', 'email name')
         .exec();
 
       const deletionRequestEntities = deletionRequests.map((request) =>
-    console.log('getAllDeletionRequests', request)
-//TODO: MAPP CORRERCTLY -- CREATE PROJECT IN DATA BASE 
-        // DelitionRequestEntity.fromObject(request)
+        DelitionRequestEntity.fromObject(request)
       );
 
       return {
@@ -50,11 +55,19 @@ export class DeletionRequestService {
   async getDeletionRequestById(deletionRequestId: string) {
     try {
       const deletionRequest = await DeletionRequestModel.findById(deletionRequestId)
-        .populate('project', 'name description owner')
+        .populate({
+          path: 'project',
+          select: 'name description owner collaborators',
+          populate: [
+            { path: 'owner', select: 'email name' },
+            { path: 'collaborators', select: 'email name' }
+          ]
+        })
         .populate('requestingUser', 'email name')
         .populate('reviewer', 'email name')
         .exec();
 
+        console.log('deletionRequest', deletionRequest)
       if (!deletionRequest) {
         throw CustomError.badRequest("Deletion request not found");
       }
@@ -74,7 +87,14 @@ export class DeletionRequestService {
   async getDeletionRequestsByProject(projectId: string) {
     try {
       const deletionRequests = await DeletionRequestModel.find({ project: projectId })
-        .populate('project', 'name description owner')
+        .populate({
+          path: 'project',
+          select: 'name description owner collaborators',
+          populate: [
+            { path: 'owner', select: 'email name' },
+            { path: 'collaborators', select: 'email name' }
+          ]
+        })
         .populate('requestingUser', 'email name')
         .populate('reviewer', 'email name')
         .exec();
@@ -186,7 +206,14 @@ export class DeletionRequestService {
       }
 
       const deletionRequests = await DeletionRequestModel.find({ state })
-        .populate('project', 'name description owner')
+        .populate({
+          path: 'project',
+          select: 'name description owner collaborators',
+          populate: [
+            { path: 'owner', select: 'email name' },
+            { path: 'collaborators', select: 'email name' }
+          ]
+        })
         .populate('requestingUser', 'email name')
         .populate('reviewer', 'email name')
         .exec();
