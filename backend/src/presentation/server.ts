@@ -65,8 +65,8 @@ export class Server {
 		this.app.use(this.routes);
 
 		//Uncomment when needed
-		this.createTestEntities();
-		// this.seedUsers();
+		//this.createTestEntities();
+		//this.seedUsers();
 	}
 
 	private async seedUsers() {
@@ -112,8 +112,8 @@ export class Server {
 
 	private async createTestEntities() {
 		//Warning! - Drops all collections to allow for a fresh start
-		 UserModel.collection.drop();
-		 ProjectModel.collection.drop();
+		UserModel.collection.drop();
+		ProjectModel.collection.drop();
 		VersionModel.collection.drop();
 
 		const hashedPassword = await bcryptAdapter.hash("123456");
