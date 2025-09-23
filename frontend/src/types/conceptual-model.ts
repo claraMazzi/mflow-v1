@@ -1,3 +1,11 @@
+export type ImageInfo = {
+	filename: string;
+	uploadedAt: Date;
+	sizeInBytes: number;
+	url: string;
+	id: string;
+};
+
 type Diagram = {
 	usesPlantText: boolean;
 	plantTextCode: string;

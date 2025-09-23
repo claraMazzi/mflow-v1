@@ -88,17 +88,17 @@ export class UploadRoutes {
 		});
 
 		router.post(
-			"uploads/:versionId/diagrams",
+			"/:versionId/diagrams",
 			AuthMiddleware.validateJWT,
 			async (req, res, next) => {
 				const versionId = req.params.versionId;
-				const propertyPath = req.body.propertyPath;
+				const diagramPropertyPath = req.body.diagramPropertyPath;
 
 				if (!versionId) {
 					return res.status(400).json({ error: "No version id provided." });
 				}
 
-				if (!propertyPath) {
+				if (!diagramPropertyPath) {
 					return res.status(400).json({ error: "No property path provided." });
 				}
 
@@ -108,9 +108,10 @@ export class UploadRoutes {
 					return res.status(400).json({ error: "Version not found." });
 				}
 
-				const property = getProperty(version.conceptualModel, propertyPath) as
-					| Diagram
-					| undefined;
+				const property = getProperty(
+					version.conceptualModel,
+					diagramPropertyPath
+				) as Diagram | undefined;
 
 				if (!property) {
 					return res.status(400).json({
@@ -119,7 +120,7 @@ export class UploadRoutes {
 				}
 
 				if (
-					!("imageFileId" in propertyPath) ||
+					!("imageFileId" in diagramPropertyPath) ||
 					property["imageFileId"] !== null
 				) {
 					return res.status(409).json({
@@ -135,7 +136,7 @@ export class UploadRoutes {
 			uploadImageMiddleware.single("image"),
 			async (req, res) => {
 				const versionId = req.params.versionId;
-				const propertyPath = req.body.propertyPath;
+				const diagramPropertyPath = req.body.diagramPropertyPath;
 
 				if (!req.file) {
 					console.error(
@@ -164,7 +165,7 @@ export class UploadRoutes {
 					return res.status(400).json({ error: "Version not found." });
 				}
 
-				const imageIdPropertyPath = `${propertyPath}.imageFileId`;
+				const imageIdPropertyPath = `${diagramPropertyPath}.imageFileId`;
 
 				setValue(
 					version.conceptualModel!,
@@ -173,6 +174,8 @@ export class UploadRoutes {
 				);
 				await version.save();
 
+				res.send(200);
+				
 				this.socketServer.emitImageFileAdded(versionId, {
 					id: newVersionImage.id,
 					url: newVersionImage.url,
@@ -182,48 +185,42 @@ export class UploadRoutes {
 					value: newVersionImage.id,
 					propertyPath: imageIdPropertyPath,
 				});
-
-				return res.send(200);
 			}
 		);
 
-		router.get(
-			"uploads/:imageId",
-			AuthMiddleware.validateJWT,
-			async (req, res) => {
-				const imageId = req.params.imageId;
-				const userId = req.session?.userId!;
+		router.get("/:imageId", AuthMiddleware.validateJWT, async (req, res) => {
+			const imageId = req.params.imageId;
+			const userId = req.session?.userId!;
 
-				try {
-					if (!imageId) {
-						return res.status(400).json({ error: "No image id provided." });
-					}
-
-					const imageInfo = await VersionImageModel.findById(imageId);
-					if (!imageInfo) {
-						return res.status(404).json({
-							error: "Image not found on server.",
-						});
-					}
-
-					if (!existsSync(imageInfo.path)) {
-						return res
-							.status(404)
-							.json({ error: "Image file not found on server" });
-					}
-
-					res.setHeader("Content-Type", imageInfo.mimeType);
-					//res.setHeader("Cache-Control", "private, max-age=3600"); // Cache for 1 hour
-
-					res.status(200).sendFile(imageInfo.path);
-				} catch (error) {
-					//errores no controlados
-					console.error("middleware error", error);
-
-					res.status(500).json({ error: "Internal server error" });
+			try {
+				if (!imageId) {
+					return res.status(400).json({ error: "No image id provided." });
 				}
+
+				const imageInfo = await VersionImageModel.findById(imageId);
+				if (!imageInfo) {
+					return res.status(404).json({
+						error: "Image not found on server.",
+					});
+				}
+
+				if (!existsSync(imageInfo.path)) {
+					return res
+						.status(404)
+						.json({ error: "Image file not found on server" });
+				}
+
+				res.setHeader("Content-Type", imageInfo.mimeType);
+				//res.setHeader("Cache-Control", "private, max-age=3600"); // Cache for 1 hour
+
+				res.status(200).sendFile(imageInfo.path);
+			} catch (error) {
+				//errores no controlados
+				console.error("middleware error", error);
+
+				res.status(500).json({ error: "Internal server error" });
 			}
-		);
+		});
 
 		return router;
 	}

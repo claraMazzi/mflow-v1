@@ -20,8 +20,10 @@ import {
 	useForm,
 	UseFormRegister,
 } from "react-hook-form";
-import Diagram from "@components/ui/conceptual-model/diagram";
-import { ConceptualModel } from "#types/conceptual-model";
+import Diagram, {
+	DiagramImageUpload,
+} from "@components/ui/conceptual-model/diagram";
+import { ConceptualModel, ImageInfo } from "#types/conceptual-model";
 import {
 	Tabs,
 	TabsContent,
@@ -66,7 +68,14 @@ type UsersInRoomChangePayload = BaseSocketEventPayload & {
 
 type InitializeConceptualModelPayload = BaseSocketEventPayload & {
 	type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL;
-	conceptualModel: any;
+	conceptualModel: ConceptualModel;
+	imageInfos: {
+		id: string;
+		createdAt: string;
+		originalFilename: string;
+		sizeInBytes: number;
+		url: string;
+	}[];
 };
 
 enum SERVER_WS_EVENT_TYPES {
@@ -143,14 +152,15 @@ export default function Page() {
 		sessionToken: session?.auth,
 	});
 
+	const [roomId, setRoomId] = useState("67d8321cd76cf5bc5bd75c79");
 	const [currentTab, setCurrentTab] = useState("objetivo-suposiciones");
 	const [isModelInitialized, setIsModelInitialized] = useState(false);
-	const [roomId, setRoomId] = useState("67d8321cd76cf5bc5bd75c79");
 
 	const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(
 		new Map()
 	);
 	const hasEditingRights = useMemo(() => {
+		console.log("Has Editing Rights was recalculated.");
 		if (!session?.user.id) return false;
 		return !!collaborators.get(session.user.id)?.hasEditingRights;
 	}, [collaborators, session?.user.id]);
@@ -168,6 +178,9 @@ export default function Page() {
 		hasEditingRights,
 	});
 
+	const [imageInfos, setImageInfos] = useState<Map<string, ImageInfo>>(
+		new Map()
+	);
 	const {
 		register,
 		control,
@@ -321,11 +334,26 @@ export default function Page() {
 			});
 		}
 
-		function onInitializeConceptualModel(
-			payload: InitializeConceptualModelPayload
-		) {
-			console.log("Initial State: ", payload);
-			reset(payload.conceptualModel);
+		function onInitializeConceptualModel({
+			conceptualModel,
+			imageInfos,
+		}: InitializeConceptualModelPayload) {
+			console.log("Initial State: ", conceptualModel);
+			reset(conceptualModel);
+			const newImageInfos = new Map<string, ImageInfo>();
+			imageInfos
+				.map((i) => {
+					const { id, sizeInBytes, url } = i;
+					return {
+						id,
+						sizeInBytes,
+						url,
+						uploadedAt: new Date(i.createdAt),
+						filename: i.originalFilename,
+					};
+				})
+				.forEach((i) => newImageInfos.set(i.id, i));
+			setImageInfos(newImageInfos);
 			setIsModelInitialized(true);
 		}
 
@@ -553,7 +581,13 @@ export default function Page() {
 			{!isModelInitialized ? (
 				<p>Loading Model</p>
 			) : (
-				<form className="flex flex-col">
+				<form
+					onSubmit={(e) => {
+						console.log("Form Submitted");
+						e.preventDefault();
+					}}
+					className="flex flex-col"
+				>
 					<br />
 					<Tabs
 						orientation="vertical"
@@ -662,13 +696,15 @@ export default function Page() {
 						</TabsContent>
 					</Tabs>
 
-					<h2>Diagrama de Estructura</h2>
-					<Diagram
+					<DiagramImageUpload
 						{...{
-							register: customRegisterField,
+							versionId: roomId,
+							hasEditingRights,
+							imageInfos,
+							title: "Diagrama de Estructura",
 							watch,
-							namePrefix: "structureDiagram",
-							propertyPathPrefix: "structureDiagram",
+							namePathPrefix: "structureDiagram",
+							diagramPropertyPath: "structureDiagram",
 						}}
 					/>
 					<h2>Entidades</h2>
