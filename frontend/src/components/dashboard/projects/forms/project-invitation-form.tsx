@@ -45,34 +45,13 @@ export const ProjectInvitationForm = ({
   const router = useRouter();
 
   const acceptInvitation = async () => {
-    // formData.append("id", project.id);
-    // formData.append("collaborators", JSON.stringify(collaborators));
     startTransition(() => {
       if (token) inviteAction(token);
     });
   };
 
-  // Handle successful invitation sending
-  // useEffect(() => {
-  //   if (inviteState?.success) {
-  //     setCollaborators([])
-  //     // You could add a success toast here
-  //   }
-  // }, [inviteState?.success])
-
   if (inviteState?.success) {
     router.push("/dashboard/shared");
-    //aca hacer un redirect
-    // return (
-    //   <div className="flex flex-col gap-4 justify-center p-2 items-center">
-    //     <h2 className="font-medium">
-    //       Se ha compartido el proyecto exitosamente!
-    //     </h2>
-    //     <Button className="uppercase" onClick={closeModal}>
-    //       Continuar
-    //     </Button>
-    //   </div>
-    // );
   }
 
   if (!project || !token)

@@ -79,7 +79,7 @@ export const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
             required: "Name is required",
             maxLength: 100,
           }}
-          render={({ field }) => (
+          render={({ }) => (
             <FormItem>
               <div className="flex items-center justify-between">
 
@@ -100,7 +100,7 @@ export const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
           rules={{
             maxLength: 200,
           }}
-          render={({ field }) => (
+          render={({ }) => (
             <FormItem>
               <div className="flex items-center justify-between">
                 <FormLabel>Descripción</FormLabel>

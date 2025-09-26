@@ -32,16 +32,17 @@ const MyProjects = () => {
     <div className="w-full flex flex-col gap-4">
       <div className="flex w-full justify-between border-b border-accent-100 py-2">
         <h1 className="text-2xl font-bold">Mis proyectos</h1>
+        <Button className="uppercase" onClick={handleCreateProject}>
+        <Plus />
+        Crear proyecto
+      </Button>
       </div>
       <ProjectList
         projects={projects || []}
         isLoading={isLoading}
         refreshProjects={refreshProjects}
       />
-      <Button className="uppercase" onClick={handleCreateProject}>
-        <Plus />
-        Crear proyecto
-      </Button>
+      
     </div>
   );
 };

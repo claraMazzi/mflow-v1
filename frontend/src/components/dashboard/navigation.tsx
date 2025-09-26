@@ -8,9 +8,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 
-
-
-export const teamsMap:Team[] =[
+export const teamsMap: Team[] = [
   {
     name: "Modelador",
     role: "modelador",
@@ -25,7 +23,8 @@ export const teamsMap:Team[] =[
     name: "Verificador",
     role: "verificador",
     logo: Share2,
-  },]
+  },
+];
 
 export const navigation: SidebarMenu = {
   modelador: [
@@ -57,17 +56,17 @@ export const navigation: SidebarMenu = {
     },
   ],
   admin: [
-    { title: "Usuarios", icon: <Users />, slug: "/users", activeColor: "" },
+    { title: "Usuarios", icon: <Users />, slug: "/dashboard", activeColor: "" },
     {
       title: "Solicitudes de eliminación",
       icon: <Trash2 />,
-      slug: "/deletion-requests",
+      slug: "/dashboard/deletion-requests",
       activeColor: "",
     },
     {
       title: "Solicitudes de verificación",
       icon: <CheckSquare />,
-      slug: "/verification-requests",
+      slug: "/dashboard/verification-requests",
       activeColor: "",
     },
   ],
@@ -75,25 +74,23 @@ export const navigation: SidebarMenu = {
     {
       title: "Revisiones pendientes",
       icon: <ClipboardList />,
-      slug: "/pending-reviews",
+      slug: "/dashboard",
       activeColor: "",
     },
     {
       title: "Revisiones en curso",
       icon: <ClipboardList />,
-      slug: "/ongoing-reviews",
+      slug: "/dashboard/ongoing-reviews",
       activeColor: "",
     },
     {
       title: "Revisiones completadas",
       icon: <ClipboardList />,
-      slug: "/completed-reviews",
+      slug: "/dashboard/completed-reviews",
       activeColor: "",
     },
   ],
 };
-
-
 
 export const getMenuItemsByRole = (role: string): MenuItem[] => {
   const rol = role.toLowerCase() as keyof SidebarMenu;
@@ -108,15 +105,29 @@ export const getActiveSidebarOption = (
   pathname: string,
   role: string
 ): string => {
-  if (pathname === "/dashboard" || pathname === "/dashboard/") {
-    return "Mis Proyectos";
-  }
 
   if (!role) {
     return "";
   }
+  
+  if (pathname === "/dashboard" || pathname === "/dashboard/") {
+    switch (role) {
+      case "modelador":
+        return "Mis Proyectos";
+
+      case "admin":
+        return "Usuarios";
+
+      case "verificador":
+        return "Revisiones pendientes";
+    }
+  }
 
   const menu = getMenuItemsByRole(role);
+
+  if (pathname == '') { 
+    return menu[0].title
+  }
 
   // First, try to find a direct match at the top level
   for (const item of menu) {
@@ -135,14 +146,13 @@ export const getActiveSidebarOption = (
   return "";
 };
 
-export const getUserRolesTeamItems =(roles: string[])=>{
+export const getUserRolesTeamItems = (roles: string[]) => {
   const teamItems: Team[] = [];
   roles.forEach((role) => {
     const item = teamsMap.find((team) => team.role === role.toLowerCase());
-    if(!item) return
-   teamItems.push(item)
+    if (!item) return;
+    teamItems.push(item);
   });
 
   return teamItems;
-
-}
+};

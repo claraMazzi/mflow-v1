@@ -16,6 +16,7 @@ import {
   FormMessage,
 } from "@components/ui/Forms/form";
 import { passwordRegex } from "../../../../../../backend/src/config/regular-exp";
+import { Skeleton } from "@src/components/ui/skeleton";
 
 interface FormData {
   password: string;
@@ -91,7 +92,7 @@ export default function PasswordRecovery({
   };
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <Skeleton className="h-screen w-64" />;
   }
 
   if (!isValidToken) {

@@ -46,15 +46,15 @@ export const Modal = ({
   const getSizeClasses = () => {
     switch (size) {
       case "sm":
-        return "max-w-sm"
+        return "md:max-w-sm"
       case "md":
-        return "max-w-xl"
+        return "md:max-w-xl"
       case "lg":
-        return "max-w-3xl"
+        return "md:max-w-3xl"
       case "full":
-        return "max-w-full w-full h-full"
+        return "md:max-w-full w-full h-full"
       default:
-        return "max-w-xl"
+        return "md:max-w-xl"
     }
   }
 

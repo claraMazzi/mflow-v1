@@ -41,7 +41,7 @@ export class AuthService {
   
   async registerUser(registerUserDto: RegisterUserDto) {
     //1. verificar que no exista ese correo en la BD
-    const existUser = await UserModel.findOne({ email: registerUserDto.email });
+    const existUser = await UserModel.findOne({ email: registerUserDto.email, deletedAt: null });
     if (existUser) throw CustomError.badRequest("Email already exists");
 
     try {
@@ -69,7 +69,7 @@ export class AuthService {
 
   async loginUser(loginUserDto: LoginUserDto) {
     //1. verificar que no exista ese correo en la BD
-    const user = await UserModel.findOne({ email: loginUserDto.email });
+    const user = await UserModel.findOne({ email: loginUserDto.email, deletedAt: null });
     //este mensaje para no darle pista al usuario de que es lo que salio mal - por si lo hackean
     if (!user) throw CustomError.badRequest("Email or password don't exist");
 
@@ -101,7 +101,7 @@ export class AuthService {
 
     if (!email) throw CustomError.internalServer("Email not in token");
 
-    const user = await UserModel.findOne({ email });
+    const user = await UserModel.findOne({ email, deletedAt: null });
 
     if (!user) throw CustomError.internalServer("Email does not exists");
 
@@ -128,7 +128,7 @@ export class AuthService {
       throw CustomError.unauthorized("Token has expired");
     }
 
-    const user = await UserModel.findOne({ email });
+    const user = await UserModel.findOne({ email, deletedAt: null });
 
     if (!user)
       throw CustomError.internalServer("Email does not exist in the system");
@@ -159,7 +159,7 @@ export class AuthService {
   };
 
   public passwordRecover = async (email: string) => {
-    const existUser = await UserModel.findOne({ email: email });
+    const existUser = await UserModel.findOne({ email: email, deletedAt: null });
     if (!existUser) throw CustomError.badRequest("Email doesn't exists");
     await this.sendPasswordRecoveryLink(email);
   };
@@ -169,7 +169,7 @@ export class AuthService {
     if (!payload) throw CustomError.unauthorized("Invalid token");
 
     const { email } = payload as { email: string };
-    const user = await UserModel.findOne({ email: email });
+    const user = await UserModel.findOne({ email: email, deletedAt: null });
 
     if (!user) throw CustomError.badRequest("User doesn't exists");
 

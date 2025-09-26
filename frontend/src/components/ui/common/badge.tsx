@@ -3,7 +3,7 @@ import cn from "clsx"
 import type { JSX } from "react" // Import JSX to declare it
 
 // Simple version for debugging
-type StaticColor = "white" | "black" | "yellow" | "blue" | "green" | "gray" | "white-gray" | "white-black"
+export type StaticColor = "white" | "black" | "yellow" | "blue" | "light-blue" | "bordo" | "green" | "light-green" | "gray" | "white-gray" | "white-black"
 
 interface SimpleBadgeProps {
   className?: string
@@ -21,6 +21,9 @@ const getColorClasses = (color: StaticColor) => {
     blue: "bg-blue-500/50 border-blue-500 border-2 text-blue-500",
     green: "bg-green-500 text-white",
     gray: "bg-gray-700 text-white",
+    bordo: "bg-bordo-100 !text-bordo-500 border border-bordo-500 hover:bg-bordo-200",
+    'light-blue': "bg-blue-100 !text-blue-500 border border-blue-500 hover:bg-blue-200",
+    'light-green':"bg-green-100 !text-green-800 border border-green-500 hover:bg-green-200",
     "white-gray": "bg-white text-gray-600 border border-gray-400",
     "white-black": "bg-white text-black border border-gray-300",
   }

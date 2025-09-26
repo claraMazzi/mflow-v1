@@ -8,9 +8,11 @@ import { Button } from '@components/ui/common/button'
 export default function LogoutButton({
   label,
   className = '',
+  variant = 'primary',
 }: {
   label: string | ReactElement
   className?: string
+  variant?: "primary" | "outline" | "secondary" | "tertiary" | "ghost" | "optionList"
 }) {
   const [loading, setLoading] = useState(false)
 
@@ -31,6 +33,7 @@ export default function LogoutButton({
         )}
         isLoading={loading}
         onClick={onClick}
+        variant={variant}
       >
         {label}
       </Button>

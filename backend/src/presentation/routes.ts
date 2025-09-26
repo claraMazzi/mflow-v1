@@ -3,9 +3,8 @@ import { Authroutes } from "./auth/routes";
 import { UserRoutes } from "./user/routes";
 import { UploadRoutes } from "./upload/routes";
 import { ProjectRoutes } from "./project/routes";
-import { CollaborationRoom } from "./collaboration/collaborationRoom";
-import { Server as SocketIO } from "socket.io";
 import { SocketServer } from "./socket-server";
+import { DeletionRequestRoutes } from "./deletion-request/routes";
 
 export class AppRoutes {
 	private socketServer: SocketServer;
@@ -30,6 +29,9 @@ export class AppRoutes {
 
 		router.use("/api/projects", ProjectRoutes.routes);
 
-		return router;
-	}
+        router.use('/api/deletion-requests', DeletionRequestRoutes.routes)
+
+        return router;
+    }
 }
+

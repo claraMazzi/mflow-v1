@@ -16,7 +16,7 @@ export class AuthController {
 
   registerUser = (req: Request, res: Response) => {
     const [error, registerDto] = RegisterUserDto.create(req.body);
-
+console.log('REGISTER USER DTO', registerDto, error);
     if (error) return res.status(400).json({ error });
 
     this.authService
