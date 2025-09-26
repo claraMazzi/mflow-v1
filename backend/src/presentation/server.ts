@@ -39,9 +39,16 @@ export class Server {
 		//* para servir todo lo que tengo en mi carpeta publica uso un middleware
 		//middleware - funciones que se ejecutan cada vez que el codigo pase por x ruta y antes del controller
 
+		var cors = require("cors");
+
 		//* Middlewares
 		this.app.use(express.json()); // raw - extrae el body en un jsin
 		this.app.use(express.urlencoded({ extended: true })); // x-www-form-urlencoded - extrae el form en json
+		this.app.use(
+			cors({
+				origin: this.frontEndURL,
+			})
+		);
 
 		//* Public folder
 		this.app.use(express.static("/public"));
