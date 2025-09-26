@@ -6,7 +6,7 @@ import type { CreateProyectFormData } from "../forms/create-project-form"
 export type ActionState = {
   error?: string
   success?: boolean
-  data?: any
+  data?: FormData
 }
 
 export const createProject = async (prevState: ActionState, formData: FormData): Promise<ActionState> => {

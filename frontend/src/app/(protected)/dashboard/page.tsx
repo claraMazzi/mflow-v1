@@ -1,7 +1,8 @@
-import DashboardContent from "@components/dashboard/content";
+"use client"
+import dynamic from "next/dynamic";
 
-const DashboardPage = async () => {
-  return <DashboardContent />;
-};
+const DashboardPage = dynamic(() => import("../../../components/dashboard/dashboard-page"), {
+  ssr: false,
+});
 
 export default DashboardPage;

@@ -1,7 +1,7 @@
 import React from "react";
-import { ProjectInvitationForm } from "@src/components/dashboard/projects/forms/project-invitation-form";
-import { ProjectEntity } from "@src/types/project";
-import { getProjectFromShareRequest } from "@src/components/dashboard/projects/actions/share-project";
+import { ProjectInvitationForm } from "@components/dashboard/projects/forms/project-invitation-form";
+import { ProjectEntity } from "#types/project";
+import { getProjectFromShareRequest } from "@components/dashboard/projects/actions/share-project";
 
 export default async function AcceptInvitation({
   searchParams,

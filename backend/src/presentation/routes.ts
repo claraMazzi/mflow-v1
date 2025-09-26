@@ -3,6 +3,7 @@ import { Authroutes } from "./auth/routes";
 import { UserRoutes } from "./user/routes";
 import { UploadRoutes } from "./upload/routes";
 import { ProjectRoutes } from "./project/routes";
+import { DeletionRequestRoutes } from "./deletion-request/routes";
 
 
 export class AppRoutes {
@@ -17,6 +18,8 @@ export class AppRoutes {
         router.use('/api/uploads', UploadRoutes.routes)
 
         router.use('/api/projects', ProjectRoutes.routes)
+
+        router.use('/api/deletion-requests', DeletionRequestRoutes.routes)
 
         return router;
     }

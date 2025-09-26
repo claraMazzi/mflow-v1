@@ -2,6 +2,7 @@
 
 import { useLayoutState } from "@components/global/Context";
 import MyProjects from "./projects/my-projects";
+import UserManager from "./users/user-manager";
 
 const DashboardContent = () => {
   const { activeRole } = useLayoutState();
@@ -10,7 +11,8 @@ const DashboardContent = () => {
     case "verificador":
       return <div>Verificador</div>;
     case "admin":
-      return <div>Admin</div>;
+      // return <UserManager />;
+      return <>test</>
     default:
       return <MyProjects />;
   }

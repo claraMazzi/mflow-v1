@@ -13,7 +13,6 @@ export const useProjects = () => {
       setIsLoading(true)
       setError(null)
       const response = await getProjects()
-      console.log('ACAAA', response)
       if (response.data && response.data.count > 0) {
         setProjects(response.data.projects)
       } else {
