@@ -3,24 +3,35 @@ import { Authroutes } from "./auth/routes";
 import { UserRoutes } from "./user/routes";
 import { UploadRoutes } from "./upload/routes";
 import { ProjectRoutes } from "./project/routes";
+import { SocketServer } from "./socket-server";
 import { DeletionRequestRoutes } from "./deletion-request/routes";
 
-
 export class AppRoutes {
-    static get routes(): Router {
-        const router = Router();
+	private socketServer: SocketServer;
+	private uploadRoutes: UploadRoutes;
 
-        //Definir las rutas
-        router.use('/api/auth', Authroutes.routes );
+	constructor({ socketServer }: { socketServer: SocketServer }) {
+		this.socketServer = socketServer;
+		this.uploadRoutes = new UploadRoutes({
+			socketServer,
+		});
+	}
 
-        router.use('/api/users', UserRoutes.routes );
+	get routes(): Router {
+		const router = Router();
 
-        router.use('/api/uploads', UploadRoutes.routes)
+		//Definir las rutas
+		router.use("/api/auth", Authroutes.routes);
 
-        router.use('/api/projects', ProjectRoutes.routes)
+		router.use("/api/users", UserRoutes.routes);
+
+		router.use("/api/uploads", this.uploadRoutes.routes);
+
+		router.use("/api/projects", ProjectRoutes.routes);
 
         router.use('/api/deletion-requests', DeletionRequestRoutes.routes)
 
         return router;
     }
 }
+

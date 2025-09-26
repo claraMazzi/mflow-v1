@@ -1,8 +1,27 @@
 "use client";
 
-import { ConceptualModel } from "#types/conceptual-model";
-import { ChangeEvent, useEffect, useRef, useState } from "react";
-import { Path } from "react-hook-form";
+import { ConceptualModel, ImageInfo } from "#types/conceptual-model";
+import {
+	ChangeEvent,
+	DragEvent,
+	startTransition,
+	useActionState,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	useTransition,
+} from "react";
+import { Path, set } from "react-hook-form";
+import { Dialog } from "../common/dialog/dialog";
+import {
+	AlertCircle,
+	CheckCircle,
+	ImageIcon,
+	Loader2,
+	Upload,
+	X,
+} from "lucide-react";
 const plantumlEncoder = require("plantuml-encoder");
 
 function debounce(func: any, delay: number) {
@@ -31,7 +50,7 @@ export default function Diagram({
 	propertyPathPrefix?: string;
 }) {
 	const [imgSource, setImageSource] = useState<undefined | string>();
-	const imgRef = useRef<null|HTMLImageElement>(null);
+	const imgRef = useRef<null | HTMLImageElement>(null);
 	const debouncedRenderDiagram = useRef(
 		debounce((value: any) => {
 			const encoded = plantumlEncoder.encode(value);
@@ -40,16 +59,16 @@ export default function Diagram({
 	);
 	const plantTextCodeValue = watch(`${namePrefix}.plantTextCode`);
 	const usesPlantTextValue = watch(`${namePrefix}.usesPlantText`);
-	const imageFilePath = watch(`${namePrefix}.imageFilePath`);
+	const imageFileId = watch(`${namePrefix}.imageFileId`);
 
 	useEffect(() => {
 		if (usesPlantTextValue) {
 			debouncedRenderDiagram.current(plantTextCodeValue);
 		} else {
-			setImageSource(imageFilePath);
+			setImageSource(imageFileId);
 		}
 		return () => {};
-	}, [plantTextCodeValue, usesPlantTextValue, imageFilePath]);
+	}, [plantTextCodeValue, usesPlantTextValue, imageFileId]);
 
 	const checkboxRegister = register({
 		name: `${namePrefix}.usesPlantText`,
@@ -63,7 +82,7 @@ export default function Diagram({
 			<input
 				type="checkbox"
 				{...checkboxRegister}
-				className={`${checkboxRegister.readOnly ? "pointer-events-none" : ""}`}
+				className={`${checkboxRegister.readOnly && "pointer-events-none"}`}
 			/>
 			<div className="flex flex-row gap-2">
 				{usesPlantTextValue ? (
@@ -75,7 +94,7 @@ export default function Diagram({
 						})}
 					/>
 				) : (
-					//TODO FIX UPLOAD TO USE THE NEW ENDPOINT
+					//TODO: FIX UPLOAD TO USE THE NEW ENDPOINT
 					<input
 						type="file"
 						accept=".png, .jpg, .jpeg"
@@ -86,7 +105,323 @@ export default function Diagram({
 					/>
 				)}
 				<img alt="Diagram" src={imgSource} />
+				<Dialog></Dialog>
 			</div>
 		</>
 	);
 }
+
+export const DiagramImageUpload = ({
+	title,
+	versionId,
+	diagramPropertyPath,
+	watch,
+	namePathPrefix,
+	hasEditingRights,
+	imageInfos,
+	sessionToken,
+}: {
+	sessionToken?: string;
+	versionId: string;
+	hasEditingRights: boolean;
+	imageInfos: Map<string, ImageInfo>;
+	title: string;
+	diagramPropertyPath: string;
+	watch: any;
+	namePathPrefix: Path<ConceptualModel>;
+}) => {
+	const [uploadState, setUploadState] = useState<{
+		success: boolean;
+		error?: string;
+	}>({ success: false });
+	const [isUploadPending, setIsUploadPending] = useState(false);
+	const [dragOver, setDragOver] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+	useEffect(() => {
+		if (uploadState.error) {
+			setError(uploadState.error);
+		}
+		return () => {};
+	}, [uploadState, error]);
+
+	const imageFileId = watch(`${namePathPrefix}.imageFileId`);
+
+	const file = useMemo(() => {
+		if (!imageFileId) return null;
+		return imageInfos.get(imageFileId) ?? null;
+	}, [imageFileId, imageInfos]);
+
+	const formatFileSize = (bytes: number) => {
+		if (bytes === 0) return "0 Bytes";
+		const k = 1024;
+		const sizes = ["Bytes", "KB", "MB", "GB"];
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+	};
+
+	const uploadFileToServer = async (selectedFile: File) => {
+		setError(null);
+		setUploadState({ success: false });
+		setIsUploadPending(true);
+
+		const formData = new FormData();
+		formData.append("image", selectedFile);
+		formData.append("diagramPropertyPath", diagramPropertyPath);
+
+		try {
+			const response = await fetch(
+				`${process.env.NEXT_PUBLIC_API_URL}/api/uploads/${versionId}/diagrams`,
+				{
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${sessionToken}`,
+					},
+					body: formData,
+				}
+			);
+
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				setUploadState({
+					success: false,
+					error: errorData.error || "Image upload failed.",
+				});
+				return;
+			}
+
+			setUploadState({ success: true });
+		} catch (error) {
+			console.error("Unexpected error during diagram image upload:", error);
+			setUploadState({
+				success: false,
+				error: "Something went wrong.",
+			});
+		} finally {
+			setIsUploadPending(false);
+		}
+	};
+
+	const deleteFileFromServer = async () => {
+		if (!file) return;
+	};
+
+	const validateAndUploadFile = (selectedFile: File) => {
+		// Validate file type
+		if (!selectedFile.type.startsWith("image/")) {
+			setError("Please select an image file");
+			return;
+		}
+
+		// Validate file size (max 5MB)
+		const maxSize = 5 * 1024 * 1024;
+		if (selectedFile.size > maxSize) {
+			setError(`File size must be less than ${formatFileSize(maxSize)}`);
+			return;
+		}
+		uploadFileToServer(selectedFile);
+	};
+
+	const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+		e.preventDefault();
+		setDragOver(false);
+
+		if (file || isUploadPending) return;
+
+		if (!e.dataTransfer) return;
+
+		const files = Array.from(e.dataTransfer.files);
+		if (files.length > 1) {
+			setError("Please select only one image");
+			return;
+		}
+
+		if (files[0]) {
+			validateAndUploadFile(files[0]);
+		}
+	};
+
+	const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+		e.preventDefault();
+		if (!file && !isUploadPending) {
+			setDragOver(true);
+		}
+	};
+
+	const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+		e.preventDefault();
+		setDragOver(false);
+	};
+
+	const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+		if (file || isUploadPending) return;
+
+		const selectedFile = e.target.files?.[0];
+		if (selectedFile) {
+			validateAndUploadFile(selectedFile);
+		}
+		e.target.value = ""; // Reset input
+	};
+
+	const clearError = () => {
+		setError(null);
+	};
+
+	const hasFile = !!file;
+	const canUpload = !hasFile && !isUploadPending && hasEditingRights;
+
+	return (
+		<div className="w-full max-w-lg mx-auto bg-card border border-border rounded-lg shadow-sm">
+			{/* Header */}
+			<div className="p-6 pb-0">
+				<div className="flex items-center gap-2 text-lg font-semibold text-card-foreground mb-2">
+					<ImageIcon className="h-5 w-5" />
+					{title}
+				</div>
+				<p className="text-sm text-muted-foreground">
+					Upload one image file (max 5MB)
+				</p>
+			</div>
+
+			{/* Content */}
+			<div className="p-6 space-y-4">
+				{/* Error Alert */}
+				{error && (
+					<div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
+						<AlertCircle className="h-4 w-4 flex-shrink-0" />
+						<div className="flex items-center justify-between w-full">
+							<span className="text-sm">{error}</span>
+							<button
+								onClick={clearError}
+								className="text-xs underline hover:no-underline ml-4"
+							>
+								Dismiss
+							</button>
+						</div>
+					</div>
+				)}
+
+				{/* Upload Area or File Display */}
+				{!hasFile ? (
+					<div
+						className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+							dragOver && canUpload
+								? "border-primary bg-primary/5"
+								: canUpload
+								? "border-muted-foreground/25 hover:border-muted-foreground/50"
+								: "border-muted bg-muted/30 cursor-not-allowed"
+						}`}
+						onDrop={handleDrop}
+						onDragOver={handleDragOver}
+						onDragLeave={handleDragLeave}
+					>
+						{canUpload && (
+							<input
+								ref={fileInputRef}
+								type="file"
+								accept="image/*"
+								onChange={handleFileInputChange}
+								className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+							/>
+						)}
+
+						{isUploadPending ? (
+							<div className="space-y-4">
+								<Loader2 className="mx-auto h-8 w-8 text-primary animate-spin" />
+								<div className="space-y-2">
+									<p className="text-sm font-medium">Uploading...</p>
+								</div>
+							</div>
+						) : (
+							<div className="space-y-4">
+								<Upload className="mx-auto h-12 w-12 text-muted-foreground" />
+								<div className="space-y-2">
+									<p className="text-base font-medium">
+										Drop image here or click to upload
+									</p>
+									<p className="text-sm text-muted-foreground">
+										PNG, JPG, JPEG up to 5MB
+									</p>
+								</div>
+							</div>
+						)}
+					</div>
+				) : (
+					/* File Display */
+					<div className="space-y-4">
+						<div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+							<div className="flex items-center space-x-3">
+								<CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+								<div>
+									<p className="text-sm font-medium">{file.filename}</p>
+									<div className="flex items-center gap-2">
+										<span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-secondary text-secondary-foreground">
+											{formatFileSize(file.sizeInBytes)}
+										</span>
+										<span className="text-xs text-muted-foreground">
+											{file.uploadedAt.toLocaleString()}
+										</span>
+									</div>
+								</div>
+							</div>
+							<button
+								onClick={deleteFileFromServer}
+								disabled={isUploadPending}
+								className="p-2 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+							>
+								{isUploadPending ? (
+									<Loader2 className="w-4 h-4 animate-spin" />
+								) : (
+									<X className="w-4 h-4" />
+								)}
+							</button>
+						</div>
+
+						{/* Image Preview */}
+						<div className="relative overflow-hidden rounded-lg border">
+							<img
+								src={file.url}
+								alt={file.filename}
+								className="w-full h-48 object-cover"
+							/>
+						</div>
+					</div>
+				)}
+
+				{/* Action Buttons */}
+				<div className="flex gap-2">
+					{!hasFile && !isUploadPending && (
+						<button
+							type="button"
+							disabled={!canUpload}
+							onClick={(e) => {
+								e.preventDefault();
+								fileInputRef.current?.click();
+							}}
+							className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+						>
+							<Upload className="w-4 h-4 mr-2" />
+							Select Image
+						</button>
+					)}
+
+					{hasFile && !isUploadPending && (
+						<button
+							type="button"
+							disabled={!hasEditingRights}
+							onClick={(e) => {
+								e.preventDefault();
+								fileInputRef.current?.click();
+							}}
+							className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-background border border-border text-foreground rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+						>
+							<Upload className="w-4 h-4 mr-2" />
+							Replace Image
+						</button>
+					)}
+				</div>
+			</div>
+		</div>
+	);
+};

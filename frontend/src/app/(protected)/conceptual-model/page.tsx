@@ -10,7 +10,7 @@ import {
 	useMemo,
 } from "react";
 import { io } from "socket.io-client";
-import { socket } from "../../socket";
+import { socket } from "../../../socket";
 import { lightningCssTransform } from "next/dist/build/swc/generated-native";
 import { set, string } from "zod";
 import {
@@ -20,8 +20,10 @@ import {
 	useForm,
 	UseFormRegister,
 } from "react-hook-form";
-import Diagram from "@components/ui/conceptual-model/diagram";
-import { ConceptualModel } from "#types/conceptual-model";
+import Diagram, {
+	DiagramImageUpload,
+} from "@components/ui/conceptual-model/diagram";
+import { ConceptualModel, ImageInfo } from "#types/conceptual-model";
 import {
 	Tabs,
 	TabsContent,
@@ -36,6 +38,7 @@ import {
 	useEditingRequests,
 } from "@src/hooks/use-request-editing-rights";
 import EditingRequestNotification from "@src/components/ui/conceptual-model/editing-request-notification";
+import { useSocketConnection } from "@src/hooks/use-socket-connection";
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
@@ -65,7 +68,14 @@ type UsersInRoomChangePayload = BaseSocketEventPayload & {
 
 type InitializeConceptualModelPayload = BaseSocketEventPayload & {
 	type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL;
-	conceptualModel: any;
+	conceptualModel: ConceptualModel;
+	imageInfos: {
+		id: string;
+		createdAt: string;
+		originalFilename: string;
+		sizeInBytes: number;
+		url: string;
+	}[];
 };
 
 enum SERVER_WS_EVENT_TYPES {
@@ -101,36 +111,59 @@ function throttle(func: any, delay: number) {
 	};
 }
 
-function parsePropertyPath(conceptualModel: any, path: string) {
+function parsePropertyPath(conceptualModel: ConceptualModel, path: string) {
 	const pathParts = path.split(".");
-	for (let i = 0; i < pathParts.length - 1; i++) {
-		if (Array.isArray(conceptualModel[pathParts[i]])) {
-			pathParts[i + 1] = conceptualModel[pathParts[i]].findIndex(
-				(e: any) => e._id === pathParts[i + 1]
+	const parsedPath = [];
+	let current: any = conceptualModel;
+
+	for (const part of pathParts) {
+		const containsListItemKey = part.includes(":");
+		if (containsListItemKey) {
+			const [listProperty, itemId] = part.split(":");
+			if (!(listProperty in current) || !Array.isArray(current[listProperty])) {
+				return undefined;
+			}
+			const itemIndex = current[listProperty].findIndex(
+				(e: any) => e._id === itemId
 			);
+			if (itemIndex === -1) {
+				return undefined;
+			}
+			parsedPath.push(listProperty);
+			parsedPath.push(itemIndex);
+			current = current[listProperty][itemIndex];
+		} else {
+			if (!(part in current)) {
+				return undefined;
+			}
+			parsedPath.push(part);
+			current = current[part];
 		}
-		conceptualModel = conceptualModel[pathParts[i]];
 	}
-	return pathParts.join(".");
+	return parsedPath.join(".");
 }
 
 const MOUSE_POSITION_UPDATE_DELAY = 33; //30 fps
 
 export default function Page() {
 	const { data: session } = useSession();
-	const [isConnected, setIsConnected] = useState(false);
-	const [transport, setTransport] = useState("N/A");
+	const { isConnected: isSocketConnected, transport } = useSocketConnection({
+		socket,
+		sessionToken: session?.auth,
+	});
+
+	const [roomId, setRoomId] = useState("67d8321cd76cf5bc5bd75c79");
 	const [currentTab, setCurrentTab] = useState("objetivo-suposiciones");
 	const [isModelInitialized, setIsModelInitialized] = useState(false);
-	const [roomId, setRoomId] = useState("67d8321cd76cf5bc5bd75c79");
 
 	const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(
 		new Map()
 	);
 	const hasEditingRights = useMemo(() => {
-		if (!session) return false;
+		console.log("Has Editing Rights was recalculated.");
+		if (!session?.user.id) return false;
 		return !!collaborators.get(session.user.id)?.hasEditingRights;
-	}, [collaborators]);
+	}, [collaborators, session?.user.id]);
 
 	const {
 		canUserSendEditingRequest,
@@ -145,6 +178,9 @@ export default function Page() {
 		hasEditingRights,
 	});
 
+	const [imageInfos, setImageInfos] = useState<Map<string, ImageInfo>>(
+		new Map()
+	);
 	const {
 		register,
 		control,
@@ -179,30 +215,12 @@ export default function Page() {
 	);
 
 	useEffect(() => {
-		if (session) {
-			socket.auth = {
-				sessionToken: session.auth,
-			};
-			socket.connect();
-		}
-
-		function onConnect() {
-			setIsConnected(true);
-			setTransport(socket.io.engine.transport.name);
-
-			socket.io.engine.on("upgrade", (transport) => {
-				setTransport(transport.name);
-			});
+		if (isSocketConnected) {
 			socket.emit(CLIENT_WS_EVENT_TYPES.JOIN_ROOM, {
 				type: CLIENT_WS_EVENT_TYPES.JOIN_ROOM,
 				roomId: roomId,
 				timestamp: new Date(),
 			} satisfies JoinRoomEventPayload);
-		}
-
-		function onDisconnect() {
-			setIsConnected(false);
-			setTransport("N/A");
 		}
 
 		function onFieldUpdate(payload: { propertyPath: any; value: any }) {
@@ -316,11 +334,26 @@ export default function Page() {
 			});
 		}
 
-		function onInitializeConceptualModel(
-			payload: InitializeConceptualModelPayload
-		) {
-			console.log("Initial State: ", payload);
-			reset(payload.conceptualModel);
+		function onInitializeConceptualModel({
+			conceptualModel,
+			imageInfos,
+		}: InitializeConceptualModelPayload) {
+			console.log("Initial State: ", conceptualModel);
+			reset(conceptualModel);
+			const newImageInfos = new Map<string, ImageInfo>();
+			imageInfos
+				.map((i) => {
+					const { id, sizeInBytes, url } = i;
+					return {
+						id,
+						sizeInBytes,
+						url,
+						uploadedAt: new Date(i.createdAt),
+						filename: i.originalFilename,
+					};
+				})
+				.forEach((i) => newImageInfos.set(i.id, i));
+			setImageInfos(newImageInfos);
 			setIsModelInitialized(true);
 		}
 
@@ -331,7 +364,7 @@ export default function Page() {
 			listPropertyPath: string;
 			newItem: any;
 		}) {
-			const parsedPath: any = parsePropertyPath(getValues, listPropertyPath);
+			const parsedPath: any = parsePropertyPath(getValues(), listPropertyPath);
 			setValue(parsedPath, [...getValues(parsedPath), newItem]);
 		}
 
@@ -342,15 +375,13 @@ export default function Page() {
 			listPropertyPath: Path<ConceptualModel>;
 			itemId: string;
 		}) {
-			const parsedPath: any = parsePropertyPath(getValues, listPropertyPath);
+			const parsedPath: any = parsePropertyPath(getValues(), listPropertyPath);
 			const currentValue = getValues(listPropertyPath);
 			if (Array.isArray(currentValue)) {
 				setValue(parsedPath, [...currentValue.filter((s) => s._id !== itemId)]);
 			}
 		}
 
-		socket.on("connect", onConnect);
-		socket.on("disconnect", onDisconnect);
 		socket.on("field-update", onFieldUpdate);
 		socket.on("item-added-to-list", onItemAddedToList);
 		socket.on("item-removed-from-list", onItemRemovedFromList);
@@ -362,9 +393,7 @@ export default function Page() {
 		socket.on(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, onUsersInRoomChange);
 
 		return () => {
-			socket.off("connect", onConnect);
 			socket.off("field-update", onFieldUpdate);
-			socket.off("disconnect", onDisconnect);
 			socket.off("item-added-to-list", onItemAddedToList);
 			socket.off("item-removed-from-list", onItemRemovedFromList);
 			socket.off("server-volatile-broadcast", onServerVolatileBroadcast);
@@ -376,9 +405,8 @@ export default function Page() {
 				SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
 				onUsersInRoomChange
 			);
-			socket.disconnect();
 		};
-	}, [session?.auth]);
+	}, [isSocketConnected]);
 
 	const sendPropertyUpdate = (value: any, propertyPath: string) => {
 		if (!hasEditingRights) return;
@@ -405,7 +433,7 @@ export default function Page() {
 		setCurrentTab(newTab);
 		socket.volatile.emit("client-volatile-broadcast", {
 			roomId,
-			e: newTab,
+			currentTab: newTab,
 			timestamp: new Date(),
 		});
 	};
@@ -503,8 +531,8 @@ export default function Page() {
 						);
 					})}
 			</div>
-			<p>Status: {isConnected ? "connected" : "disconnected"}</p>
-			<p>Id: {isConnected ? socket.id : "No disponible"}</p>
+			<p>Status: {isSocketConnected ? "connected" : "disconnected"}</p>
+			<p>Id: {isSocketConnected ? socket.id : "No disponible"}</p>
 			<p>Transport: {transport}</p>
 			<p>Current Room: {roomId}</p>
 			<h1>Collaborators:</h1>
@@ -553,7 +581,13 @@ export default function Page() {
 			{!isModelInitialized ? (
 				<p>Loading Model</p>
 			) : (
-				<form className="flex flex-col">
+				<form
+					onSubmit={(e) => {
+						console.log("Form Submitted");
+						e.preventDefault();
+					}}
+					className="flex flex-col"
+				>
 					<br />
 					<Tabs
 						orientation="vertical"
@@ -573,6 +607,7 @@ export default function Page() {
 							</TabsTrigger>
 						</TabsList>
 						<TabsContent value="objetivo-suposiciones">
+							<label>Objetivo del Modelo Conceptual: </label>
 							<input {...customRegisterField({ name: "objective" })} />
 							<h2>Suposiciones</h2>
 							<button
@@ -597,7 +632,7 @@ export default function Page() {
 											<input
 												{...customRegisterField({
 													name: `assumptions.${index}.description`,
-													propertyPath: `assumptions.${field._id}.description`,
+													propertyPath: `assumptions:${field._id}.description`,
 												})}
 											/>
 											<button
@@ -639,7 +674,7 @@ export default function Page() {
 											<input
 												{...customRegisterField({
 													name: `simplifications.${index}.description`,
-													propertyPath: `simplifications.${field._id}.description`,
+													propertyPath: `simplifications:${field._id}.description`,
 												})}
 											/>
 											<button
@@ -661,13 +696,16 @@ export default function Page() {
 						</TabsContent>
 					</Tabs>
 
-					<h2>Diagrama de Estructura</h2>
-					<Diagram
+					<DiagramImageUpload
 						{...{
-							register: customRegisterField,
+							sessionToken: session?.auth,
+							versionId: roomId,
+							hasEditingRights,
+							imageInfos,
+							title: "Diagrama de Estructura",
 							watch,
-							namePrefix: "structureDiagram",
-							propertyPathPrefix: "structureDiagram",
+							namePathPrefix: "structureDiagram",
+							diagramPropertyPath: "structureDiagram",
 						}}
 					/>
 					<h2>Entidades</h2>
@@ -691,7 +729,7 @@ export default function Page() {
 									<input
 										{...customRegisterField({
 											name: `entities.${index}.name`,
-											propertyPath: `entities.${field._id}.name`,
+											propertyPath: `entities:${field._id}.name`,
 										})}
 									/>
 									<button

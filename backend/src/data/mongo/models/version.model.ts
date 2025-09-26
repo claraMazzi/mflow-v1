@@ -1,4 +1,4 @@
-import { Schema, model } from "mongoose";
+import { InferSchemaType, Schema, model } from "mongoose";
 import { conceptualModelSchema, todoItemSchema } from "./subdocuments-schemas";
 
 const versionSchema = new Schema(
@@ -25,7 +25,13 @@ const versionSchema = new Schema(
 			ref: "Revision",
 		},
 		todoItems: [todoItemSchema],
-		conceptualModel: conceptualModelSchema,
+		conceptualModel: {
+			type: conceptualModelSchema,
+			required: [
+				true,
+				"The conceptual model must be initialized when the version is created.",
+			],
+		},
 		//Uncomment later if needed
 		/*comments : {
 			type: [Schema.Types.ObjectId],
@@ -34,5 +40,7 @@ const versionSchema = new Schema(
 	},
 	{ timestamps: true }
 );
+
+export type Version = InferSchemaType<typeof versionSchema>;
 
 export const VersionModel = model("Version", versionSchema);

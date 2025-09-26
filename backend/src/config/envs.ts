@@ -12,7 +12,6 @@ export const envs = {
   WEBSERVICE_URL: env.get('WEBSERVICE_URL').required().asString(),
   FRONTEND_URL: env.get('FRONTEND_URL').required().asString(),
 
-
   PROD: env.get('PROD').required().asBool(),
 
   JWT_SEED: env.get('JWT_SEED').required().asString(),

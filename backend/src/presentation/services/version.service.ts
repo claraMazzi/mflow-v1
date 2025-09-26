@@ -1,5 +1,6 @@
+import mongoose from "mongoose";
 import { bcryptAdapter } from "../../config";
-import { UserModel, VersionModel } from "../../data";
+import { ProjectModel, UserModel, Version, VersionModel } from "../../data";
 import {
 	CreateVersionDto,
 	CustomError,
@@ -7,6 +8,8 @@ import {
 	UpdateUserDto,
 	UserEntity,
 } from "../../domain";
+import { version } from "os";
+import { VersionImage } from "../../data/mongo/models/version-image.model";
 
 export class VersionService {
 	constructor() {}
@@ -20,72 +23,209 @@ export class VersionService {
 		//const versionEntity = VersionEntity.fromObject(version);
 		const versionEntity = version;
 
+		return { version };
+	}
+
+	async getVersionByIdWithImages(id: string): Promise<{
+		version: Version & { id: string } & {
+			imageInfos: (Pick<
+				VersionImage,
+				"originalFilename" | "url" | "createdAt" | "sizeInBytes"
+			> & {
+				id: string;
+			})[];
+		};
+	}> {
+		const pipeline: mongoose.PipelineStage[] = [
+			{
+				$match: { _id: new mongoose.Types.ObjectId(id) },
+			},
+			{
+				$lookup: {
+					from: "versionimages",
+					localField: "_id",
+					foreignField: "version",
+					as: "imageInfos",
+					pipeline: [
+						{
+							$project: {
+								_id: 0,
+								id: { $toString: "_id" },
+								url: 1,
+								sizeInBytes: 1,
+								originalFilename: 1,
+								createdAt: 1,
+							},
+						},
+					],
+				},
+			},
+			{
+				$addFields: {
+					id: { $toString: "$_id" },
+				},
+			},
+			{
+				$project: {
+					_id: 0,
+				},
+			},
+		];
+
+		const result = await VersionModel.aggregate(pipeline).exec();
+
+		if (result.length === 0)
+			throw CustomError.notFound("Version does not exist.");
+
 		return {
-			version,
+			version: result[0],
 		};
 	}
 
-	async updateUserById({ name, lastName, id }: UpdateUserDto) {
-		const user = await UserModel.findOne({ id: id });
-		if (!user) throw CustomError.badRequest("User does not exists");
+	async hasUserReadAccessToVersion({
+		versionId,
+		userId,
+	}: {
+		versionId: string;
+		userId: string;
+	}): Promise<boolean> {
+		const pipeline: mongoose.PipelineStage[] = [
+			{
+				$match: { _id: new mongoose.Types.ObjectId(versionId) },
+			},
+			{
+				$project: {
+					sharedWithReaders: 1,
+				},
+			},
+			{
+				$lookup: {
+					from: "projects",
+					localField: "_id",
+					foreignField: "versions",
+					as: "project",
+					pipeline: [
+						{
+							$project: {
+								owner: 1,
+								collaborators: 1,
+							},
+						},
+					],
+				},
+			},
+			{
+				$unwind: {
+					path: "project",
+				},
+			},
+			{
+				$lookup: {
+					from: "revisions",
+					localField: "_id",
+					foreignField: "version",
+					as: "revisions",
+					pipeline: [
+						{
+							$project: {
+								verifier: 1,
+							},
+						},
+					],
+				},
+			},
+		];
 
-		if (!name && !lastName)
-			throw CustomError.badRequest("No data sent to update");
+		const result = await VersionModel.aggregate(pipeline).exec();
 
-		if (name === user.name && lastName === user.lastName)
-			throw CustomError.badRequest("No updated data");
+		if (result.length === 0)
+			throw CustomError.notFound("Version does not exist.");
 
-		try {
-			if (name) user.name = name;
-			if (lastName) user.lastName = lastName;
+		const usersWithAccess = result[0] as {
+			_id: mongoose.Types.ObjectId;
+			sharedWithReaders: mongoose.Types.ObjectId[];
+			project: {
+				_id: mongoose.Types.ObjectId;
+				owner: mongoose.Types.ObjectId;
+				collaborators: mongoose.Types.ObjectId[];
+			};
+			revisions: {
+				_id: mongoose.Types.ObjectId;
+				verifier: mongoose.Types.ObjectId;
+			}[];
+		};
 
-			user.save();
-		} catch (error) {
-			throw CustomError.internalServer(`${error}`);
+		const isOwner = usersWithAccess.project.owner.equals(userId);
+		if (isOwner) {
+			return true;
 		}
-	}
 
-	async deleteUser(id: string) {
-		const user = await UserModel.findOne({ id: id });
-		if (!user) throw CustomError.badRequest("User does not exists");
-
-		try {
-			await UserModel.deleteOne({ id: id });
-		} catch (error) {
-			throw CustomError.internalServer(`${error}`);
-		}
-	}
-
-	/** Esto actualizar y sacar la old password, esto es para un UPDATE PASSOWRD */
-
-	public passwordUpdate = async (recoverDto: PasswordUpdateDto) => {
-		//1. verificar que no exista ese correo en la BD
-		const user = await UserModel.findOne({ email: recoverDto.email });
-
-		console.log(user, recoverDto.email);
-		if (!user) throw CustomError.badRequest("User doesn't exists");
-
-		const passwordMatch = bcryptAdapter.compare(
-			recoverDto.oldPassword,
-			user.password
+		const isCollaborator = usersWithAccess.project.collaborators.some((c) =>
+			c.equals(userId)
 		);
-		if (!passwordMatch)
-			throw CustomError.badRequest("Old password doesn't match");
-
-		if (recoverDto.oldPassword.trim() === recoverDto.newPassword.trim())
-			throw CustomError.badRequest(
-				"New password cant be the same as old password"
-			);
-		try {
-			//Encriptar la contraseña
-			user.password = bcryptAdapter.hash(recoverDto.newPassword);
-			await user.save();
-
-			const { password, ...userEntity } = UserEntity.fromObject(user);
-
-			return { user: userEntity };
-		} catch (error) {
-			throw CustomError.internalServer(`${error}`);
+		if (isCollaborator) {
+			return true;
 		}
-	};
+
+		const isReader = usersWithAccess.sharedWithReaders.some((r) =>
+			r.equals(userId)
+		);
+		if (isReader) {
+			return true;
+		}
+
+		const isVerifier = usersWithAccess.revisions.some((r) =>
+			r.verifier.equals(userId)
+		);
+		if (isVerifier) {
+			return true;
+		}
+
+		return false;
+	}
+
+	async hasUserWriteAccessToVersion({
+		versionId,
+		userId,
+	}: {
+		versionId: string;
+		userId: string;
+	}): Promise<boolean> {
+		const pipeline: mongoose.PipelineStage[] = [
+			{
+				$match: { versions: new mongoose.Types.ObjectId(versionId) },
+			},
+			{
+				$project: {
+					_id: 0,
+					owner: 1,
+					collaborators: 1,
+				},
+			},
+		];
+
+		const result = await VersionModel.aggregate(pipeline).exec();
+
+		if (result.length === 0)
+			throw CustomError.notFound("Version does not exist.");
+
+		const usersWithAccess = result[0] as {
+			owner: mongoose.Types.ObjectId;
+			collaborators: mongoose.Types.ObjectId[];
+		};
+
+		const isOwner = usersWithAccess.owner.equals(userId);
+		if (isOwner) {
+			return true;
+		}
+
+		const isCollaborator = usersWithAccess.collaborators.some((c) =>
+			c.equals(userId)
+		);
+		if (isCollaborator) {
+			return true;
+		}
+
+		return false;
+	}
 }

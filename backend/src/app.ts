@@ -1,5 +1,4 @@
 import { MongoDatabase } from "./data";
-import { AppRoutes } from "./presentation/routes";
 import { Server } from "./presentation/server";
 import { envs } from "./config";
 //Funcion anonima auto invocada
@@ -14,7 +13,7 @@ async function main() {
   });
   const server = new Server({
     port: envs.PORT,
-    routes: AppRoutes.routes,
+    frontEndURL: envs.FRONTEND_URL,
   });
   server.start();
 }

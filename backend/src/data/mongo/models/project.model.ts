@@ -28,7 +28,7 @@ const projectSchema = new Schema(
 			enum: ["CREADO", "PENDIENTE DE ELIMINACION", "ELIMINADO"],
 			default: "CREADO",
 		},
-		versions: [{ type: Schema.Types.ObjectId, ref: "Version" }],
+		versions: [{ type: Schema.Types.ObjectId, ref: "Version", index: true }],
 	},
 	{ timestamps: true }
 ); // Agrega createdAt y updatedAt automáticamente

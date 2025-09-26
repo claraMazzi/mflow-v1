@@ -105,7 +105,8 @@ export class CollaborationRoom {
 		};
 	}
 
-	cleanupStaleConnections(activeSocketIds: Set<string>) {
+	cleanUpStaleConnections(activeSocketIds: Set<string>): boolean {
+		let hasRoomChanged = false;
 		const usersToRemove: string[] = [];
 		for (const [userId, userInfo] of this.userIdToUserInfoMap.entries()) {
 			const staleSocketIds: string[] = [];
@@ -117,6 +118,7 @@ export class CollaborationRoom {
 			}
 
 			staleSocketIds.forEach((socketId) => {
+				hasRoomChanged = true;
 				userInfo.socketIds.delete(socketId);
 				console.log(`Cleaned up stale socket ${socketId} for user ${userId}`);
 			});
@@ -143,6 +145,8 @@ export class CollaborationRoom {
 				}
 			}
 		});
+
+		return hasRoomChanged;
 	}
 
 	private removeEditingRequest({ requestId }: { requestId: string }) {
@@ -240,7 +244,6 @@ export class CollaborationRoom {
 		}
 
 		this.removeEditingRequest({ requestId });
-		return request.requesterUserId;
 	}
 
 	addCollaborator({
