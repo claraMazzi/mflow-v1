@@ -10,6 +10,7 @@ import {
 	useMemo,
 	useRef,
 	useState,
+	useTransition,
 } from "react";
 import { Path, set } from "react-hook-form";
 import { Dialog } from "../common/dialog/dialog";
@@ -21,10 +22,6 @@ import {
 	Upload,
 	X,
 } from "lucide-react";
-import {
-	uploadDiagramImage,
-	UploadDiagramImageActionState,
-} from "./actions/upload-diagram-image";
 const plantumlEncoder = require("plantuml-encoder");
 
 function debounce(func: any, delay: number) {
@@ -122,7 +119,9 @@ export const DiagramImageUpload = ({
 	namePathPrefix,
 	hasEditingRights,
 	imageInfos,
+	sessionToken,
 }: {
+	sessionToken?: string;
 	versionId: string;
 	hasEditingRights: boolean;
 	imageInfos: Map<string, ImageInfo>;
@@ -131,10 +130,11 @@ export const DiagramImageUpload = ({
 	watch: any;
 	namePathPrefix: Path<ConceptualModel>;
 }) => {
-	const [uploadState, uploadAction, isUploadPending] = useActionState(
-		uploadDiagramImage,
-		{ success: false }
-	);
+	const [uploadState, setUploadState] = useState<{
+		success: boolean;
+		error?: string;
+	}>({ success: false });
+	const [isUploadPending, setIsUploadPending] = useState(false);
 	const [dragOver, setDragOver] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -162,15 +162,45 @@ export const DiagramImageUpload = ({
 	};
 
 	const uploadFileToServer = async (selectedFile: File) => {
+		setError(null);
+		setUploadState({ success: false });
+		setIsUploadPending(true);
+
 		const formData = new FormData();
-		formData.append("versionId", versionId);
 		formData.append("image", selectedFile);
 		formData.append("diagramPropertyPath", diagramPropertyPath);
-		console.log("Image Upload Attempt: ", formData)
 
-		startTransition(() => {
-			uploadAction(formData);
-		});
+		try {
+			const response = await fetch(
+				`${process.env.NEXT_PUBLIC_API_URL}/api/uploads/${versionId}/diagrams`,
+				{
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${sessionToken}`,
+					},
+					body: formData,
+				}
+			);
+
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				setUploadState({
+					success: false,
+					error: errorData.error || "Image upload failed.",
+				});
+				return;
+			}
+
+			setUploadState({ success: true });
+		} catch (error) {
+			console.error("Unexpected error during diagram image upload:", error);
+			setUploadState({
+				success: false,
+				error: "Something went wrong.",
+			});
+		} finally {
+			setIsUploadPending(false);
+		}
 	};
 
 	const deleteFileFromServer = async () => {

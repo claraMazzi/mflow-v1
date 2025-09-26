@@ -16,11 +16,12 @@ export class CheckVersionAccessMiddleware {
 		this.socketServer = socketServer;
 	}
 
-	checkIsEditorInCollaborationRoom(
+	//Using arrow function, to keep alive the correct "this" reference in the mehthod. JavaScript gives me headaches.
+	checkIsEditorInCollaborationRoom = (
 		req: Request,
 		res: Response,
 		next: NextFunction
-	) {
+	) => {
 		try {
 			const userId = req.session?.userId!;
 			const versionId = req.params.versionId;
@@ -51,11 +52,11 @@ export class CheckVersionAccessMiddleware {
 		}
 	}
 
-	async checkVersionAccessForUploading(
+	checkVersionAccessForUploading = async (
 		req: Request,
 		res: Response,
 		next: NextFunction
-	) {
+	) => {
 		const userId = req.session?.userId!;
 		const versionId = req.params.versionId;
 
@@ -70,10 +71,12 @@ export class CheckVersionAccessMiddleware {
 				});
 			}
 
+			const isOwner = project.owner.equals(userId);
+
 			const isCollaborator = project.collaborators.some((cId) =>
 				cId.equals(userId)
 			);
-			if (!isCollaborator) {
+			if (!isOwner && !isCollaborator) {
 				return res.status(403).json({
 					error:
 						"The user is not a collaborator in the project associated with the specified version.",

@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { bcryptAdapter } from "../../config";
-import { UserModel, Version, VersionModel } from "../../data";
+import { ProjectModel, UserModel, Version, VersionModel } from "../../data";
 import {
 	CreateVersionDto,
 	CustomError,
@@ -80,5 +80,152 @@ export class VersionService {
 		return {
 			version: result[0],
 		};
+	}
+
+	async hasUserReadAccessToVersion({
+		versionId,
+		userId,
+	}: {
+		versionId: string;
+		userId: string;
+	}): Promise<boolean> {
+		const pipeline: mongoose.PipelineStage[] = [
+			{
+				$match: { _id: new mongoose.Types.ObjectId(versionId) },
+			},
+			{
+				$project: {
+					sharedWithReaders: 1,
+				},
+			},
+			{
+				$lookup: {
+					from: "projects",
+					localField: "_id",
+					foreignField: "versions",
+					as: "project",
+					pipeline: [
+						{
+							$project: {
+								owner: 1,
+								collaborators: 1,
+							},
+						},
+					],
+				},
+			},
+			{
+				$unwind: {
+					path: "project",
+				},
+			},
+			{
+				$lookup: {
+					from: "revisions",
+					localField: "_id",
+					foreignField: "version",
+					as: "revisions",
+					pipeline: [
+						{
+							$project: {
+								verifier: 1,
+							},
+						},
+					],
+				},
+			},
+		];
+
+		const result = await VersionModel.aggregate(pipeline).exec();
+
+		if (result.length === 0)
+			throw CustomError.notFound("Version does not exist.");
+
+		const usersWithAccess = result[0] as {
+			_id: mongoose.Types.ObjectId;
+			sharedWithReaders: mongoose.Types.ObjectId[];
+			project: {
+				_id: mongoose.Types.ObjectId;
+				owner: mongoose.Types.ObjectId;
+				collaborators: mongoose.Types.ObjectId[];
+			};
+			revisions: {
+				_id: mongoose.Types.ObjectId;
+				verifier: mongoose.Types.ObjectId;
+			}[];
+		};
+
+		const isOwner = usersWithAccess.project.owner.equals(userId);
+		if (isOwner) {
+			return true;
+		}
+
+		const isCollaborator = usersWithAccess.project.collaborators.some((c) =>
+			c.equals(userId)
+		);
+		if (isCollaborator) {
+			return true;
+		}
+
+		const isReader = usersWithAccess.sharedWithReaders.some((r) =>
+			r.equals(userId)
+		);
+		if (isReader) {
+			return true;
+		}
+
+		const isVerifier = usersWithAccess.revisions.some((r) =>
+			r.verifier.equals(userId)
+		);
+		if (isVerifier) {
+			return true;
+		}
+
+		return false;
+	}
+
+	async hasUserWriteAccessToVersion({
+		versionId,
+		userId,
+	}: {
+		versionId: string;
+		userId: string;
+	}): Promise<boolean> {
+		const pipeline: mongoose.PipelineStage[] = [
+			{
+				$match: { versions: new mongoose.Types.ObjectId(versionId) },
+			},
+			{
+				$project: {
+					_id: 0,
+					owner: 1,
+					collaborators: 1,
+				},
+			},
+		];
+
+		const result = await VersionModel.aggregate(pipeline).exec();
+
+		if (result.length === 0)
+			throw CustomError.notFound("Version does not exist.");
+
+		const usersWithAccess = result[0] as {
+			owner: mongoose.Types.ObjectId;
+			collaborators: mongoose.Types.ObjectId[];
+		};
+
+		const isOwner = usersWithAccess.owner.equals(userId);
+		if (isOwner) {
+			return true;
+		}
+
+		const isCollaborator = usersWithAccess.collaborators.some((c) =>
+			c.equals(userId)
+		);
+		if (isCollaborator) {
+			return true;
+		}
+
+		return false;
 	}
 }

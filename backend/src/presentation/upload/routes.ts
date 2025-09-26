@@ -90,17 +90,37 @@ export class UploadRoutes {
 		router.post(
 			"/:versionId/diagrams",
 			AuthMiddleware.validateJWT,
-			async (req, res, next) => {
+			(req, res, next) => {
 				const versionId = req.params.versionId;
-				const diagramPropertyPath = req.body.diagramPropertyPath;
 
 				if (!versionId) {
 					return res.status(400).json({ error: "No version id provided." });
 				}
 
+				next();
+			},
+			versionAccessMiddleware.checkVersionAccessForUploading,
+			versionAccessMiddleware.checkIsEditorInCollaborationRoom,
+			uploadImageMiddleware.single("image"),
+			async (req, res) => {
+				const versionId = req.params.versionId;
+				const diagramPropertyPath = req.body.diagramPropertyPath;
+
 				if (!diagramPropertyPath) {
 					return res.status(400).json({ error: "No property path provided." });
 				}
+
+				if (!req.file) {
+					console.error(
+						`The file info field was unexpectedly undefined - Version Id: ${versionId}.`
+					);
+					return res.send(500).json({
+						error:
+							"There was an internal server error while uploading the file.",
+					});
+				}
+
+				
 
 				const version = await VersionModel.findById(versionId).exec();
 
@@ -129,25 +149,6 @@ export class UploadRoutes {
 					});
 				}
 
-				next();
-			},
-			versionAccessMiddleware.checkVersionAccessForUploading,
-			versionAccessMiddleware.checkIsEditorInCollaborationRoom,
-			uploadImageMiddleware.single("image"),
-			async (req, res) => {
-				const versionId = req.params.versionId;
-				const diagramPropertyPath = req.body.diagramPropertyPath;
-
-				if (!req.file) {
-					console.error(
-						`The file info field was unexpectedly undefined - Version Id: ${versionId}.`
-					);
-					return res.send(500).json({
-						error:
-							"There was an internal server error while uploading the file.",
-					});
-				}
-
 				const { mimetype, originalname, filename, size, path } = req.file;
 
 				const newVersionImage = new VersionImageModel({
@@ -159,12 +160,6 @@ export class UploadRoutes {
 				newVersionImage.url = `uploads/${newVersionImage.id}`;
 				await newVersionImage.save();
 
-				const version = await VersionModel.findById(versionId).exec();
-
-				if (!version) {
-					return res.status(400).json({ error: "Version not found." });
-				}
-
 				const imageIdPropertyPath = `${diagramPropertyPath}.imageFileId`;
 
 				setValue(
@@ -175,7 +170,7 @@ export class UploadRoutes {
 				await version.save();
 
 				res.send(200);
-				
+
 				this.socketServer.emitImageFileAdded(versionId, {
 					id: newVersionImage.id,
 					url: newVersionImage.url,

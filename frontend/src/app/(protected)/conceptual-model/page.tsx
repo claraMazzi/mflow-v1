@@ -698,6 +698,7 @@ export default function Page() {
 
 					<DiagramImageUpload
 						{...{
+							sessionToken: session?.auth,
 							versionId: roomId,
 							hasEditingRights,
 							imageInfos,
