@@ -251,7 +251,27 @@ export class SocketServer {
 		});
 	}
 
-	private async handleFieldUpdate(
+	//agregar un handler pare el text field de plantext change. 
+
+	/*
+	cuando el plantext code cambia el servidor es el encargado de generar la URL de la imagen plant text y enviarsela a todos los clientes para quee la actualice en el front. 
+	Ahora se esta generando en el front directamente. 
+
+
+
+	ahora todos reciben el texto -- generan el token, llaman al encoder y muestran la imagen 
+
+	desintalar el encoder del front 
+	instalarlo en el back
+	escuchar por el evento del field de plant text 
+	generar el token
+	guardar el cambio que hubo en el plant text field y guardar el token para no vovler a generarlo.-- diagramSchema
+
+	generar el link 
+
+	*/
+
+	private async handleFieldUpdate( //funciona para todos los text fields 
 		socket: Socket,
 		payload: {
 			propertyPath: string;
@@ -265,6 +285,7 @@ export class SocketServer {
 
 		setValue(version.conceptualModel, payload.propertyPath, payload.value);
 		version.save();
+		//agregar try catch para manejar errores 
 
 		this.emitFieldUpdate(payload.roomId, {
 			propertyPath: payload.propertyPath,
@@ -425,6 +446,12 @@ export class SocketServer {
 			itemType: "assumption" | "simplification" | "entity";
 		}
 	) {
+		//add try catch 
+		//agregar que tipo de entidad agrego. 
+
+		//va a tener problema cuando quiera agregar una propiedad dentro de una entidad 
+		// -- entidad1 y quiero agregar una entrada o una salida, para poder agregar esa entrada o salida voy a necesitar el id de la entidad sobre la que estoy aplicando y el tipo de dato que vas a agregar a esa lista, si es una entrada tiene otros atributos distintos a lo de la salida, depende de que quiero agregar 
+	
 		const { version } = await this.versionService.getVersionById(
 			payload.roomId
 		);
@@ -525,7 +552,7 @@ export class SocketServer {
 		}
 	) {
 		this.socketServer
-			.to(roomId)
+			.to(roomId) //sends to all sockets inside the room - includingm me
 			.emit(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, {
 				type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
 				roomState: collabRoom.getRoomState(),
@@ -534,7 +561,7 @@ export class SocketServer {
 	}
 
 	public emitInitializeConceptualModel(
-		socket: Socket,
+		socket: Socket, 
 		{
 			conceptualModel,
 			imageInfos,
@@ -548,6 +575,7 @@ export class SocketServer {
 			})[];
 		}
 	) {
+		//socket.to(roomId) mandaria a todos en la room menos a mi
 		socket.emit(SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL, {
 			type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
 			timestamp: new Date(),

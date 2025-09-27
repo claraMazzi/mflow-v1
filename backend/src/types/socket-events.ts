@@ -5,6 +5,12 @@ function parsePropertyPath(conceptualModel: ConceptualModel, path: string) {
 	const parsedPath = [];
 	let current: any = conceptualModel;
 
+	//. dividen las propiedades anidades y cuando tengo una propiedad que es una lista coloco : si quiero acceder a un item especifico de la lsita. 
+	//quiero la lista -> entidad.lista 
+	//quiero la entidad 1 de la lista --> entidad.lista:1. 
+	//entidad.listaEntradas:1.texto
+
+	//entidades:1.listaEntradas
 	for (const part of pathParts) {
 		const containsListItemKey = part.includes(":");
 		if (containsListItemKey) {

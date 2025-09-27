@@ -38,7 +38,7 @@ function debounce(func: any, delay: number) {
 
 const DEBOUNCE_DIAGRAM_RENDER_DELAY = 3000;
 
-export default function Diagram({
+export default function Diagram({ //tiene que soportar ambas funciones archivo o plant text
 	register,
 	watch,
 	namePrefix,
@@ -114,9 +114,9 @@ export default function Diagram({
 export const DiagramImageUpload = ({
 	title,
 	versionId,
-	diagramPropertyPath,
-	watch,
-	namePathPrefix,
+	diagramPropertyPath, //path absoluto del servidor a la propiedad del diagrama 
+	watch, //react hook forms para ver si un valor cambia
+	namePathPrefix, //path de react hookforms -- aca adentro voy a subscribir nuevas variables y necesito tener el prefijo hasta este momento. -- No pueod tener todo el path completo cuando tengo un elemento dentro de una lista porque necesito saber en que elemento me encuentro
 	hasEditingRights,
 	imageInfos,
 	sessionToken,

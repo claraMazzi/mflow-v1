@@ -99,6 +99,7 @@ export class UploadRoutes {
 
 				next();
 			},
+			//remove this middlewares and add them to the service layer 
 			versionAccessMiddleware.checkVersionAccessForUploading,
 			versionAccessMiddleware.checkIsEditorInCollaborationRoom,
 			uploadImageMiddleware.single("image"),
@@ -119,8 +120,6 @@ export class UploadRoutes {
 							"There was an internal server error while uploading the file.",
 					});
 				}
-
-				
 
 				const version = await VersionModel.findById(versionId).exec();
 

@@ -7,6 +7,7 @@ import { useDeletionRequests } from "@hooks/use-deletion-requests";
 export default function DeletionRequestManager() {
   const { deletionRequests, isLoading, refreshDeletionRequests } = useDeletionRequests();
 
+  console.log('deletion', deletionRequests)
   if (isLoading) {
     return <Skeleton className="h-screen w-full" />;
   }

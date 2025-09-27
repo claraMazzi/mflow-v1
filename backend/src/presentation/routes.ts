@@ -22,7 +22,7 @@ export class AppRoutes {
 
 		//Definir las rutas
 		router.use("/api/auth", Authroutes.routes);
-
+// ver si rotuer.use(middleware) funciona para todas las de de abajo el validateJWT 
 		router.use("/api/users", UserRoutes.routes);
 
 		router.use("/api/uploads", this.uploadRoutes.routes);

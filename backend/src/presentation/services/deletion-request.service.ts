@@ -38,6 +38,9 @@ export class DeletionRequestService {
         .populate('reviewer', 'email name')
         .exec();
 
+        console.log(
+          'SERVER ', deletionRequests
+        )
       const deletionRequestEntities = deletionRequests.map((request) =>
         DelitionRequestEntity.fromObject(request)
       );
