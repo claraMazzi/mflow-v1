@@ -11,9 +11,9 @@ export default function Unauthorized() {
             MFLOW
           </h1>
 
-          <p>Debes iniciar sesión para poder acceder a esta página</p>
+          <p>Debes iniciar sesión para poder acceder a esta página.</p>
           <Button as={"a"}  href={`/login`} >
-            Iniciar sesion
+            Iniciar sesión
           </Button>
         </div>
       </div>
