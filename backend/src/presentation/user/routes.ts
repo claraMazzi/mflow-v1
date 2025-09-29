@@ -21,13 +21,15 @@ export class UserRoutes {
     //ADMIN ONLY
     router.get(
       "/all",
-      AuthMiddleware.validateAdminRole,
+      AuthMiddleware.validateJWT,
+      AuthMiddleware.validateRequiredRoles(["ADMIN"]),
       controller.getAllUsers
     );
 
     router.put(
       "/:id/roles",
-      AuthMiddleware.validateAdminRole,
+      AuthMiddleware.validateJWT,
+      AuthMiddleware.validateRequiredRoles(["ADMIN"]),
       controller.updateUserRolesById
     ); //actualizar el rol de un usuario
 
@@ -36,7 +38,8 @@ export class UserRoutes {
     //send invite mail with invitation token
     router.post(
       "/invite",
-      AuthMiddleware.validateAdminRole,
+      AuthMiddleware.validateJWT,
+      AuthMiddleware.validateRequiredRoles(["ADMIN"]),
       controller.inviteUsersWithRole
     );
 

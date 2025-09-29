@@ -99,7 +99,7 @@ export async function inviteUsers(prevState: ActionState, formData: FormData): P
     }
   }
   
-
+  //TODO: check if this needs bearer token since the user requesting the roles shouldn't have an account 
   export const getUserRolesFromInviteRequest = async (
     token: string
   ): Promise<ActionState> => {

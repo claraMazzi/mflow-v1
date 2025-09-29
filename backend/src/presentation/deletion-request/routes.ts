@@ -12,46 +12,25 @@ export class DeletionRequestRoutes {
     //--------------------- Deletion Request CRUD routes
 
     // Get all deletion requests (admin only)
-    router.get(
-      "/",
-      AuthMiddleware.validateAdminRole,
-      controller.getAllDeletionRequests
-    );
+    router.get("/", controller.getAllDeletionRequests);
 
     // Get deletion requests by state (admin only)
-    router.get(
-      "/state/:state",
-      AuthMiddleware.validateAdminRole,
-      controller.getDeletionRequestsByState
-    );
+    router.get("/state/:state", controller.getDeletionRequestsByState);
 
     // Get deletion requests by project ID
-    router.get(
-      "/project/:projectId",
-      AuthMiddleware.validateAdminRole,
-      controller.getDeletionRequestsByProject
-    );
+    router.get("/project/:projectId", controller.getDeletionRequestsByProject);
 
     // Get a specific deletion request by ID
-    router.get(
-      "/:deletionRequestId",
-      AuthMiddleware.validateAdminRole,
-      controller.getDeletionRequestById
-    );
+    router.get("/:deletionRequestId", controller.getDeletionRequestById);
 
     // Approve a deletion request (admin only)
     router.put(
       "/:deletionRequestId/approve",
-      AuthMiddleware.validateAdminRole,
       controller.approveDeletionRequest
     );
 
     // Deny a deletion request (admin only)
-    router.put(
-      "/:deletionRequestId/deny",
-      AuthMiddleware.validateAdminRole,
-      controller.denyDeletionRequest
-    );
+    router.put("/:deletionRequestId/deny", controller.denyDeletionRequest);
 
     return router;
   }
