@@ -16,6 +16,25 @@ export class CheckVersionAccessMiddleware {
 		this.socketServer = socketServer;
 	}
 
+	checkVersionExists = (
+		req: Request,
+		res: Response,
+		next: NextFunction
+	) => {
+		try {
+			const versionId = req.params.versionId;
+
+			if (!versionId) {
+				return res.status(400).json({ error: "No version id provided." });
+			}
+
+			next();
+		} catch (error) {
+			console.error("middleware error", error);
+
+			res.status(500).json({ error: "Internal server error" });
+		}
+	}
 	//Using arrow function, to keep alive the correct "this" reference in the mehthod. JavaScript gives me headaches.
 	checkIsEditorInCollaborationRoom = (
 		req: Request,

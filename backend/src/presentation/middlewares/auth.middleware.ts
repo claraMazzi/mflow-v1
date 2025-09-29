@@ -43,29 +43,35 @@ export class AuthMiddleware {
     //le paso por parametro la lista de required roles --req: Request, res:Response, next: NextFunction
 
     return (req: Request, res: Response, next: NextFunction) => {
-      // Check if session exists
-      if (!req.session) {
-        return res.status(401).json({ error: "No session found" });
+      try {
+        // Check if session exists
+        if (!req.session) {
+          return res.status(401).json({ error: "No session found" });
+        }
+
+        // Check if user has roles
+        if (!req.session.roles || !Array.isArray(req.session.roles)) {
+          return res.status(403).json({ error: "User has no roles assigned" });
+        }
+
+        // Check if user has all required roles
+        const hasAllRequiredRoles = requiredRoles.every(requiredRole => 
+          req.session!.roles.includes(requiredRole)
+        );
+
+        if (!hasAllRequiredRoles) {
+          return res.status(403).json({ 
+            error: `User does not have required roles. Required: ${requiredRoles.join(', ')}` 
+          });
+        }
+
+        // User has all required roles, proceed to next middleware
+        next();
+      } catch (error) {
+        //errores no controlados
+        console.log("validateRequiredRoles middleware error", error);
+        res.status(500).json({ error: "Internal server error" });
       }
-
-      // Check if user has roles
-      if (!req.session.roles || !Array.isArray(req.session.roles)) {
-        return res.status(403).json({ error: "User has no roles assigned" });
-      }
-
-      // Check if user has all required roles
-      const hasAllRequiredRoles = requiredRoles.every(requiredRole => 
-        req.session!.roles.includes(requiredRole)
-      );
-
-      if (!hasAllRequiredRoles) {
-        return res.status(403).json({ 
-          error: `User does not have required roles. Required: ${requiredRoles.join(', ')}` 
-        });
-      }
-
-      // User has all required roles, proceed to next middleware
-      next();
     };
   }
   
