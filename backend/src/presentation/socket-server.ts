@@ -203,7 +203,7 @@ export class SocketServer {
 
 	// Event Handler Methods
 	private async handleJoinRoom(socket: Socket, payload: JoinRoomEventPayload) {
-		//TODO: ADD CHECK OF VALIDITY BEFORE ADDING THE SOCKET TO THE ROOM
+		//TODO: ADD CHECK OF VALIDITY BEFORE ADDING THE SOCKET TO THE ROOM -- verificar que es colaborador del proyecto -- 
 		const { version } = await this.versionService.getVersionByIdWithImages(
 			payload.roomId
 		);
@@ -225,6 +225,7 @@ export class SocketServer {
 		await socket.join(payload.roomId);
 
 		console.info(`Collaborator Added: ${socket.id} - ${socket.data.userId}`);
+		//TODO: hacer el ADD colaborator si el usuario es colaboradora 
 		collabRoom.addCollaborator({
 			socketId: socket.id,
 			userInfo: socket.data,

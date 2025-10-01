@@ -10,7 +10,7 @@ import {
   useMemo,
 } from "react";
 import { io } from "socket.io-client";
-import { socket } from "../../../socket";
+import { socket } from "@lib/socket";
 import { lightningCssTransform } from "next/dist/build/swc/generated-native";
 import { set, string } from "zod";
 import {
@@ -39,6 +39,7 @@ import {
 } from "@src/hooks/use-request-editing-rights";
 import EditingRequestNotification from "@src/components/ui/conceptual-model/editing-request-notification";
 import { useSocketConnection } from "@src/hooks/use-socket-connection";
+import React from "react";
 //mover a #types
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
@@ -145,14 +146,19 @@ function parsePropertyPath(conceptualModel: ConceptualModel, path: string) {
 
 const MOUSE_POSITION_UPDATE_DELAY = 33; //30 fps
 
-export default function Page() {
+export default function Page({ params }: { params: Promise<{ roomId: string }> }) {
+
   const { data: session } = useSession();
   const { isConnected: isSocketConnected, transport } = useSocketConnection({
     socket,
     sessionToken: session?.auth,
   });
+  const { roomId } = React.use(params); // ✅ unwrap the promise
 
-  const [roomId, setRoomId] = useState("67d8321cd76cf5bc5bd75c79"); //esta hardcodeado -agregar el id a la ruta roomID y versionId son lo mismo
+  //todo: enhance error message
+  if (!roomId) return <>No version ID</>
+
+  // const [roomId, setRoomId] = useState(versionId); //esta hardcodeado -agregar el id a la ruta roomID y versionId son lo mismo
   const [currentTab, setCurrentTab] = useState("objetivo-suposiciones");
   const [isModelInitialized, setIsModelInitialized] = useState(false);
 
