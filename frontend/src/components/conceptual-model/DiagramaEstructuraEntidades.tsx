@@ -5,6 +5,9 @@ import { DiagramImageUpload } from "@components/ui/conceptual-model/diagram";
 import { ImageInfo } from "#types/conceptual-model";
 import { useFieldArray, RegisterOptions, Path } from "react-hook-form";
 import { ConceptualModel } from "#types/conceptual-model";
+import { Input } from "@components/ui/common/input";
+import { Button } from "@components/ui/common/button";
+import { X, Plus } from "lucide-react";
 
 interface DiagramaEstructuraEntidadesProps {
   sessionToken?: string;
@@ -62,58 +65,85 @@ export default function DiagramaEstructuraEntidades({
   handleRemoveItemFromList,
 }: DiagramaEstructuraEntidadesProps) {
   return (
-    <div>
-      <DiagramImageUpload
-        sessionToken={sessionToken}
-        versionId={versionId}
-        hasEditingRights={hasEditingRights}
-        imageInfos={imageInfos}
-        title="Diagrama de Estructura"
-        watch={watch}
-        namePathPrefix="structureDiagram"
-        diagramPropertyPath="structureDiagram"
-      />
+    <div className="flex flex-col gap-6 p-6 bg-white rounded-lg shadow-sm">
+      {/* Diagram Upload Section */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-medium text-gray-900">Diagrama de Estructura</h2>
+        <DiagramImageUpload
+          sessionToken={sessionToken}
+          versionId={versionId}
+          hasEditingRights={hasEditingRights}
+          imageInfos={imageInfos}
+          title="Diagrama de Estructura"
+          watch={watch}
+          namePathPrefix="structureDiagram"
+          diagramPropertyPath="structureDiagram"
+        />
+      </div>
       
-      <h2>Entidades</h2>
-      <button
-        disabled={!hasEditingRights}
-        onClick={(e) =>
-          handleAddItemToList({
-            e,
-            listPropertyPath: "entities",
-            itemType: "entity",
-          })
-        }
-      >
-        Agregar Entidad
-      </button>
-      <ul>
-        {entitiesList.fields.map((field, index) => {
-          return (
-            <li key={field.id}>
-              <label>{`Entity Id: ${field._id}`} - Nombre:</label>
-              <input
-                {...customRegisterField({
-                  name: `entities.${index}.name`,
-                  propertyPath: `entities:${field._id}.name`,
-                })}
-              />
-              <button
-                disabled={!hasEditingRights}
-                onClick={(e) =>
-                  handleRemoveItemFromList({
-                    e,
-                    listPropertyPath: "entities",
-                    itemId: field._id,
-                  })
-                }
-              >
-                Delete
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      {/* Entities Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium text-gray-900">Entidades</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!hasEditingRights}
+            onClick={(e) =>
+              handleAddItemToList({
+                e,
+                listPropertyPath: "entities",
+                itemType: "entity",
+              })
+            }
+            className="flex items-center gap-2"
+          >
+            <Plus size={16} />
+            Agregar Entidad
+          </Button>
+        </div>
+        
+        {entitiesList.fields.length > 0 ? (
+          <div className="space-y-3">
+            {entitiesList.fields.map((field, index) => {
+              return (
+                <div key={field.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+                  <div className="flex-1">
+                    <Input
+                      {...customRegisterField({
+                        name: `entities.${index}.name`,
+                        propertyPath: `entities:${field._id}.name`,
+                      })}
+                      placeholder="Nombre de la entidad..."
+                      className="border-2 border-gray-200 focus:border-purple-400"
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={!hasEditingRights}
+                    onClick={(e) =>
+                      handleRemoveItemFromList({
+                        e,
+                        listPropertyPath: "entities",
+                        itemId: field._id,
+                      })
+                    }
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <X size={16} />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <p>No hay entidades agregadas</p>
+            <p className="text-sm">Haz clic en &quot;Agregar Entidad&quot; para comenzar</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

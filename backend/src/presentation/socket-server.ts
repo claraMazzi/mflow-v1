@@ -285,6 +285,7 @@ export class SocketServer {
 		);
 
 		setValue(version.conceptualModel, payload.propertyPath, payload.value);
+		console.log("Version Conceptual Model: ", version.conceptualModel);
 		version.save();
 		//agregar try catch para manejar errores 
 

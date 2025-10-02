@@ -3,6 +3,9 @@
 import { MouseEvent, ChangeEvent } from "react";
 import { useFieldArray, RegisterOptions, Path } from "react-hook-form";
 import { ConceptualModel } from "#types/conceptual-model";
+import { Input } from "@components/ui/common/input";
+import { Button } from "@components/ui/common/button";
+import { X, Plus } from "lucide-react";
 
 interface ObjetivosSuposicionesProps {
   hasEditingRights: boolean;
@@ -54,95 +57,146 @@ export default function ObjetivosSuposiciones({
   handleRemoveItemFromList,
 }: ObjetivosSuposicionesProps) {
   return (
-    <div>
-      <label>Objetivo del Modelo Conceptual: </label>
-      <input {...customRegisterField({ name: "objective" })} />
+    <div className="flex flex-col gap-6 p-6 bg-white rounded-lg shadow-sm">
+      {/* Objective Section */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          Objetivo del Modelo Conceptual
+        </label>
+        <Input
+          {...customRegisterField({ name: "objective" })}
+          placeholder="Describe el objetivo del modelo conceptual..."
+          className="border-2 border-gray-200 focus:border-purple-400"
+        />
+      </div>
       
-      <h2>Suposiciones</h2>
-      <button
-        disabled={!hasEditingRights}
-        onClick={(e) =>
-          handleAddItemToList({
-            e,
-            listPropertyPath: "assumptions",
-            itemType: "assumption",
-          })
-        }
-      >
-        Agregar Suposición
-      </button>
-      <ul>
-        {assumptionList.fields.map((field, index) => {
-          return (
-            <li key={field.id}>
-              <label>
-                {`Assumption Id: ${field._id}`} - Description:
-              </label>
-              <input
-                {...customRegisterField({
-                  name: `assumptions.${index}.description`,
-                  propertyPath: `assumptions:${field._id}.description`,
-                })}
-              />
-              <button
-                disabled={!hasEditingRights}
-                onClick={(e) =>
-                  handleRemoveItemFromList({
-                    e,
-                    listPropertyPath: "assumptions",
-                    itemId: field._id,
-                  })
-                }
-              >
-                Delete
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      {/* Assumptions Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium text-gray-900">Suposiciones</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!hasEditingRights}
+            onClick={(e) =>
+              handleAddItemToList({
+                e,
+                listPropertyPath: "assumptions",
+                itemType: "assumption",
+              })
+            }
+            className="flex items-center gap-2"
+          >
+            <Plus size={16} />
+            Agregar Suposición
+          </Button>
+        </div>
+        
+        {assumptionList.fields.length > 0 ? (
+          <div className="space-y-3">
+            {assumptionList.fields.map((field, index) => {
+              return (
+                <div key={field.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+                  <div className="flex-1">
+                    <Input
+                      {...customRegisterField({
+                        name: `assumptions.${index}.description`,
+                        propertyPath: `assumptions:${field._id}.description`,
+                      })}
+                      placeholder="Describe la suposición..."
+                      className="border-2 border-gray-200 focus:border-purple-400"
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={!hasEditingRights}
+                    onClick={(e) =>
+                      handleRemoveItemFromList({
+                        e,
+                        listPropertyPath: "assumptions",
+                        itemId: field._id,
+                      })
+                    }
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <X size={16} />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <p>No hay suposiciones agregadas</p>
+            <p className="text-sm">Haz clic en &quot;Agregar Suposición&quot; para comenzar</p>
+          </div>
+        )}
+      </div>
       
-      <h2>Simplificaciones</h2>
-      <button
-        disabled={!hasEditingRights}
-        onClick={(e) =>
-          handleAddItemToList({
-            e,
-            listPropertyPath: "simplifications",
-            itemType: "simplification",
-          })
-        }
-      >
-        Agregar Simplificacion
-      </button>
-      <ul>
-        {simplificationList.fields.map((field, index) => {
-          return (
-            <li key={field.id}>
-              <label>
-                {`Simplification Id: ${field._id}`} - Description:
-              </label>
-              <input
-                {...customRegisterField({
-                  name: `simplifications.${index}.description`,
-                  propertyPath: `simplifications:${field._id}.description`,
-                })}
-              />
-              <button
-                disabled={!hasEditingRights}
-                onClick={(e) =>
-                  handleRemoveItemFromList({
-                    e,
-                    listPropertyPath: "simplifications",
-                    itemId: field._id,
-                  })
-                }
-              >
-                Delete
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      {/* Simplifications Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium text-gray-900">Simplificaciones</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!hasEditingRights}
+            onClick={(e) =>
+              handleAddItemToList({
+                e,
+                listPropertyPath: "simplifications",
+                itemType: "simplification",
+              })
+            }
+            className="flex items-center gap-2"
+          >
+            <Plus size={16} />
+            Agregar Simplificación
+          </Button>
+        </div>
+        
+        {simplificationList.fields.length > 0 ? (
+          <div className="space-y-3">
+            {simplificationList.fields.map((field, index) => {
+              return (
+                <div key={field.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+                  <div className="flex-1">
+                    <Input
+                      {...customRegisterField({
+                        name: `simplifications.${index}.description`,
+                        propertyPath: `simplifications:${field._id}.description`,
+                      })}
+                      placeholder="Describe la simplificación..."
+                      className="border-2 border-gray-200 focus:border-purple-400"
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={!hasEditingRights}
+                    onClick={(e) =>
+                      handleRemoveItemFromList({
+                        e,
+                        listPropertyPath: "simplifications",
+                        itemId: field._id,
+                      })
+                    }
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <X size={16} />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <p>No hay simplificaciones agregadas</p>
+            <p className="text-sm">Haz clic en &quot;Agregar Simplificación&quot; para comenzar</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

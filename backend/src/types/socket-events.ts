@@ -35,6 +35,7 @@ function parsePropertyPath(conceptualModel: ConceptualModel, path: string) {
 			current = current[part];
 		}
 	}
+	console.log("Parsed Path: ", parsedPath);
 	return parsedPath;
 }
 
@@ -61,13 +62,11 @@ export const setValue = (
 ) => {
 	const parts = parsePropertyPath(conceptualModel, propertyPath);
 	let current: any = conceptualModel;
-	console.debug(`Updated Field Path Parts: ${parts} - New Value: ${value}`);
+
 	while (
 		parts!.length > 1
-		//parts.length > 1 &&
-		//conceptualModel.hasOwnProperty(parts[0])
 	) {
-		conceptualModel = current[parts!.shift()!];
+		current = current[parts!.shift()!];
 	}
 	current[parts![0]] = value;
 };
