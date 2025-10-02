@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { DynamicSidebarContent } from "./dynamic-sidebar-content";
-import { TeamSwitcher } from "./team-switcher";
+import { RoleSwitcher } from "./role-switcher";
 import { NavUser } from "./nav-user";
 import {
   Sidebar,
@@ -13,7 +13,7 @@ import {
 } from "@components/dashboard/sidebar/sidebar";
 import { TooltipProvider } from "@components/ui/tooltip";
 import { useSession } from "next-auth/react";
-import { getActiveSidebarOption, getUserRolesTeamItems } from "../navigation";
+import { getActiveSidebarOption, getUserRolesItems } from "../navigation";
 import { useLayoutActions, useLayoutState } from "@components/global/Context";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@components/ui/common/skeleton";
@@ -45,9 +45,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     session?.user.name.charAt(0).toUpperCase() +
     session?.user.lastName.charAt(0).toUpperCase();
   const roles = session?.user.roles;
-  const userTeams = getUserRolesTeamItems(roles);
+  const userRoles = getUserRolesItems(roles);
 
-  const handleTeamChange = (role: string) => {
+  const handleRoleChange = (role: string) => {
     setActiveRole(role);
     setActiveSidebarOption(getActiveSidebarOption("", role));
     router.push("/dashboard");
@@ -68,15 +68,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       >
         <Sidebar collapsible="icon" {...props}>
           <SidebarHeader>
-            <TeamSwitcher
-              teams={userTeams}
-              onTeamChange={handleTeamChange}
-              activeRole={activeRole}
+            <RoleSwitcher
+              userRoles={userRoles}
+              onRoleChange={handleRoleChange}
+              activeRoleId={activeRole}
             />
           </SidebarHeader>
           <SidebarContent>
             <DynamicSidebarContent
-              activeTeam={activeRole}
               userRoles={roles}
               activeRole={activeRole}
               activeSidebarOption={activeSidebarOption}
