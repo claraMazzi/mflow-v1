@@ -1,4 +1,4 @@
-import { SidebarMenu, Team, MenuItem } from "#types/common";
+import { SidebarMenu, Role, MenuItem } from "#types/common";
 import {
   FolderOpen,
   Share2,
@@ -8,20 +8,20 @@ import {
   ClipboardList,
 } from "lucide-react";
 
-export const teamsMap: Team[] = [
+export const rolesMap: Role[] = [
   {
     name: "Modelador",
-    role: "modelador",
+    roleId: "modelador",
     logo: FolderOpen,
   },
   {
     name: "Administrador",
-    role: "admin",
+    roleId: "admin",
     logo: Users,
   },
   {
     name: "Verificador",
-    role: "verificador",
+    roleId: "verificador",
     logo: Share2,
   },
 ];
@@ -146,13 +146,13 @@ export const getActiveSidebarOption = (
   return "";
 };
 
-export const getUserRolesTeamItems = (roles: string[]) => {
-  const teamItems: Team[] = [];
+export const getUserRolesItems = (roles: string[]) => {
+  const rolesItems: Role[] = [];
   roles.forEach((role) => {
-    const item = teamsMap.find((team) => team.role === role.toLowerCase());
+    const item = rolesMap.find((r) => r.roleId === role.toLowerCase());
     if (!item) return;
-    teamItems.push(item);
+    rolesItems.push(item);
   });
 
-  return teamItems;
+  return rolesItems;
 };
