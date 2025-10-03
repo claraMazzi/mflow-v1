@@ -6,6 +6,7 @@ import { NextAuthProvider } from "@components/auth/provider";
 import { LayoutProvider } from "@components/global/Context";
 import ModalUI from "@components/ui/common/modal/modal-ui";
 import { ManagedUIContext } from "@components/ui/context";
+import EditingRequestToastContainer from "@components/ui/conceptual-model/editing-request-toast-container";
 
 const Exo = Exo_2({
   variable: "--font-exo",
@@ -32,6 +33,7 @@ export default function RootLayout({
           <main>
             <Toaster />
             <ModalUI />
+            <EditingRequestToastContainer />
 
             <div className="block">{children}</div>
             {/* <div className="block lg:hidden">

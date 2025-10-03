@@ -9,89 +9,22 @@ import {
   useMemo,
 } from "react";
 import { socket } from "@lib/socket";
-import {
-  Path,
-  RegisterOptions,
-  useFieldArray,
-  useForm,
-} from "react-hook-form";
+import { Path, RegisterOptions, useFieldArray, useForm } from "react-hook-form";
 import { ConceptualModel, ImageInfo } from "#types/conceptual-model";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@src/components/ui/tabs/tabs";
+} from "@components/ui/tabs/tabs";
 import { useSession } from "@node_modules/next-auth/react";
-import { Button } from "@src/components/ui/common/button";
-import {
-  ActiveEditingRequest,
-  useEditingRequests,
-} from "@src/hooks/use-request-editing-rights";
-import EditingRequestNotification from "@src/components/ui/conceptual-model/editing-request-notification";
-import { useSocketConnection } from "@src/hooks/use-socket-connection";
-import ObjetivosSuposiciones from "@src/components/conceptual-model/ObjetivosSuposiciones";
-import DiagramaEstructuraEntidades from "@src/components/conceptual-model/DiagramaEstructuraEntidades";
+import { useEditingRequests } from "@hooks/use-request-editing-rights";
+import { useSocketConnection } from "@hooks/use-socket-connection";
+import ObjetivosSuposiciones from "@components/conceptual-model/ObjetivosSuposiciones";
+import DiagramaEstructuraEntidades from "@components/conceptual-model/DiagramaEstructuraEntidades";
 import React from "react";
-//mover a #types
-type BaseSocketEventPayload = { type: string; timestamp: Date };
-
-enum CLIENT_WS_EVENT_TYPES {
-  JOIN_ROOM = "join-room",
-}
-
-type JoinRoomEventPayload = BaseSocketEventPayload & {
-  type: CLIENT_WS_EVENT_TYPES.JOIN_ROOM;
-  roomId: string;
-};
-
-type UsersInRoomChangePayload = BaseSocketEventPayload & {
-  type: SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE;
-  roomState: {
-    roomId: string;
-    currentEditingUser: string | null;
-    collaborators: {
-      userId: string;
-      name: string;
-      lastName: string;
-      email: string;
-      socketIds: string[];
-    }[];
-  };
-};
-
-type InitializeConceptualModelPayload = BaseSocketEventPayload & {
-  type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL;
-  conceptualModel: ConceptualModel;
-  imageInfos: {
-    id: string;
-    createdAt: string;
-    originalFilename: string;
-    sizeInBytes: number;
-    url: string;
-  }[];
-};
-
-enum SERVER_WS_EVENT_TYPES {
-  FIRST_IN_ROOM = "first-in-room",
-  USERS_IN_ROOM_CHANGE = "users-in-room-change",
-  INITIALIZE_CONCEPTUAL_MODEL = "initialize-conceptual-model",
-}
-
-type SocketPosition = Readonly<{
-  socketId: string;
-  mousePosition?: { relativeX: number; relativeY: number };
-  currentTab?: string;
-}>;
-
-export type Collaborator = Readonly<{
-  userId: string;
-  name: string;
-  lastName: string;
-  email: string;
-  sockets: Map<string, SocketPosition>;
-  hasEditingRights: boolean;
-}>;
+import VersionBar from "@components/versions/VersionBar";
+import { CLIENT_WS_EVENT_TYPES, Collaborator, InitializeConceptualModelPayload, JoinRoomEventPayload, SERVER_WS_EVENT_TYPES, SocketPosition, UsersInRoomChangePayload } from "@src/types/collaboration";
 
 function throttle(func: any, delay: number) {
   let timeout: NodeJS.Timeout | null = null;
@@ -139,8 +72,11 @@ function parsePropertyPath(conceptualModel: ConceptualModel, path: string) {
 
 const MOUSE_POSITION_UPDATE_DELAY = 33; //30 fps
 
-export default function Page({ params }: { params: Promise<{ roomId: string }> }) {
-
+export default function Page({
+  params,
+}: {
+  params: Promise<{ roomId: string }>;
+}) {
   const { data: session } = useSession();
   const { isConnected: isSocketConnected, transport } = useSocketConnection({
     socket,
@@ -177,14 +113,8 @@ export default function Page({ params }: { params: Promise<{ roomId: string }> }
   const [imageInfos, setImageInfos] = useState<Map<string, ImageInfo>>(
     new Map()
   );
-  const {
-    register,
-    control,
-    setValue,
-    watch,
-    getValues,
-    reset,
-  } = useForm<ConceptualModel>();
+  const { register, control, setValue, watch, getValues, reset } =
+    useForm<ConceptualModel>();
   const simplificationList = useFieldArray({
     name: "simplifications",
     control,
@@ -225,10 +155,10 @@ export default function Page({ params }: { params: Promise<{ roomId: string }> }
       const parsedPath = parsePropertyPath(getValues(), payload.propertyPath);
       setValue(parsedPath as any, payload.value);
 
-	  //objective - para acceder objetivo
-	  // para acceder a la image id del diagrama de estructura -- structureDiagram.imageFileId
-	  //suposiciones.0.description
-	  //
+      //objective - para acceder objetivo
+      // para acceder a la image id del diagrama de estructura -- structureDiagram.imageFileId
+      //suposiciones.0.description
+      //
     }
 
     function onServerVolatileBroadcast(payload: {
@@ -507,32 +437,17 @@ export default function Page({ params }: { params: Promise<{ roomId: string }> }
   };
 
   //todo: enhance error message
-  if (!roomId) return <>No version ID</>
+  if (!roomId) return <>No version ID</>;
 
   return (
-    <div className="flex-grow" onMouseMove={handleMouseMove}>
-      <div className="flex flex-col absolute top-0 right-0 ">
-        <Button
-          disabled={!canUserSendEditingRequest}
-          onClick={handleRequestEditingRights}
-        >
-          Solicitar el Permiso de Edición
-        </Button>
-        <p>Pending Requests:</p>
-        {pendingEditingRequests
-          .filter((r): r is ActiveEditingRequest => r.status === "pending")
-          .filter((r) => collaborators.get(r.requesterUserId))
-          .map((r) => {
-            return (
-              <EditingRequestNotification
-                key={r.requestId}
-                request={r}
-                collaborator={collaborators.get(r.requesterUserId)!}
-                {...{ handleEditingRequestEvaluation }}
-              />
-            );
-          })}
-      </div>
+    <div className="flex-grow bg-grey-0" onMouseMove={handleMouseMove}>
+      <VersionBar
+        canUserSendEditingRequest={canUserSendEditingRequest}
+        handleRequestEditingRights={handleRequestEditingRights}
+        pendingEditingRequests={pendingEditingRequests}
+        collaborators={collaborators}
+        handleEditingRequestEvaluation={handleEditingRequestEvaluation}
+      />
       <p>Status: {isSocketConnected ? "connected" : "disconnected"}</p>
       <p>Id: {isSocketConnected ? socket.id : "No disponible"}</p>
       <p>Transport: {transport}</p>
@@ -631,8 +546,6 @@ export default function Page({ params }: { params: Promise<{ roomId: string }> }
                 handleRemoveItemFromList={handleRemoveItemFromList}
               />
             </TabsContent>
-            
-              
           </Tabs>
         </form>
       )}
