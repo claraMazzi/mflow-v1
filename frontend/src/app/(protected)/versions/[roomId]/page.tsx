@@ -612,6 +612,7 @@ export default function Page({ params }: { params: Promise<{ roomId: string }> }
                 hasEditingRights={hasEditingRights}
                 assumptionList={assumptionList}
                 simplificationList={simplificationList}
+                watch={watch}
                 customRegisterField={customRegisterField}
                 handleAddItemToList={handleAddItemToList}
                 handleRemoveItemFromList={handleRemoveItemFromList}

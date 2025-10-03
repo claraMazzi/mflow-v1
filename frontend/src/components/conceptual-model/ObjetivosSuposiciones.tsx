@@ -1,6 +1,6 @@
 "use client";
 
-import { MouseEvent, ChangeEvent } from "react";
+import { MouseEvent, ChangeEvent, useEffect, useRef } from "react";
 import { useFieldArray, RegisterOptions, Path } from "react-hook-form";
 import { ConceptualModel } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
@@ -9,8 +9,13 @@ import { X, Plus } from "lucide-react";
 
 interface ObjetivosSuposicionesProps {
   hasEditingRights: boolean;
-  assumptionList: ReturnType<typeof useFieldArray<ConceptualModel, "assumptions">>;
-  simplificationList: ReturnType<typeof useFieldArray<ConceptualModel, "simplifications">>;
+  assumptionList: ReturnType<
+    typeof useFieldArray<ConceptualModel, "assumptions">
+  >;
+  simplificationList: ReturnType<
+    typeof useFieldArray<ConceptualModel, "simplifications">
+  >;
+  watch: (name?: Path<ConceptualModel>) => unknown;
   customRegisterField: ({
     name,
     propertyPath,
@@ -23,7 +28,9 @@ interface ObjetivosSuposicionesProps {
     propagateUpdateOnChange?: boolean;
   }) => {
     onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-    onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+    onBlur: (
+      e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
+    ) => void;
     readOnly: boolean;
     name: Path<ConceptualModel>;
     ref: (instance: HTMLInputElement | HTMLTextAreaElement | null) => void;
@@ -52,10 +59,115 @@ export default function ObjetivosSuposiciones({
   hasEditingRights,
   assumptionList,
   simplificationList,
+  watch,
   customRegisterField,
   handleAddItemToList,
   handleRemoveItemFromList,
 }: ObjetivosSuposicionesProps) {
+  const previousAssumptionsLength = useRef(assumptionList.fields.length);
+  const previousSimplificationsLength = useRef(simplificationList.fields.length);
+
+
+  // Focus on the last added item when the list changes
+  useEffect(() => {
+    if (assumptionList.fields.length > previousAssumptionsLength.current) {
+      // A new item was added, focus on the last one
+      const lastIndex = assumptionList.fields.length - 1;
+      const input = document.querySelector<
+        HTMLInputElement | HTMLTextAreaElement
+      >(`[name="assumptions.${lastIndex}.description"]`);
+      if (input) {
+        // Use setTimeout to ensure the DOM is updated
+        setTimeout(() => {
+          input.focus();
+        }, 0);
+      }
+    }
+    previousAssumptionsLength.current = assumptionList.fields.length;
+  }, [assumptionList.fields.length]);
+
+  useEffect(() => {
+    if (simplificationList.fields.length > previousSimplificationsLength.current) {
+      // A new item was added, focus on the last one
+      const lastIndex = simplificationList.fields.length - 1;
+      const input = document.querySelector<
+        HTMLInputElement | HTMLTextAreaElement
+      >(`[name="simplifications.${lastIndex}.description"]`);
+      if (input) {
+        // Use setTimeout to ensure the DOM is updated
+        setTimeout(() => {
+          input.focus();
+        }, 0);
+      }
+    }
+    previousSimplificationsLength.current = simplificationList.fields.length;
+  }, [simplificationList.fields.length]);
+
+  const addItemToList = ({
+    listPropertyPath,
+    itemType,
+    e,
+  }: {
+    listPropertyPath: string;
+    itemType: "assumption" | "simplification";
+    e: MouseEvent;
+  }) => {
+    switch (listPropertyPath) {
+      case "assumptions":
+        {
+          // Get current form values instead of using assumptionList.fields
+          const currentAssumptions =
+            (watch("assumptions") as { description?: string }[]) || [];
+          const firstEmptyIndex = currentAssumptions.findIndex(
+            (assumption: { description?: string }) =>
+              !assumption?.description || assumption.description.trim() === ""
+          );
+
+          if (firstEmptyIndex !== -1) {
+            const input = document.querySelector<
+              HTMLInputElement | HTMLTextAreaElement
+            >(`[name="assumptions.${firstEmptyIndex}.description"]`);
+            if (input) {
+              input.focus();
+            }
+            return;
+          }
+
+          handleAddItemToList({
+            e: e,
+            listPropertyPath,
+            itemType,
+          });
+        }
+        break;
+      case "simplifications":
+        {
+          // Get current form values instead of using assumptionList.fields
+          const currentSimplifications =
+            (watch("simplifications") as { description?: string }[]) || [];
+          console.log('currentSimplifications', currentSimplifications)
+          const firstEmptyIndex = currentSimplifications.findIndex(
+            (simplification: { description?: string }) =>
+              !simplification?.description ||
+              simplification.description.trim() === ""
+          );
+
+          if (firstEmptyIndex !== -1) {
+            const input = document.querySelector<
+              HTMLInputElement | HTMLTextAreaElement
+            >(`[name="simplifications.${firstEmptyIndex}.description"]`);
+            if (input) {
+              input.focus();
+            }
+            return;
+          }
+
+          handleAddItemToList({ e, listPropertyPath, itemType });
+        }
+        break;
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 p-6 bg-white rounded-lg shadow-sm">
       {/* Objective Section */}
@@ -69,7 +181,7 @@ export default function ObjetivosSuposiciones({
           className="border-2 border-gray-200 focus:border-purple-400"
         />
       </div>
-      
+
       {/* Assumptions Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -79,7 +191,12 @@ export default function ObjetivosSuposiciones({
             size="sm"
             disabled={!hasEditingRights}
             onClick={(e) =>
-              handleAddItemToList({
+              //   handleAddItemToList({
+              //     e,
+              //     listPropertyPath: "assumptions",
+              //     itemType: "assumption",
+              //   })
+              addItemToList({
                 e,
                 listPropertyPath: "assumptions",
                 itemType: "assumption",
@@ -91,12 +208,15 @@ export default function ObjetivosSuposiciones({
             Agregar Suposición
           </Button>
         </div>
-        
+
         {assumptionList.fields.length > 0 ? (
           <div className="space-y-3">
             {assumptionList.fields.map((field, index) => {
               return (
-                <div key={field.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+                <div
+                  key={field.id}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border"
+                >
                   <div className="flex-1">
                     <Input
                       {...customRegisterField({
@@ -129,21 +249,25 @@ export default function ObjetivosSuposiciones({
         ) : (
           <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
             <p>No hay suposiciones agregadas</p>
-            <p className="text-sm">Haz clic en &quot;Agregar Suposición&quot; para comenzar</p>
+            <p className="text-sm">
+              Haz clic en &quot;Agregar Suposición&quot; para comenzar
+            </p>
           </div>
         )}
       </div>
-      
+
       {/* Simplifications Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium text-gray-900">Simplificaciones</h2>
+          <h2 className="text-lg font-medium text-gray-900">
+            Simplificaciones
+          </h2>
           <Button
             variant="outline"
             size="sm"
             disabled={!hasEditingRights}
             onClick={(e) =>
-              handleAddItemToList({
+              addItemToList({
                 e,
                 listPropertyPath: "simplifications",
                 itemType: "simplification",
@@ -155,12 +279,15 @@ export default function ObjetivosSuposiciones({
             Agregar Simplificación
           </Button>
         </div>
-        
+
         {simplificationList.fields.length > 0 ? (
           <div className="space-y-3">
             {simplificationList.fields.map((field, index) => {
               return (
-                <div key={field.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+                <div
+                  key={field.id}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border"
+                >
                   <div className="flex-1">
                     <Input
                       {...customRegisterField({
@@ -193,7 +320,9 @@ export default function ObjetivosSuposiciones({
         ) : (
           <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
             <p>No hay simplificaciones agregadas</p>
-            <p className="text-sm">Haz clic en &quot;Agregar Simplificación&quot; para comenzar</p>
+            <p className="text-sm">
+              Haz clic en &quot;Agregar Simplificación&quot; para comenzar
+            </p>
           </div>
         )}
       </div>
