@@ -157,7 +157,7 @@ export class Server {
 		version.save();
 
 		const project = new ProjectModel({
-			name: "P1",
+			title: "P1",
 			description: "Whatever",
 			owner: user._id,
 		});

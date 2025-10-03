@@ -122,8 +122,8 @@ export class ProjectService {
 
   async createProject(createDto: CreateProjectDto) {
     //1. verificar que no exista un proyecto con el mismo nombre
-    const existName = await ProjectModel.findOne({ name: createDto.name });
-    if (existName) throw CustomError.badRequest("Project name already exists");
+    const existName = await ProjectModel.findOne({ title: createDto.title });
+    if (existName) throw CustomError.badRequest("Project title already exists");
 
     try {
       const project = new ProjectModel(createDto);
@@ -139,19 +139,19 @@ export class ProjectService {
   }
 
   async updateProject(projectData: UpdateProjectDto) {
-    const { id, name, description } = projectData;
+    const { id, title, description } = projectData;
 
     const project = await ProjectModel.findOne({ _id: id });
     if (!project) throw CustomError.badRequest("Project does not exists");
 
-    if (!name && !description)
+    if (!title && !description)
       throw CustomError.badRequest("No data sent to update");
 
-    if (name === project.name && description === project.description)
+    if (title === project.title && description === project.description)
       throw CustomError.badRequest("Data not updated");
 
     try {
-      if (name) project.name = name;
+      if (title) project.title = title;
       if (description) project.description = description;
 
       await project.save();

@@ -20,7 +20,7 @@ import { modifyProject } from "../actions/modify-project";
 
 export type ModifyProjectFormData = {
   id: string;
-  name?: string;
+  title?: string;
   description?: string;
 };
 
@@ -47,7 +47,7 @@ export const ModifyProjectForm = ({
   const form = useForm<ModifyProjectFormData>({
     defaultValues: {
       id: project.id,
-      name: "",
+      title: "",
       description: "",
     },
     mode: "onBlur",
@@ -118,9 +118,9 @@ export const ModifyProjectForm = ({
         </div>
         <FormField
           control={form.control}
-          name="name"
+          name="title"
           rules={{
-            required: "Name is required",
+            required: "Title is required",
             maxLength: 100,
           }}
           render={({ field }) => (
@@ -134,7 +134,7 @@ export const ModifyProjectForm = ({
               <FormControl>
                 <Input
                   type="text"
-                  defaultValue={project.name}
+                  defaultValue={project.title}
                   placeholder="MiProyecto"
                   name="name"
                   required

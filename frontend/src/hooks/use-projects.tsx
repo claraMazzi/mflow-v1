@@ -4,7 +4,7 @@ import type { ProjectEntity } from "#types/project"
 import { getProjects, getSharedProjects } from "../components/dashboard/projects/actions/get-projects"
 
 export const useProjects = () => {
-  const [projects, setProjects] = useState<ProjectEntity[]>()
+  const [projects, setProjects] = useState<ProjectEntity[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -41,7 +41,7 @@ export const useProjects = () => {
 
 
 export const useSharedProjects = () => {
-  const [projects, setProjects] = useState<ProjectEntity[]>()
+  const [projects, setProjects] = useState<ProjectEntity[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 

@@ -10,7 +10,7 @@ import { Textarea } from "@components/ui/common/textarea"
 import { useUI } from "@components/ui/context"
 
 export type CreateProyectFormData = {
-  name: string
+  title: string
   description?: string
 }
 
@@ -29,7 +29,7 @@ export const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
 
   const form = useForm<CreateProyectFormData>({
     defaultValues: {
-      name: "",
+      title: "",
       description: "",
     },
     mode: "onBlur",
@@ -74,9 +74,9 @@ export const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
 
         <FormField
           control={form.control}
-          name="name"
+          name="title"
           rules={{
-            required: "Name is required",
+            required: "Title is required",
             maxLength: 100,
           }}
           render={({ }) => (

@@ -9,7 +9,7 @@ interface ReducedUserEntity {
 export class ProjectEntity {
   constructor(
     public id: string,
-    public name: string,
+    public title: string,
     public description: string,
     public owner: string,
     public collaborators: ReducedUserEntity[],
@@ -18,17 +18,17 @@ export class ProjectEntity {
   ) {}
 
   static fromObject(object: { [key: string]: any }) {
-    const { id, _id, name, description, owner, collaborators, state, versions} = object;
+    const { id, _id, title, description, owner, collaborators, state, versions} = object;
     
     if (!_id && !id)throw CustomError.badRequest("Missing id");
-    if (!name) throw CustomError.badRequest("Missing name");
+    if (!title) throw CustomError.badRequest("Missing title");
     if (!owner) throw CustomError.badRequest("Missing owner");
     if (!collaborators) throw CustomError.badRequest("Missing collaborators");
     if (!versions) throw CustomError.badRequest("Missing versions");
   
     return new ProjectEntity(
       _id || id,
-      name,
+      title,
       description,
       owner,
       collaborators.map((item: UserEntity) =>({email: item.email, id: item.id})),
