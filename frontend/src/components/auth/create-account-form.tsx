@@ -1,16 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@components/ui/Forms/form";
 import { Input } from "@components/ui/common/input";
 import { Button } from "@components/ui/common/button";
 import { Checkbox } from "@components/ui/common/checkbox";
@@ -56,7 +47,6 @@ export default function CreateAccountForm({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const router = useRouter();
 
   const form = useForm<FormData>({
     defaultValues: { ...defaultValues },
@@ -106,92 +96,78 @@ export default function CreateAccountForm({
             </p>
           </div>
         ) : (
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(handleSubmit)}
-              className="space-y-6"
-            >
-              <div className="flex flex-col text-center gap-2">
-                <h1 className="text-3xl font-medium text-center text-purple-600">
-                  {title}
-                </h1>
-                <p>Crea tu cuenta</p>
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-6"
+          >
+            <div className="flex flex-col text-center gap-2">
+              <h1 className="text-3xl font-medium text-center text-purple-600">
+                {title}
+              </h1>
+              <p>Crea tu cuenta</p>
+            </div>
+            <div className="flex flex-col gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Nombre <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  placeholder="Tu nombre"
+                  {...form.register("name", {
+                    required: "Nombre es requerido"
+                  })}
+                  value={form.watch("name") || ""}
+                />
+                {form.formState.errors.name && (
+                  <p className="text-sm text-red-600">{form.formState.errors.name.message}</p>
+                )}
               </div>
-              <div className="flex flex-col gap-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  rules={{ required: "Nombre es requerido" }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Nombre <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Tu nombre"
-                          {...field}
-                          value={field.value || ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
 
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  rules={{ required: "Apellido es requerido" }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Apellido<span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Tu apellido"
-                          {...field}
-                          value={field.value || ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              <div className="space-y-2">
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Apellido<span className="text-red-500">*</span>
+                </label>
+                <Input
+                  placeholder="Tu apellido"
+                  {...form.register("lastName", {
+                    required: "Apellido es requerido"
+                  })}
+                  value={form.watch("lastName") || ""}
                 />
+                {form.formState.errors.lastName && (
+                  <p className="text-sm text-red-600">{form.formState.errors.lastName.message}</p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="email"
-                  rules={{
+              <div className="space-y-2">
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Correo electrónico
+                  <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  placeholder="tu@email.com"
+                  {...form.register("email", {
                     required: "Correo electrónico es requerido",
                     pattern: {
                       value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
                       message: "Correo electrónico invalido",
                     },
-                  }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Correo electrónico
-                        <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="tu@email.com"
-                          {...field}
-                          value={field.value || ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  })}
+                  value={form.watch("email") || ""}
                 />
+                {form.formState.errors.email && (
+                  <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  rules={{
+              <div className="space-y-2">
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Contraseña<span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="password"
+                  placeholder="Tu contraseña"
+                  {...form.register("password", {
                     required: "Contraseña es requerida",
                     pattern: {
                       value:
@@ -199,118 +175,96 @@ export default function CreateAccountForm({
                       message:
                         "Contraseña debe tener entre 6-25 caracteres con al menos una minúscula, una mayúscula, un número y un caracter especial (@$!%*?&)",
                     },
-                  }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Contraseña<span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="Tu contraseña"
-                          {...field}
-                          value={field.value || ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  })}
+                  value={form.watch("password") || ""}
                 />
-
-                <div className="self-baseline">
-                  <FormField
-                    control={form.control}
-                    name="role"
-                    rules={{
-                      validate: (value) => {
-                        if (!value || value.length === 0) {
-                          return "Debe seleccionar al menos un rol";
-                        }
-                        return true;
-                      },
-                    }}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Roles a asignar:</FormLabel>
-                        <div className="flex flex-col gap-2 ml-2">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="modelador"
-                              checked={field.value?.includes("MODELADOR")}
-                              disabled
-                              className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                            />
-                            <label
-                              htmlFor="modelador"
-                              className="text-sm font-medium"
-                            >
-                              Modelador
-                            </label>
-                          </div>
-                          <div
-                            className={cn(
-                              "flex items-center space-x-2",
-                              !field.value?.includes("ADMIN") ? "hidden" : ""
-                            )}
-                          >
-                            <Checkbox
-                              id="admin"
-                              checked={field.value?.includes("ADMIN")}
-                              disabled
-                              className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                            />
-                            <label
-                              htmlFor="admin"
-                              className="text-sm font-medium"
-                            >
-                              Administrador
-                            </label>
-                          </div>
-
-                          <div
-                            className={cn(
-                              "flex items-center space-x-2",
-                              !field.value?.includes("VERIFICADOR")
-                                ? "hidden"
-                                : ""
-                            )}
-                          >
-                            <Checkbox
-                              id="verificador"
-                              checked={field.value?.includes("VERIFICADOR")}
-                              disabled
-                              className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                            />
-                            <label
-                              htmlFor="verificador"
-                              className="text-sm font-medium"
-                            >
-                              Verificador
-                            </label>
-                          </div>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="h-full w-full flex items-end row-start-4 col-span-2 justify-center">
-                  <Button
-                    type="submit"
-                    disabled={isLoading}
-                    className="h-fit w-full items-end"
-                  >
-                    {isLoading ? "Creando..." : submitButtonText}
-                  </Button>
-                </div>
+                {form.formState.errors.password && (
+                  <p className="text-sm text-red-600">{form.formState.errors.password.message}</p>
+                )}
               </div>
 
-              {errorMessage && (
-                <p className="text-sm text-red-600">{parseErrorMessage()}</p>
-              )}
-            </form>
-          </Form>
+              <div className="self-baseline">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Roles a asignar:
+                  </label>
+                  <div className="flex flex-col gap-2 ml-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="modelador"
+                        checked={form.watch("role")?.includes("MODELADOR")}
+                        disabled
+                        className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                      />
+                      <label
+                        htmlFor="modelador"
+                        className="text-sm font-medium"
+                      >
+                        Modelador
+                      </label>
+                    </div>
+                    <div
+                      className={cn(
+                        "flex items-center space-x-2",
+                        !form.watch("role")?.includes("ADMIN") ? "hidden" : ""
+                      )}
+                    >
+                      <Checkbox
+                        id="admin"
+                        checked={form.watch("role")?.includes("ADMIN")}
+                        disabled
+                        className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                      />
+                      <label
+                        htmlFor="admin"
+                        className="text-sm font-medium"
+                      >
+                        Administrador
+                      </label>
+                    </div>
+
+                    <div
+                      className={cn(
+                        "flex items-center space-x-2",
+                        !form.watch("role")?.includes("VERIFICADOR")
+                          ? "hidden"
+                          : ""
+                      )}
+                    >
+                      <Checkbox
+                        id="verificador"
+                        checked={form.watch("role")?.includes("VERIFICADOR")}
+                        disabled
+                        className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                      />
+                      <label
+                        htmlFor="verificador"
+                        className="text-sm font-medium"
+                      >
+                        Verificador
+                      </label>
+                    </div>
+                  </div>
+                  {form.formState.errors.role && (
+                    <p className="text-sm text-red-600">{form.formState.errors.role.message}</p>
+                  )}
+                </div>
+              </div>
+              <div className="h-full w-full flex items-end row-start-4 col-span-2 justify-center">
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="h-fit w-full items-end"
+                >
+                  {isLoading ? "Creando..." : submitButtonText}
+                </Button>
+              </div>
+            </div>
+
+            {errorMessage && (
+              <p className="text-sm text-red-600">{parseErrorMessage()}</p>
+            )}
+          </form>
         )}
       </div>
 

@@ -10,8 +10,15 @@ export async function authenticate(
   formData: FormData,
 ) {
   try {
-    await signIn('credentials', {...Object.fromEntries(formData), redirectTo: '/dashboard'});
-    //si todo sale bien esto va a recargar el navegador con las credenciales
+    const result: any = await signIn('credentials', {
+      email: formData.get('email') as string,
+      password: formData.get('password') as string,
+      redirectTo: '/dashboard'
+    });
+    
+    if (result?.error) {
+      return 'Invalid credentials.';
+    }
   } catch (error) {
     if (error instanceof AuthError) {
       switch (error.type) {
@@ -23,5 +30,4 @@ export async function authenticate(
     }
     throw error;
   }
-  
 }

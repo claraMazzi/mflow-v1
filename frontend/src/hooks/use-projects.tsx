@@ -13,6 +13,8 @@ export const useProjects = () => {
       setIsLoading(true)
       setError(null)
       const response = await getProjects()
+
+      console.log('RESPONSE PRoJECTS', response);
       if (response.data && response.data.count > 0) {
         setProjects(response.data.projects)
       } else {

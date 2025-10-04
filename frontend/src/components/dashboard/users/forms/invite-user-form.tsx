@@ -1,20 +1,12 @@
 "use client";
 
 import { inviteUsers, type ActionState } from "../actions/invite-user";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@components/ui/common/button";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@components/ui/Forms/form";
 import { Input } from "@components/ui/common/input";
 import { Checkbox } from "@components/ui/common/checkbox";
-import { X, Trash2, UserPlus } from "lucide-react";
+import { Trash2, UserPlus } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -100,7 +92,9 @@ export const InviteUserForm = ({ onSuccess, onClose }: InviteUserFormProps) => {
     if (pendingInvitations.length > 0) {
       const formData = new FormData();
       formData.append("invitations", JSON.stringify(pendingInvitations));
-      formAction(formData);
+      startTransition(() => {
+        formAction(formData);
+      });
     }
   };
 
@@ -138,93 +132,78 @@ export const InviteUserForm = ({ onSuccess, onClose }: InviteUserFormProps) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <Form {...form}>
+      <div>
         <h2 className="text-3xl font-medium text-center">Invitar usuario</h2>
 
         <div className="grid grid-cols-5 gap-2 items-end">
           <div className="col-span-3 self-baseline">
-            <FormField
-              control={form.control}
-              name="email"
-              rules={{
-                required: "Email es requerido",
-                pattern: {
-                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: "Email inválido",
-                },
-              }}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      type="email"
-                      placeholder="usuario@ejemplo.com"
-                      disabled={isPending}
-                      className="border-2 border-gray-200 focus:border-blue-400"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <Input
+                {...form.register("email", {
+                  required: "Email es requerido",
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: "Email inválido",
+                  },
+                })}
+                type="email"
+                placeholder="usuario@ejemplo.com"
+                disabled={isPending}
+                className="border-2 border-gray-200 focus:border-blue-400"
+              />
+              {form.formState.errors.email && (
+                <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
               )}
-            />
+            </div>
           </div>
 
           <div className="col-start-4 ml-4 self-baseline">
-            <FormField
-              control={form.control}
-              name="roles"
-              rules={{
-                validate: (value) => {
-                  if (!value || value.length === 0) {
-                    return "Debe seleccionar al menos un rol";
-                  }
-                  return true;
-                },
-              }}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Roles a asignar:</FormLabel>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="admin-invite"
-                        checked={field.value?.includes("ADMIN")}
-                        onCheckedChange={(checked) => {
-                          handleRoleChange("ADMIN", checked as boolean);
-                        }}
-                        className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                      />
-                      <label
-                        htmlFor="admin-invite"
-                        className="text-sm font-medium"
-                      >
-                        Administrador
-                      </label>
-                    </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Roles a asignar: <span className="text-red-500">*</span>
+              </label>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="admin-invite"
+                    checked={form.watch("roles")?.includes("ADMIN")}
+                    onCheckedChange={(checked) => {
+                      handleRoleChange("ADMIN", checked as boolean);
+                    }}
+                    className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                  />
+                  <label
+                    htmlFor="admin-invite"
+                    className="text-sm font-medium"
+                  >
+                    Administrador
+                  </label>
+                </div>
 
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="verificador-invite"
-                        checked={field.value?.includes("VERIFICADOR")}
-                        onCheckedChange={(checked) => {
-                          handleRoleChange("VERIFICADOR", checked as boolean);
-                        }}
-                        className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                      />
-                      <label
-                        htmlFor="verificador-invite"
-                        className="text-sm font-medium"
-                      >
-                        Verificador
-                      </label>
-                    </div>
-                  </div>
-                  <FormMessage />
-                </FormItem>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="verificador-invite"
+                    checked={form.watch("roles")?.includes("VERIFICADOR")}
+                    onCheckedChange={(checked) => {
+                      handleRoleChange("VERIFICADOR", checked as boolean);
+                    }}
+                    className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                  />
+                  <label
+                    htmlFor="verificador-invite"
+                    className="text-sm font-medium"
+                  >
+                    Verificador
+                  </label>
+                </div>
+              </div>
+              {form.formState.errors.roles && (
+                <p className="text-sm text-red-600">{form.formState.errors.roles.message}</p>
               )}
-            />
+            </div>
           </div>
 
           <Button
@@ -241,7 +220,7 @@ export const InviteUserForm = ({ onSuccess, onClose }: InviteUserFormProps) => {
             <UserPlus />
           </Button>
         </div>
-      </Form>
+      </div>
 
       <Table>
         <TableHeader>

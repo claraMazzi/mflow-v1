@@ -6,7 +6,6 @@ import Link from "next/link"
 import { Button } from "@components/ui/common/button"
 import { Input } from "@components/ui/common/input"
 import { Label } from "@components/ui/common/label"
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@components/ui/Forms/form"
 
 interface FormData {
   email: string
@@ -55,49 +54,45 @@ export default function ForgotPassword() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-purple-200 p-5">
       <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <h2 className="text-2xl font-medium text-center text-gray-900">¿Olvidaste tu contraseña?</h2>
-            <p className="text-sm text-center text-gray-600">
-              Por favor ingresá tu e-mail. Las instrucciones para reiniciar tu contraseña serán enviadas a tu correo
-              electrónico.
-            </p>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <h2 className="text-2xl font-medium text-center text-gray-900">¿Olvidaste tu contraseña?</h2>
+          <p className="text-sm text-center text-gray-600">
+            Por favor ingresá tu e-mail. Las instrucciones para reiniciar tu contraseña serán enviadas a tu correo
+            electrónico.
+          </p>
 
-            <FormField
-              control={form.control}
-              name="email"
-              rules={{
+          <div className="space-y-2">
+            <Label htmlFor="email">Correo electrónico</Label>
+            <Input 
+              type="email" 
+              id="email" 
+              placeholder="tu@email.com" 
+              {...form.register("email", {
                 required: "Email is required",
                 pattern: {
                   value: /^\S+@\S+$/i,
                   message: "Invalid email address",
                 },
-              }}
-              render={({ field }) => (
-                <FormItem>
-                  <Label htmlFor="email">Correo electrónico</Label>
-                  <FormControl>
-                    <Input type="email" id="email" placeholder="tu@email.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              })}
             />
+            {form.formState.errors.email && (
+              <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
+            )}
+          </div>
 
-            {successMessage && <p className="text-sm text-green-600 text-center">{successMessage}</p>}
-            {errorMessage && <p className="text-sm text-red-600 text-center">{errorMessage}</p>}
+          {successMessage && <p className="text-sm text-green-600 text-center">{successMessage}</p>}
+          {errorMessage && <p className="text-sm text-red-600 text-center">{errorMessage}</p>}
 
-            <Button type="submit" variant="primary" fullWidth isLoading={isLoading}>
-              ENVIAR EMAIL
-            </Button>
+          <Button type="submit" variant="primary" fullWidth isLoading={isLoading}>
+            ENVIAR EMAIL
+          </Button>
 
-            <div className="text-center">
-              <Link href="/login" className="text-sm text-purple-600 hover:text-purple-500">
-                Volver al inicio de sesión
-              </Link>
-            </div>
-          </form>
-        </Form>
+          <div className="text-center">
+            <Link href="/login" className="text-sm text-purple-600 hover:text-purple-500">
+              Volver al inicio de sesión
+            </Link>
+          </div>
+        </form>
       </div>
     </div>
   )
