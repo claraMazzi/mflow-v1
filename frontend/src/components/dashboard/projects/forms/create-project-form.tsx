@@ -1,10 +1,9 @@
 "use client"
 
 import { createProject, type ActionState } from "../actions/create-project"
-import { useActionState, useEffect } from "react"
+import { startTransition, useActionState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { Button } from "@components/ui/common/button"
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@components/ui/Forms/form"
 import { Input } from "@components/ui/common/input"
 import { Textarea } from "@components/ui/common/textarea"
 import { useUI } from "@components/ui/context"
@@ -49,12 +48,20 @@ export const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
         return "Usuario o contraseña no corresponden a un usuario registrado"
       case "Not authenticated":
         return "Debes iniciar sesión para crear un proyecto"
-      case "Project name is required":
+      case "Project title is required":
         return "El nombre del proyecto es requerido"
       case "Something went wrong.":
       default:
         return "Ocurrió un error inesperado"
     }
+  }
+  const onSubmit = (data: CreateProyectFormData) => {
+    const formData = new FormData();
+    formData.append("title", data.title);
+    formData.append("description", data.description || "");
+    startTransition(() => {
+      formAction(formData);
+    })
   }
 
   if(state?.success && onSuccess){
@@ -68,64 +75,62 @@ export const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
   }
 
   return (
-    <Form {...form}>
-      <form action={formAction} className="space-y-6">
-        <h2 className="text-3xl font-medium text-center">Crear proyecto</h2>
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <h2 className="text-3xl font-medium text-center">Crear proyecto</h2>
 
-        <FormField
-          control={form.control}
-          name="title"
-          rules={{
-            required: "Title is required",
-            maxLength: 100,
-          }}
-          render={({ }) => (
-            <FormItem>
-              <div className="flex items-center justify-between">
-
-              <FormLabel>Nombre del proyecto <span className="text-sm text-red-600"> *</span></FormLabel>
-              <span className="text-sm text-gray-500">Máximo 100 caracteres</span>
-              </div>
-              <FormControl>
-                <Input type="text" placeholder="MiProyecto" name="name" required maxLength={100} disabled={isPending} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            Nombre del proyecto <span className="text-sm text-red-600"> *</span>
+          </label>
+          <span className="text-sm text-gray-500">Máximo 100 caracteres</span>
+        </div>
+        <Input 
+          type="text" 
+          placeholder="MiProyecto" 
+          {...form.register("title", {
+            required: "El nombre del proyecto es requerido",
+            maxLength: {
+              value: 100,
+              message: "Máximo 100 caracteres"
+            }
+          })}
+          maxLength={100} 
+          disabled={isPending} 
         />
+        {form.formState.errors.title && (
+          <p className="text-sm text-red-600">{form.formState.errors.title.message}</p>
+        )}
+      </div>
 
-        <FormField
-          control={form.control}
-          name="description"
-          rules={{
-            maxLength: 200,
-          }}
-          render={({ }) => (
-            <FormItem>
-              <div className="flex items-center justify-between">
-                <FormLabel>Descripción</FormLabel>
-                <span className="text-sm text-gray-500">Máximo 200 caracteres</span>
-              </div>
-              <FormControl>
-                <Textarea
-                  placeholder="Descripción de tu proyecto"
-                  name="description"
-                  maxLength={200}
-                  disabled={isPending}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            Descripción
+          </label>
+          <span className="text-sm text-gray-500">Máximo 200 caracteres</span>
+        </div>
+        <Textarea
+          placeholder="Descripción de tu proyecto"
+          {...form.register("description", {
+            maxLength: {
+              value: 200,
+              message: "Máximo 200 caracteres"
+            }
+          })}
+          maxLength={200}
+          disabled={isPending}
         />
+        {form.formState.errors.description && (
+          <p className="text-sm text-red-600">{form.formState.errors.description.message}</p>
+        )}
+      </div>
 
-        {state?.error && <p className="text-sm text-red-600">{parseErrorMessage(state.error)}</p>}
+      {state?.error && <p className="text-sm text-red-600">{parseErrorMessage(state.error)}</p>}
 
-
-        <Button type="submit" className="uppercase w-full" isLoading={isPending}>
-          Crear proyecto
-        </Button>
-      </form>
-    </Form>
+      <Button type="submit" className="uppercase w-full" isLoading={isPending}>
+        Crear proyecto
+      </Button>
+    </form>
   )
 }
