@@ -1,10 +1,10 @@
-import { Collaborator } from "@src/app/conceptual-model/page";
+import { Collaborator } from "#types/collaboration";
 import {
 	ActiveEditingRequest,
-	EditingRequest,
-} from "@src/hooks/use-request-editing-rights";
+} from "@hooks/use-request-editing-rights";
 import { Button } from "../common/button";
 import { useEffect, useState } from "react";
+import { useUI } from "../context";
 
 export default function EditingRequestNotification({
 	request,
@@ -22,6 +22,7 @@ export default function EditingRequestNotification({
 	}) => () => void;
 }) {
 	const [remainingTimeoutSeconds, setRemainingTimeoutSeconds] = useState(10);
+	const { closeModal } = useUI();
 
 	useEffect(() => {
 		const updateCountdown = () => {
@@ -38,7 +39,10 @@ export default function EditingRequestNotification({
 
 		const intervalId = setInterval(() => {
 			const remainingTime = updateCountdown();
-			if (remainingTime === 0) clearInterval(intervalId);
+			if (remainingTime === 0){
+			closeModal();
+				
+				clearInterval(intervalId);}
 		}, 1000);
 
 		return () => {

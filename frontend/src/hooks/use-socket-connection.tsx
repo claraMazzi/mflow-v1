@@ -8,7 +8,7 @@ export function useSocketConnection({
 	socket: Socket;
 	sessionToken: string | undefined;
 }) {
-	const [isConnected, setIsConnected] = useState(false);
+	const [isConnected, setIsConnected] = useState(false); //conecta al socket 
 	//TODO: Transport could probably be removed
 	const [transport, setTransport] = useState("N/A");
 

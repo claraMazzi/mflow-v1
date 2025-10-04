@@ -1,5 +1,5 @@
 import { DeletionRequestModel, ProjectModel, UserModel } from "../../data";
-import { CustomError, UserEntity } from "../../domain";
+import { CustomError } from "../../domain";
 import { CreateDeletionRequestDto } from "../../domain/dtos/project/create-deletion-request.dto";
 import { CreateProjectDto } from "../../domain/dtos/project/create-project.dto";
 import { ShareProjectDto } from "../../domain/dtos/project/share-project.dto";
@@ -7,9 +7,8 @@ import { UpdateProjectDto } from "../../domain/dtos/project/update-project.dto";
 import { DelitionRequestEntity } from "../../domain/entities/delition-request.entity";
 import { ProjectEntity } from "../../domain/entities/project.entity";
 import { EmailService } from "./email.service";
-import { bcryptAdapter, jwtAdapter } from "../../config";
+import { jwtAdapter } from "../../config";
 import { ShareProjectLinkDto } from "../../domain/dtos/project/share-project-link.dto";
-import { Types } from "mongoose";
 
 const projectState: {
   created: "CREADO";

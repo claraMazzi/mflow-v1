@@ -1,73 +1,78 @@
 import { NextFunction, Response, Request } from "express";
 import { jwtAdapter } from "../../config";
 import { UserModel } from "../../data";
-import { UserEntity } from "../../domain";
 
 export class AuthMiddleware {
-    /** si necesito realizar inyeccion de dependencias entonces necesito 
-     * un constructor para poder instanciar la clase y pasarle las dependencias 
-     * 
-     * Si no uso inyeccion de dependencias, no necesito instanciar la clase y mi metodo
-     * constructor puede ser static 
-     */
+  /** si necesito realizar inyeccion de dependencias entonces necesito
+   * un constructor para poder instanciar la clase y pasarle las dependencias
+   *
+   * Si no uso inyeccion de dependencias, no necesito instanciar la clase y mi metodo
+   * constructor puede ser static
+   */
 
-    static async validateJWT(req: Request, res:Response, next: NextFunction) {
-        const authorization = req.header('Authorization');
-        if (!authorization) return res.status(401).json({error: 'No token provided'});
-        if (!authorization.startsWith('Bearer ')) return res.status(500).json({ error: 'Invalid bearer token'});
-        const token = authorization.split(' ').at(1) || "";
-        
-        try {
-            const payload = await jwtAdapter.validateToken<{id: string}>(token);
-            if (!payload) return res.status(401).json({error: 'Invalid token'});
+  static async validateJWT(req: Request, res: Response, next: NextFunction) {
+    const authorization = req.header("Authorization");
+    if (!authorization)
+      return res.status(401).json({ error: "No token provided" });
+    if (!authorization.startsWith("Bearer "))
+      return res.status(500).json({ error: "Invalid bearer token" });
+    const token = authorization.split(" ").at(1) || "";
 
-            const user = await UserModel.findById(payload.id);
+    try {
+      const payload = await jwtAdapter.validateToken<{ id: string }>(token);
+      if (!payload) return res.status(401).json({ error: "Invalid token" });
 
-            if (!user) return res.status(404).json({error: `Invalid token user`});
+      const user = await UserModel.findById(payload.id);
 
-            //TODO: validar si el usuario esta acitvo 
+      if (!user) return res.status(404).json({ error: `Invalid token user` });
 
-            req.session = {userId: user.id};
-             
-            next(); //procede con el siguiente middleware o el proximo controlador de ruta 
-        } catch (error) {
-            //errores no controlados 
-            console.log('middleware error', error);
+      //TODO: validar si el usuario esta acitvo
+      //todo argregar los user roles y abajo llamarlo solo del req.session
+      req.session = { userId: user.id, roles: user.roles };
 
-            res.status(500).json({error: 'Internal server error'});
-            
-        };
+      next(); //procede con el siguiente middleware o el proximo controlador de ruta
+    } catch (error) {
+      //errores no controlados
+      console.log("middleware error", error);
 
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 
-    static async validateAdminRole(req: Request, res:Response, next: NextFunction) {
-        const authorization = req.header('Authorization');
-        if (!authorization) return res.status(401).json({error: 'No token provided'});
-        if (!authorization.startsWith('Bearer ')) return res.status(500).json({ error: 'Invalid bearer token'});
-        const token = authorization.split(' ').at(1) || "";
-        
-        try {
-            const payload = await jwtAdapter.validateToken<{id: string}>(token);
-            if (!payload) return res.status(401).json({error: 'Invalid token'});
+  static validateRequiredRoles(requiredRoles: string[]) {
+    //le paso por parametro la lista de required roles --req: Request, res:Response, next: NextFunction
 
-            const user = await UserModel.findById(payload.id);
+    return (req: Request, res: Response, next: NextFunction) => {
+      try {
+        // Check if session exists
+        if (!req.session) {
+          return res.status(401).json({ error: "No session found" });
+        }
 
-            if (!user) return res.status(404).json({error: `Invalid token user`});
+        // Check if user has roles
+        if (!req.session.roles || !Array.isArray(req.session.roles)) {
+          return res.status(403).json({ error: "User has no roles assigned" });
+        }
 
-            if (user.roles.indexOf('ADMIN') == -1) return res.status(404).json({error: `Invalid user role`});
+        // Check if user has all required roles
+        const hasAllRequiredRoles = requiredRoles.every(requiredRole => 
+          req.session!.roles.includes(requiredRole)
+        );
 
-            //TODO: validar si el usuario esta acitvo 
+        if (!hasAllRequiredRoles) {
+          return res.status(403).json({ 
+            error: `User does not have required roles. Required: ${requiredRoles.join(', ')}` 
+          });
+        }
 
-            req.session = {userId: user.id};
-             
-            next(); //procede con el siguiente middleware o el proximo controlador de ruta 
-        } catch (error) {
-            //errores no controlados 
-            console.log('middleware error', error);
-
-            res.status(500).json({error: 'Internal server error'});
-            
-        };
-
-    }
+        // User has all required roles, proceed to next middleware
+        next();
+      } catch (error) {
+        //errores no controlados
+        console.log("validateRequiredRoles middleware error", error);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    };
+  }
+  
 }

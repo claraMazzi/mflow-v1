@@ -24,70 +24,52 @@ export class ProjectRoutes {
     //--------------------- Projects CRUD routes
 
     //create
-    router.post("/", AuthMiddleware.validateJWT, controller.createProject);
+    router.post("/", controller.createProject);
 
     //get projects by user
-    router.get("/", AuthMiddleware.validateJWT, controller.getUserProjects);
-    router.get(
-      "/shared",
-      AuthMiddleware.validateJWT,
-      controller.getUserSharedProjects
-    );
+    router.get("/", controller.getUserProjects);
+    //get user shared projects
+    router.get("/shared", controller.getUserSharedProjects);
 
     //getById
-    router.get(
-      "/:projectId",
-      AuthMiddleware.validateJWT,
-      controller.getProjectById
-    );
+    router.get("/:projectId", controller.getProjectById);
 
     //Update project data - name and desc
-    router.put(
-      "/:projectId",
-      AuthMiddleware.validateJWT,
-      controller.updateProject
-    );
+    router.put("/:projectId", controller.updateProject);
 
     //Request Project Deletion project
-    router.post(
-      "/:projectId/deletion",
-      AuthMiddleware.validateJWT,
-      controller.requestProjectDeletion
-    );
+    router.post("/:projectId/deletion", controller.requestProjectDeletion);
 
     //Get delition request details per project
-    router.get("/:projectId/deletion", controller.getDeletionDetails);
+    router.get(
+      "/:projectId/deletion",
+      AuthMiddleware.validateRequiredRoles(["ADMIN"]),
+      controller.getDeletionDetails
+    );
 
-    //Delete project -- verifier only
-    router.delete("/:projectId", controller.deleteProject);
+    //Delete project -- admin only
+    router.delete(
+      "/:projectId",
+      AuthMiddleware.validateRequiredRoles(["ADMIN"]),
+      controller.deleteProject
+    );
 
     // Sharing routes
     router.post(
       "/:projectId/share",
-      AuthMiddleware.validateJWT,
       controller.sendProjectCollaborationInvitation
     );
-    router.get(
-      "/:projectId/share",
-      AuthMiddleware.validateJWT,
-      controller.getProjectSharingLink
-    );
+
+    //get project sharing link
+    router.get("/:projectId/share", controller.getProjectSharingLink);
+
+    //add collaborator to project with invitation token
     router.post("/share/:token", controller.addCollaboratorToProject);
+
+    //get project data from invitation token
     router.get("/share/:token", controller.getProjectFromInvitationToken);
 
-    // // Logic to approve or reject deletion request
-    // router.put("/:projectId/deletion", controller.handleDeletionRequest);
-
-    //----------------------------------------------
-
-    // Collaboration routes
-    router.post("/:projectId/collaboration", (req, res) => {
-      // Logic to accept or deny collaboration invite
-      res.send(
-        `Handle collaboration invite for project ID: ${req.params.projectId}`
-      );
-    });
-
+    //TODO: IMPLEMENT THESE ROUTES
     //remove collaborator
     router.delete(
       "/:projectId/collaboration/:userId",
@@ -99,103 +81,6 @@ export class ProjectRoutes {
 
     router.put("/:projectId/verification", controller.updateVerificationStatus);
 
-    // Models CRUD routes
-    router.get("/:projectId/models/:modelId", (req, res) => {
-      // Logic to get a specific model within a project
-      res.send(
-        `Get model with ID: ${req.params.modelId} in project ID: ${req.params.projectId}`
-      );
-    });
-
-    router.put("/:projectId/models/:modelId", (req, res) => {
-      // Logic to update a specific model within a project
-      res.send(
-        `Update model with ID: ${req.params.modelId} in project ID: ${req.params.projectId}`
-      );
-    });
-
-    router.delete("/:projectId/models/:modelId", (req, res) => {
-      // Logic to delete a specific model within a project
-      res.send(
-        `Delete model with ID: ${req.params.modelId} in project ID: ${req.params.projectId}`
-      );
-    });
-
-    router.post("/:projectId/models", (req, res) => {
-      // Logic to create a new model within a project
-      res.send(`Create a new model in project ID: ${req.params.projectId}`);
-    });
-
-    router.post("/:projectId/models/:modelId/collaboration", (req, res) => {
-      // Logic to collaborate on a model within a project
-      res.send(
-        `Collaborate on model with ID: ${req.params.modelId} in project ID: ${req.params.projectId}`
-      );
-    });
-
-    router.delete(
-      "/:projectId/models/:modelId/collaboration/:userId",
-      (req, res) => {
-        // Logic to remove a collaborator from a model within a project
-        res.send(
-          `Remove collaborator with ID: ${req.params.userId} from model with ID: ${req.params.modelId} in project ID: ${req.params.projectId}`
-        );
-      }
-    );
-
-    router.post(
-      "/:projectId/models/:modelId/verification/request",
-      (req, res) => {
-        // Logic to request model verification within a project
-        res.send(
-          `Request verification for model with ID: ${req.params.modelId} in project ID: ${req.params.projectId}`
-        );
-      }
-    );
-
-    router.post("/:projectId/models/:modelId/versions", (req, res) => {
-      // Logic to create a new version from an existing one within a project
-      res.send(
-        `Create a new version for model with ID: ${req.params.modelId} in project ID: ${req.params.projectId}`
-      );
-    });
-
-    router.get("/:projectId/models/:modelId/versions", (req, res) => {
-      // Logic to get all versions of a model within a project
-      res.send(
-        `Get all versions for model with ID: ${req.params.modelId} in project ID: ${req.params.projectId}`
-      );
-    });
-
-    router.get(
-      "/:projectId/models/:modelId/versions/:versionId",
-      (req, res) => {
-        // Logic to get a specific version of a model within a project
-        res.send(
-          `Get version with ID: ${req.params.versionId} of model with ID: ${req.params.modelId} in project ID: ${req.params.projectId}`
-        );
-      }
-    );
-
-    router.put(
-      "/:projectId/models/:modelId/versions/:versionId",
-      (req, res) => {
-        // Logic to update the state of a specific version of a model within a project
-        res.send(
-          `Update version with ID: ${req.params.versionId} of model with ID: ${req.params.modelId} in project ID: ${req.params.projectId}`
-        );
-      }
-    );
-
-    router.delete(
-      "/:projectId/models/:modelId/versions/:versionId",
-      (req, res) => {
-        // Logic to delete a specific version of a model within a project
-        res.send(
-          `Delete version with ID: ${req.params.versionId} of model with ID: ${req.params.modelId} in project ID: ${req.params.projectId}`
-        );
-      }
-    );
     return router;
   }
 }

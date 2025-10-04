@@ -14,20 +14,42 @@ export class UploadController {
 		return res.status(500).json({ error: "Internal server error" });
 	};
 
-	getVersionResource = (req: Request, res: Response) => {
-		const { versionId, propertyPath } = req.params;
-
-		//TODO: ADD AUTHORIZATION CHECK
-
-		try {
-			const filePath = this.uploadService.getVersionResourceFilePath({
-				versionId,
-				propertyPath,
-			});
-            
-            res.sendFile(filePath)
-		} catch (error) {
-			this.handleError(error, res);
+	getImageById = (req: Request, res: Response) => {
+		const imageId = req.params.imageId;
+		if (!imageId) {
+			throw CustomError.badRequest("No image id provided.");
 		}
+
+		this.uploadService
+		  .getImageById(imageId)
+		  .then((image) => {
+			res.setHeader("Content-Type", image.imageInfo.mimeType);
+			res.status(200).json(image)})
+		  .catch((error) => this.handleError(error, res));
 	};
+
+	uploadImageDiagaram = (req: Request, res: Response) => {
+		const versionId = req.params.versionId;
+		const diagramPropertyPath = req.body.diagramPropertyPath;
+
+		if (!diagramPropertyPath) {
+			return res.status(400).json({ error: "No property path provided." });
+		}
+
+		if (!req.file) {
+			console.error(
+				`The file info field was unexpectedly undefined - Version Id: ${versionId}.`
+			);
+			return res.send(500).json({
+				error:
+					"There was an internal server error while uploading the file.",
+			});
+		}
+
+		this.uploadService
+		  .uploadImageToVersion(versionId, diagramPropertyPath, req.file)
+		  .then((uploadedImage) => res.status(201).json(uploadedImage))
+		  .catch((error) => this.handleError(error, res));
+	  };
+	
 }

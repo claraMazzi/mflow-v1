@@ -30,6 +30,20 @@ export type NoticeView = {
   message: ReactNode
 }
 
+export type EditingRequestToastView = {
+  id: string
+  type: 'editing-request'
+  request: any // ActiveEditingRequest
+  collaborator: any // Collaborator
+  handleEditingRequestEvaluation: ({
+    requestId,
+    action,
+  }: {
+    requestId: string;
+    action: "accept" | "decline";
+  }) => () => void
+}
+
 export interface State {
   displaySidebar: boolean
   displayAlert: boolean
@@ -39,6 +53,7 @@ export interface State {
   modalView: Nullable<ModalView | CustomModalView>
   alertView: Nullable<NoticeView>
   toasterBoxes: NoticeView[]
+  editingRequestToasts: EditingRequestToastView[]
 }
 
 const initialState = {
@@ -51,6 +66,7 @@ const initialState = {
   sidebarView: null,
   alertView: null,
   toasterBoxes: [],
+  editingRequestToasts: [],
 }
 
 type Action =
@@ -79,6 +95,14 @@ type Action =
   | {
       type: 'ADD_TOASTER_BOX'
       view: NoticeView
+    }
+  | {
+      type: 'ADD_EDITING_REQUEST_TOAST'
+      view: EditingRequestToastView
+    }
+  | {
+      type: 'REMOVE_EDITING_REQUEST_TOAST'
+      id: string
     }
   | {
       type: 'RESET'
@@ -140,6 +164,20 @@ function uiReducer(state: State, action: Action) {
         toasterBoxes: [...(state.toasterBoxes || []), action.view],
       }
     }
+    case 'ADD_EDITING_REQUEST_TOAST': {
+      return {
+        ...state,
+        editingRequestToasts: [...(state.editingRequestToasts || []), action.view],
+      }
+    }
+    case 'REMOVE_EDITING_REQUEST_TOAST': {
+      return {
+        ...state,
+        editingRequestToasts: (state.editingRequestToasts || []).filter(
+          (toast) => toast.id !== action.id
+        ),
+      }
+    }
     case 'RESET': {
       return initialState
     }
@@ -189,6 +227,16 @@ export const UIProvider: FC<{ children?: ReactNode }> = ({ ...props }) => {
     [dispatch]
   )
 
+  const addEditingRequestToast = useCallback(
+    (view: EditingRequestToastView) => dispatch({ type: 'ADD_EDITING_REQUEST_TOAST', view }),
+    [dispatch]
+  )
+
+  const removeEditingRequestToast = useCallback(
+    (id: string) => dispatch({ type: 'REMOVE_EDITING_REQUEST_TOAST', id }),
+    [dispatch]
+  )
+
   const value = useMemo(
     () => ({
       ...state,
@@ -199,6 +247,8 @@ export const UIProvider: FC<{ children?: ReactNode }> = ({ ...props }) => {
       setModalView,
       setAlertView,
       addToasterBox,
+      addEditingRequestToast,
+      removeEditingRequestToast,
       reset,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps

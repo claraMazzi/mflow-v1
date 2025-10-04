@@ -5,6 +5,7 @@ import { UploadRoutes } from "./upload/routes";
 import { ProjectRoutes } from "./project/routes";
 import { SocketServer } from "./socket-server";
 import { DeletionRequestRoutes } from "./deletion-request/routes";
+import { AuthMiddleware } from "./middlewares/auth.middleware";
 
 export class AppRoutes {
 	private socketServer: SocketServer;
@@ -20,15 +21,24 @@ export class AppRoutes {
 	get routes(): Router {
 		const router = Router();
 
-		//Definir las rutas
+		//auth routes
 		router.use("/api/auth", Authroutes.routes);
-
+		//user routes
 		router.use("/api/users", UserRoutes.routes);
 
+		//-----------user needs to be logged in routes
+		router.use(AuthMiddleware.validateJWT);
+
+		//file upload routes
 		router.use("/api/uploads", this.uploadRoutes.routes);
 
+		//projects routes
 		router.use("/api/projects", ProjectRoutes.routes);
 
+		//-----------user needs to be admin routes
+		router.use(AuthMiddleware.validateRequiredRoles(["ADMIN"]));
+		
+		//deletion requests routes
         router.use('/api/deletion-requests', DeletionRequestRoutes.routes)
 
         return router;
