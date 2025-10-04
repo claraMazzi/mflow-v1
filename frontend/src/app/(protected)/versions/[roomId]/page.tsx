@@ -98,7 +98,7 @@ export default function Page({
   });
 
   const throttledEmitMouseUpdateFunction = useRef(
-    throttle((roomId: any, mousePosition: any, currentTab: string) => {
+    throttle((roomId: string, mousePosition: any, currentTab: string) => {
       socket.volatile.emit("client-volatile-broadcast", {
         roomId,
         mousePosition,
@@ -417,53 +417,7 @@ export default function Page({
         collaborators={collaborators}
         handleEditingRequestEvaluation={handleEditingRequestEvaluation}
       />
-      <p>Status: {isSocketConnected ? "connected" : "disconnected"}</p>
-      <p>Id: {isSocketConnected ? socket.id : "No disponible"}</p>
-      <p>Transport: {transport}</p>
-      <p>Current Room: {roomId}</p>
-      <h1>Collaborators:</h1>
-      <ul>
-        {Array.from(collaborators.values()).map((collaborator) => {
-          return (
-            <li className="ml-5" key={collaborator.userId}>
-              <p>
-                - User: {collaborator.userId} - Can Edit:{" "}
-                {collaborator.hasEditingRights.toString()}
-              </p>
-              <p>
-                {collaborator.name} {collaborator.lastName} -{" "}
-                {collaborator.email}
-              </p>
-              <p>Sockets:</p>
-              <ul>
-                {Array.from(collaborator.sockets.values()).map((socket) => {
-                  return (
-                    <li className="ml-5" key={socket.socketId}>
-                      <p>Socket: {socket.socketId}</p>
-                      {socket.currentTab ? (
-                        <p className="ml-5">Current Tab: {socket.currentTab}</p>
-                      ) : (
-                        <p className="ml-5"> Current Tab not available</p>
-                      )}
-                      {socket.mousePosition ? (
-                        <p className="ml-5">
-                          {" "}
-                          Mouse Position: X: {
-                            socket.mousePosition.relativeX
-                          } Y: {socket.mousePosition.relativeY}
-                        </p>
-                      ) : (
-                        <p className="ml-5"> Mouse Position not available</p>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-              <br />
-            </li>
-          );
-        })}
-      </ul>
+
       {!isModelInitialized ? (
         <p>Loading Model</p>
       ) : (
@@ -518,6 +472,54 @@ export default function Page({
           </Tabs>
         </form>
       )}
+{/* DELETE AFTER */}
+<p>Status: {isSocketConnected ? "connected" : "disconnected"}</p>
+      <p>Id: {isSocketConnected ? socket.id : "No disponible"}</p>
+      <p>Transport: {transport}</p>
+      <p>Current Room: {roomId}</p>
+      <h1>Collaborators:</h1>
+      <ul>
+        {Array.from(collaborators.values()).map((collaborator) => {
+          return (
+            <li className="ml-5" key={collaborator.userId}>
+              <p>
+                - User: {collaborator.userId} - Can Edit:{" "}
+                {collaborator.hasEditingRights.toString()}
+              </p>
+              <p>
+                {collaborator.name} {collaborator.lastName} -{" "}
+                {collaborator.email}
+              </p>
+              <p>Sockets:</p>
+              <ul>
+                {Array.from(collaborator.sockets.values()).map((socket) => {
+                  return (
+                    <li className="ml-5" key={socket.socketId}>
+                      <p>Socket: {socket.socketId}</p>
+                      {socket.currentTab ? (
+                        <p className="ml-5">Current Tab: {socket.currentTab}</p>
+                      ) : (
+                        <p className="ml-5"> Current Tab not available</p>
+                      )}
+                      {socket.mousePosition ? (
+                        <p className="ml-5">
+                          {" "}
+                          Mouse Position: X: {
+                            socket.mousePosition.relativeX
+                          } Y: {socket.mousePosition.relativeY}
+                        </p>
+                      ) : (
+                        <p className="ml-5"> Mouse Position not available</p>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+              <br />
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
