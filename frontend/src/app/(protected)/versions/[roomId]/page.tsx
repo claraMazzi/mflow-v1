@@ -92,7 +92,7 @@ export default function Page({
     new Map()
   );
   const hasEditingRights = useMemo(() => {
-    console.log("Has Editing Rights was recalculated.");
+    // console.log("Has Editing Rights was recalculated.");
     if (!session?.user.id) return false;
     return !!collaborators.get(session.user.id)?.hasEditingRights;
   }, [collaborators, session?.user.id]);

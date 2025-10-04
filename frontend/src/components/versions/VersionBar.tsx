@@ -32,21 +32,14 @@ const VersionBar = ({
   const { addEditingRequestToast } = useUI();
   const shownRequestsRef = useRef<Set<string>>(new Set());
 
-  // Get pending requests that have valid collaborators
-  const validPendingRequests = useMemo(() => {
-    console.log("pendingEditingRequests!!!!!!", pendingEditingRequests);
-
-    return pendingEditingRequests
-      .filter((r): r is ActiveEditingRequest => r.status === "pending")
-      .filter((r) => collaborators.get(r.requesterUserId));
-  }, [pendingEditingRequests]);
-
-  useEffect(() => {
-    console.log("validPendingRequests!!!!!!", validPendingRequests);
-  }, [validPendingRequests]);
-
   // Show toast for each pending request
   useEffect(() => {
+    const validPendingRequests = pendingEditingRequests
+      .filter((r): r is ActiveEditingRequest => r.status === "pending")
+      .filter((r) => collaborators.get(r.requesterUserId));
+
+    if (!validPendingRequests.length) return
+
     // First, clean up shown requests that are no longer pending
     const currentRequestIds = new Set(
       validPendingRequests.map((r) => r.requestId!)
@@ -56,19 +49,13 @@ const VersionBar = ({
         shownRequestsRef.current.delete(requestId);
       }
     });
-    console.log("--------------------------------");
-    console.log("validPendingRequests", validPendingRequests);
 
     // Then, add toasts for new pending requests
     validPendingRequests.forEach((request) => {
-      // console.log("Request:", request.requestId);
-      // console.log("Shown requests:", shownRequestsRef.current);
-    //   console.log("Shown requests has:", shownRequestsRef.current.has(request.requestId!));
-      if (!shownRequestsRef.current.has(request.requestId!)) {
-        // console.log("Adding editing request toast for request:", request);
+    if (!shownRequestsRef.current.has(request.requestId!)) {
         shownRequestsRef.current.add(request.requestId!);
         const collaborator = collaborators.get(request.requesterUserId)!;
-        // console.log("Adding editing request toast for request:", request);
+
         addEditingRequestToast({
           id: request.requestId!,
           type: "editing-request",
@@ -79,10 +66,7 @@ const VersionBar = ({
       }
     });
   }, [
-    validPendingRequests,
-    // collaborators,
-    // addEditingRequestToast,
-    // handleEditingRequestEvaluation,
+    pendingEditingRequests
   ]);
 
   return (

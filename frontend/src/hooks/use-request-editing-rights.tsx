@@ -53,6 +53,7 @@ export function useEditingRequests({
 		});
 		socket.emit("request-editing-privilege", { roomId });
 	}, [canUserSendEditingRequest, roomId, userId]);
+	
 
 	const handleEditingRequestEvaluation = useCallback(
 		({
@@ -65,12 +66,12 @@ export function useEditingRequests({
 			return () => {
 				if (!userId) return;
 				if (!hasEditingRights) return;
+				let eventName: string;
+				let newStatus: "accepted" | "declined";
 				const isRequestPresent = pendingEditingRequests.some(
 					(r) => requestId === r.requestId
 				);
 				if (!isRequestPresent) return;
-				let eventName: string;
-				let newStatus: "accepted" | "declined";
 				switch (action) {
 					case "accept":
 						eventName = "accept-editing-request";
@@ -81,18 +82,16 @@ export function useEditingRequests({
 						newStatus = "declined";
 						break;
 				}
-				setPendingEditingRequests(
-					pendingEditingRequests.map((r) => {
+				setPendingEditingRequests((prev) => {
+					return prev.map((r) => {
 						if (r.requestId === requestId) {
 							return { ...r, status: newStatus };
 						} else {
 							return r;
 						}
-					})
+					})}
 				);
-				console.log("Emitting event:", eventName, { roomId, requestId });
-				console.log("pendingEditingRequests", pendingEditingRequests);
-				console.log('-----------------*******************')
+				
 				socket.emit(eventName, { roomId, requestId });
 			};
 		},
