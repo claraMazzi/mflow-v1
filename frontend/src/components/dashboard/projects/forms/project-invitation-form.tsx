@@ -2,7 +2,7 @@
 
 import { startTransition, useActionState } from "react";
 import { Button } from "@components/ui/common/button";
-import { ProjectEntity } from "@src/types/project";
+import { ProjectEntity } from "#types/project";
 import { acceptProjectCollaborationInvitation } from "../actions/share-project";
 import { useRouter } from "next/navigation";
 export type ShareProjectFormData = {

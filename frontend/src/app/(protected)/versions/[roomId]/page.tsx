@@ -17,14 +17,15 @@ import {
   TabsList,
   TabsTrigger,
 } from "@components/ui/tabs/tabs";
-import { useSession } from "@node_modules/next-auth/react";
+import { useSession } from "next-auth/react";
 import { useEditingRequests } from "@hooks/use-request-editing-rights";
 import { useSocketConnection } from "@hooks/use-socket-connection";
 import ObjetivosSuposiciones from "@components/conceptual-model/ObjetivosSuposiciones";
 import DiagramaEstructuraEntidades from "@components/conceptual-model/DiagramaEstructuraEntidades";
 import React from "react";
 import VersionBar from "@components/versions/VersionBar";
-import { CLIENT_WS_EVENT_TYPES, Collaborator, InitializeConceptualModelPayload, JoinRoomEventPayload, SERVER_WS_EVENT_TYPES, SocketPosition, UsersInRoomChangePayload } from "@src/types/collaboration";
+import { CLIENT_WS_EVENT_TYPES, Collaborator, InitializeConceptualModelPayload, JoinRoomEventPayload, SERVER_WS_EVENT_TYPES, SocketPosition, UsersInRoomChangePayload } from "#types/collaboration";
+import { parsePropertyPath } from "@lib/utils";
 
 function throttle(func: any, delay: number) {
   let timeout: NodeJS.Timeout | null = null;
@@ -36,38 +37,6 @@ function throttle(func: any, delay: number) {
       }, delay);
     }
   };
-}
-//llevar a UTILS
-function parsePropertyPath(conceptualModel: ConceptualModel, path: string) {
-  const pathParts = path.split(".");
-  const parsedPath = [];
-  let current: any = conceptualModel;
-
-  for (const part of pathParts) {
-    const containsListItemKey = part.includes(":");
-    if (containsListItemKey) {
-      const [listProperty, itemId] = part.split(":");
-      if (!(listProperty in current) || !Array.isArray(current[listProperty])) {
-        return undefined;
-      }
-      const itemIndex = current[listProperty].findIndex(
-        (e: any) => e._id === itemId
-      );
-      if (itemIndex === -1) {
-        return undefined;
-      }
-      parsedPath.push(listProperty);
-      parsedPath.push(itemIndex);
-      current = current[listProperty][itemIndex];
-    } else {
-      if (!(part in current)) {
-        return undefined;
-      }
-      parsedPath.push(part);
-      current = current[part];
-    }
-  }
-  return parsedPath.join(".");
 }
 
 const MOUSE_POSITION_UPDATE_DELAY = 33; //30 fps

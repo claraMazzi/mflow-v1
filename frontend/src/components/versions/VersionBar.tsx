@@ -76,8 +76,8 @@ const VersionBar = ({
   ]);
 
   return (
-    <div className="bg-blue-50 h-16">
-      <div className="flex flex-col absolute top-0 right-0 ">
+    <div className="bg-blue-50 h-16 flex justify-between items-center p-4">
+      <div className="">
         <Button
           disabled={!canUserSendEditingRequest}
           onClick={handleRequestEditingRights}

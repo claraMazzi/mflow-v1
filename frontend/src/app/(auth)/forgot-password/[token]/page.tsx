@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { Button } from "@components/ui/common/button";
 import { Input } from "@components/ui/common/input";
 import { passwordRegex } from "../../../../../../backend/src/config/regular-exp";
-import { Skeleton } from "@src/components/ui/skeleton";
+import { Skeleton } from "@components/ui/skeleton";
 
 interface FormData {
   password: string;
