@@ -5,22 +5,21 @@ import { useSharedProjects } from "@src/hooks/use-projects";
 import React from "react";
 
 const Page = () => {
-  const { projects, isLoading, refreshProjects } = useSharedProjects();
+	const { projects, isLoading, refreshProjects } = useSharedProjects();
 
-  return (
-    <div className="w-full flex flex-col gap-4">
-      <div className="flex w-full justify-between border-b border-accent-100 py-2">
-        <h1 className="text-2xl font-bold">Mis proyectos compartidos</h1>
-      </div>
-      <ProjectList
-        projects={projects || []}
-        isLoading={isLoading}
-        refreshProjects={refreshProjects}
-        isSharing
-
-      />
-    </div>
-  );
+	return (
+		<div className="w-full flex flex-col gap-4">
+			<div className="flex w-full justify-between border-b border-accent-100 py-2">
+				<h1 className="text-2xl font-bold">Mis proyectos compartidos</h1>
+			</div>
+			<ProjectList
+				projects={projects}
+				isLoading={isLoading}
+				refreshProjects={refreshProjects}
+				isSharing
+			/>
+		</div>
+	);
 };
 
 export default Page;

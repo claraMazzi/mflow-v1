@@ -20,13 +20,13 @@ export const createProject = async (prevState: ActionState, formData: FormData):
 
     // Extract data from FormData
     const projectData: CreateProyectFormData = {
-      name: formData.get("name") as string,
+      title: formData.get("title") as string,
       description: (formData.get("description") as string) || undefined,
     }
 
     // Validate required fields
-    if (!projectData.name?.trim()) {
-      return { error: "Project name is required" }
+    if (!projectData.title?.trim()) {
+      return { error: "Project title is required" }
     }
     
     const accessToken = session.auth 

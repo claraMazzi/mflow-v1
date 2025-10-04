@@ -3,18 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Button } from "@components/ui/common/button";
 import { Input } from "@components/ui/common/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@components/ui/Forms/form";
 import { passwordRegex } from "../../../../../../backend/src/config/regular-exp";
 import { Skeleton } from "@src/components/ui/skeleton";
 
@@ -117,12 +107,14 @@ export default function PasswordRecovery({
     <div className="min-h-screen flex items-center justify-center bg-purple-200 p-4">
       <div className="w-full max-w-xl flex flex-col gap-8 bg-white shadow-md rounded-md p-8 border border-gray-200">
         <h1 className="text-2xl font-bold mb-5">Restablece tu contraseña</h1>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <FormField
-              control={form.control}
-              name="password"
-              rules={{
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <div className="space-y-2">
+            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              New Password
+            </label>
+            <Input 
+              type="password" 
+              {...form.register("password", {
                 required: "Contraseña es requerida",
                 pattern: {
                   value: passwordRegex,
@@ -134,21 +126,20 @@ export default function PasswordRecovery({
                     return "Your passwords do no match";
                   }
                 },
-              }}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>New Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              })}
             />
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              rules={{
+            {form.formState.errors.password && (
+              <p className="text-sm text-red-600">{form.formState.errors.password.message}</p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              Confirm New Password
+            </label>
+            <Input 
+              type="password" 
+              {...form.register("confirmPassword", {
                 required: "Contraseña es requerida",
                 pattern: {
                   value: passwordRegex,
@@ -160,20 +151,15 @@ export default function PasswordRecovery({
                     return "Your passwords do no match";
                   }
                 },
-              }}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirm New Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              })}
             />
-            <Button type="submit">Reset Password</Button>
-          </form>
-        </Form>
+            {form.formState.errors.confirmPassword && (
+              <p className="text-sm text-red-600">{form.formState.errors.confirmPassword.message}</p>
+            )}
+          </div>
+          
+          <Button type="submit">Reset Password</Button>
+        </form>
       </div>
     </div>
   );

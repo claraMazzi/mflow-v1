@@ -4,7 +4,7 @@ import type { ProjectEntity } from "#types/project"
 import { getProjects, getSharedProjects } from "../components/dashboard/projects/actions/get-projects"
 
 export const useProjects = () => {
-  const [projects, setProjects] = useState<ProjectEntity[]>()
+  const [projects, setProjects] = useState<ProjectEntity[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -13,6 +13,8 @@ export const useProjects = () => {
       setIsLoading(true)
       setError(null)
       const response = await getProjects()
+
+      console.log('RESPONSE PRoJECTS', response);
       if (response.data && response.data.count > 0) {
         setProjects(response.data.projects)
       } else {
@@ -41,7 +43,7 @@ export const useProjects = () => {
 
 
 export const useSharedProjects = () => {
-  const [projects, setProjects] = useState<ProjectEntity[]>()
+  const [projects, setProjects] = useState<ProjectEntity[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 

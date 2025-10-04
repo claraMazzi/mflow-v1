@@ -1,17 +1,25 @@
+"use client";
+
 import Unauthorized from "@components/auth/Unauthorized";
 import { auth } from "@lib/auth";
+import { useSession } from "@node_modules/next-auth/react";
 
-export default async function Layout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const session = await auth()
+export default function Layout({ children }: { children: React.ReactNode }) {
+	const { data: session, status } = useSession();
 
-  if (!session) {
-    return <Unauthorized />;
-  }
+	// Show loading state while session is being fetched
+	if (status === "loading") {
+		return (
+			<div className="min-h-screen flex items-center justify-center bg-purple-400">
+				<div className="text-white text-lg">Cargando...</div>
+			</div>
+		);
+	}
 
-  return <> {children} 
-  </>;
+	// Only show unauthorized if session is definitely not available
+	if (!session) {
+		return <Unauthorized />;
+	}
+
+	return <> {children}</>;
 }

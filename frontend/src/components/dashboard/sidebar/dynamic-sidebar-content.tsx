@@ -16,14 +16,8 @@ import {
 import { getMenuItemsByRole } from "@components/dashboard/navigation";
 import { useEffect, useState } from "react";
 import cn from "clsx";
-type Team = {
-  name: string;
-  role: "modelador" | "admin" | "verificador";
-  logo: React.ElementType;
-};
 
 type DynamicSidebarContentProps = {
-  activeTeam: Team;
   userRoles?: string[];
   activeRole: string;
   activeSidebarOption: string;

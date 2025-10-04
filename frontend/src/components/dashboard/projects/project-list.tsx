@@ -146,8 +146,8 @@ const ProjectList = ({
                 ];
             return (
               <ContentCard
-                key={`${project}-${index}`}
-                title={project.name}
+                key={project.id}
+                title={project.title}
                 description={project.description}
                 options={popoverOptions}
                 decorators={getProjectDecorators(project)}

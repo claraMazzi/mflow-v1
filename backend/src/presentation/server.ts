@@ -85,7 +85,7 @@ export class Server {
 				lastName: "González",
 				email: "ana.admin@example.com",
 				password: hashedPassword,
-				roles: ["ADMIN"],
+				roles: ["MODELADOR" ,"ADMIN"],
 				emailValidated: true,
 			},
 			{
@@ -93,7 +93,7 @@ export class Server {
 				lastName: "Pérez",
 				email: "carlos.verificador@example.com",
 				password: hashedPassword,
-				roles: ["VERIFICADOR"],
+				roles: ["MODELADOR", "VERIFICADOR"],
 				emailValidated: false,
 			},
 			{
@@ -157,7 +157,7 @@ export class Server {
 		version.save();
 
 		const project = new ProjectModel({
-			name: "P1",
+			title: "P1",
 			description: "Whatever",
 			owner: user._id,
 		});

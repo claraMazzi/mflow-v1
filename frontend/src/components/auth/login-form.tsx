@@ -1,33 +1,25 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
-import { authenticate } from "./actions";
+import { signIn } from "next-auth/react";
 import { Button } from "@components/ui/common/button";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@components/ui/Forms/form";
 import { Input } from "@components/ui/common/input";
-import { startTransition } from "react";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+
 interface FormData {
   email: string;
   password: string;
 }
 
 export const LoginForm = () => {
-  const [errorMessage, formAction, isPending] = useActionState(
-    authenticate,
-    undefined
-  );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
     if (searchParams.get("reset") === "success") {
@@ -59,83 +51,95 @@ export const LoginForm = () => {
     }
   };
 
-  const handleSubmit = (data: FormData) => {
-    startTransition(() => {
-      const formData = new FormData();
-      formData.append("email", data.email);
-      formData.append("password", data.password);
-      formAction(formData);
-    });
+  const handleSubmit = async (data: FormData) => {
+    setIsPending(true);
+    setErrorMessage(null);
+
+    try {
+      const result = await signIn('credentials', {
+        email: data.email,
+        password: data.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setErrorMessage('Invalid credentials.');
+      } else if (result?.ok) {
+        router.push('/dashboard');
+      }
+    } catch {
+      setErrorMessage('Something went wrong.');
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <h1 className="text-3xl font-medium text-center text-purple-600">
-          MFLOW
-        </h1>
+    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <h1 className="text-3xl font-medium text-center text-purple-600">
+        MFLOW
+      </h1>
 
-        <FormField
-          control={form.control}
-          name="email"
-          rules={{
+      <div className="space-y-2">
+        <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+          Correo electrónico
+        </label>
+        <Input 
+          type="email" 
+          placeholder="tu@email.com" 
+          {...form.register("email", {
             required: "Email is required",
             pattern: { value: /^\S+@\S+$/i, message: "Invalid email" },
-          }}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Correo electrónico</FormLabel>
-              <FormControl>
-                <Input type="email" placeholder="tu@email.com" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          })}
         />
-
-        <FormField
-          control={form.control}
-          name="password"
-          rules={{ required: "Password is required" }}
-          render={({ field }) => (
-            <FormItem>
-              <div className="flex items-center justify-between">
-                <FormLabel>Contraseña</FormLabel>
-                <Link
-                  href="/forgot-password"
-                  className="text-sm text-gray-600 hover:text-purple-600 hover:underline"
-                >
-                  ¿Olvidaste tu contraseña?
-                </Link>
-              </div>
-              <FormControl>
-                <Input type="password" placeholder="Tu contraseña" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {errorMessage && (
-          <p className="text-sm text-red-600">{parseErrorMessage()}</p>
+        {form.formState.errors.email && (
+          <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
         )}
+      </div>
 
-        <div className="flex flex-nowrap justify-center gap-2">
-          <Button type="submit" isLoading={isPending} className="w-full">
-            INICIAR SESION
-          </Button>
-
-          <Button
-            as="a"
-            href="/register"
-            variant="outline"
-            isLoading={isPending}
-            className="w-full"
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            Contraseña
+          </label>
+          <Link
+            href="/forgot-password"
+            className="text-sm text-gray-600 hover:text-purple-600 hover:underline"
           >
-            CREAR CUENTA
-          </Button>
+            ¿Olvidaste tu contraseña?
+          </Link>
         </div>
-      </form>
-    </Form>
+        <Input 
+          type="password" 
+          placeholder="Tu contraseña" 
+          {...form.register("password", {
+            required: "Password is required"
+          })}
+        />
+        {form.formState.errors.password && (
+          <p className="text-sm text-red-600">{form.formState.errors.password.message}</p>
+        )}
+      </div>
+
+      {errorMessage && (
+        <p className="text-sm text-red-600">{parseErrorMessage()}</p>
+      )}
+
+      <div className="flex flex-nowrap justify-center gap-2">
+        <Button type="submit" isLoading={isPending} className="w-full">
+          INICIAR SESION
+        </Button>
+
+        <Button
+          as="a"
+          href="/register"
+          variant="outline"
+          isLoading={isPending}
+          className="w-full"
+        >
+          CREAR CUENTA
+        </Button>
+      </div>
+    </form>
   );
 };

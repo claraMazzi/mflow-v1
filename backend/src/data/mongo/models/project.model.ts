@@ -2,7 +2,7 @@ import { Schema, model } from "mongoose";
 
 const projectSchema = new Schema(
 	{
-		name: {
+		title: {
 			type: String,
 			required: [true, "El campo nombre del proyecto es obligatorio."],
 		},

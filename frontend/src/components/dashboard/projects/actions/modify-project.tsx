@@ -24,7 +24,7 @@ export const modifyProject = async (prevState: ActionState, formData: FormData):
 
     // Extract data from FormData
     const projectData = {
-      name: formData.get("name") as string,
+      title: formData.get("title") as string,
       description: (formData.get("description") as string) || undefined,
     }
 

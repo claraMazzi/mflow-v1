@@ -1,6 +1,6 @@
 export type ProjectEntity = {
   id: string;
-  name: string;
+  title: string;
   description: string;
   owner: string;
   collaborators: ReducedUserEntity[];

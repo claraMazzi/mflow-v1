@@ -1,8 +1,8 @@
 
 
-  export type Team = {
+  export type Role = {
     name: string;
-    role: "modelador" | "admin" | "verificador";
+    roleId: "modelador" | "admin" | "verificador";
     logo: React.ElementType;
   };
 

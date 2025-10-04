@@ -72,7 +72,7 @@ export const ProjectInvitationForm = ({
       </h1>
 
       <div>
-        ¿Desea participar en <strong>{project.name}</strong>?
+        ¿Desea participar en <strong>{project.title}</strong>?
       </div>
       <div className="grid grid-cols-2 w-full gap-2">
         <Button
