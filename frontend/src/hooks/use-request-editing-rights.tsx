@@ -90,6 +90,9 @@ export function useEditingRequests({
 						}
 					})
 				);
+				console.log("Emitting event:", eventName, { roomId, requestId });
+				console.log("pendingEditingRequests", pendingEditingRequests);
+				console.log('-----------------*******************')
 				socket.emit(eventName, { roomId, requestId });
 			};
 		},

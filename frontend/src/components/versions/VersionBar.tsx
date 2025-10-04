@@ -34,17 +34,35 @@ const VersionBar = ({
 
   // Get pending requests that have valid collaborators
   const validPendingRequests = useMemo(() => {
+    console.log("pendingEditingRequests!!!!!!", pendingEditingRequests);
+
     return pendingEditingRequests
       .filter((r): r is ActiveEditingRequest => r.status === "pending")
       .filter((r) => collaborators.get(r.requesterUserId));
-  }, [pendingEditingRequests, collaborators]);
+  }, [pendingEditingRequests]);
+
+  useEffect(() => {
+    console.log("validPendingRequests!!!!!!", validPendingRequests);
+  }, [validPendingRequests]);
 
   // Show toast for each pending request
   useEffect(() => {
+    // First, clean up shown requests that are no longer pending
+    const currentRequestIds = new Set(
+      validPendingRequests.map((r) => r.requestId!)
+    );
+    shownRequestsRef.current.forEach((requestId) => {
+      if (!currentRequestIds.has(requestId)) {
+        shownRequestsRef.current.delete(requestId);
+      }
+    });
+    console.log("--------------------------------");
+    console.log("validPendingRequests", validPendingRequests);
+
+    // Then, add toasts for new pending requests
     validPendingRequests.forEach((request) => {
-      console.log("--------------------------------");
-      console.log("Request:", request);
-      console.log("Shown requests:", shownRequestsRef.current);
+      // console.log("Request:", request.requestId);
+      // console.log("Shown requests:", shownRequestsRef.current);
     //   console.log("Shown requests has:", shownRequestsRef.current.has(request.requestId!));
       if (!shownRequestsRef.current.has(request.requestId!)) {
         // console.log("Adding editing request toast for request:", request);
@@ -60,21 +78,11 @@ const VersionBar = ({
         });
       }
     });
-
-    // Clean up shown requests that are no longer pending
-    const currentRequestIds = new Set(
-      validPendingRequests.map((r) => r.requestId!)
-    );
-    shownRequestsRef.current.forEach((requestId) => {
-      if (!currentRequestIds.has(requestId)) {
-        shownRequestsRef.current.delete(requestId);
-      }
-    });
   }, [
     validPendingRequests,
-    collaborators,
-    addEditingRequestToast,
-    handleEditingRequestEvaluation,
+    // collaborators,
+    // addEditingRequestToast,
+    // handleEditingRequestEvaluation,
   ]);
 
   return (
