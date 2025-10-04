@@ -213,7 +213,7 @@ export default function Page({
     }
 
     function onUsersInRoomChange({ roomState }: UsersInRoomChangePayload) {
-      console.log("users-in-room-chage: ", roomState);
+      // console.log("users-in-room-chage: ", roomState);
       const previousEditorUserId = collaborators
         .values()
         .find((c) => c.hasEditingRights)?.userId;

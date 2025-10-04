@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import React, { FC, ReactNode, useCallback, useEffect, useMemo } from 'react'
+import { useCrossTabCommunication } from '@hooks/use-cross-tab-communication'
 
 type Nullable<T> = T | null
 
@@ -187,10 +188,19 @@ function uiReducer(state: State, action: Action) {
 export const UIProvider: FC<{ children?: ReactNode }> = ({ ...props }) => {
   const [state, dispatch] = React.useReducer(uiReducer, initialState)
   const pathname = usePathname()
+  const { listenToEvents, broadcastEvent } = useCrossTabCommunication()
 
   useEffect(() => {
     dispatch({ type: 'RESET' })
   }, [pathname])
+
+  // Listen for cross-tab toast removal events
+  useEffect(() => {
+    const unsubscribe = listenToEvents('toast-removed', (toastId) => {
+      dispatch({ type: 'REMOVE_EDITING_REQUEST_TOAST', id: toastId })
+    })
+    return unsubscribe
+  }, [listenToEvents])
 
   const reset = useCallback(() => dispatch({ type: 'RESET' }), [dispatch])
   const openAlert = useCallback(
@@ -233,8 +243,15 @@ export const UIProvider: FC<{ children?: ReactNode }> = ({ ...props }) => {
   )
 
   const removeEditingRequestToast = useCallback(
-    (id: string) => dispatch({ type: 'REMOVE_EDITING_REQUEST_TOAST', id }),
-    [dispatch]
+    (id: string) => {
+      dispatch({ type: 'REMOVE_EDITING_REQUEST_TOAST', id })
+      // Broadcast to other tabs
+      broadcastEvent({
+        type: 'toast-removed',
+        data: { toastId: id, timestamp: Date.now() }
+      })
+    },
+    [dispatch, broadcastEvent]
   )
 
   const value = useMemo(

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { Button } from "@components/ui/common/button";
 import {
   ActiveEditingRequest,
@@ -29,7 +29,7 @@ const VersionBar = ({
   collaborators,
   handleEditingRequestEvaluation,
 }: VersionBarProps) => {
-  const { addEditingRequestToast } = useUI();
+  const { addEditingRequestToast, removeEditingRequestToast } = useUI();
   const shownRequestsRef = useRef<Set<string>>(new Set());
 
   // Show toast for each pending request
@@ -47,6 +47,8 @@ const VersionBar = ({
     shownRequestsRef.current.forEach((requestId) => {
       if (!currentRequestIds.has(requestId)) {
         shownRequestsRef.current.delete(requestId);
+        // Remove the toast from UI context and broadcast to other tabs
+        removeEditingRequestToast(requestId);
       }
     });
 
@@ -66,7 +68,11 @@ const VersionBar = ({
       }
     });
   }, [
-    pendingEditingRequests
+    pendingEditingRequests,
+    // addEditingRequestToast,
+    // removeEditingRequestToast,
+    // collaborators,
+    // handleEditingRequestEvaluation
   ]);
 
   return (
