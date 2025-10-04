@@ -81,15 +81,15 @@ export const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-            Nombre del proyecto <span className="text-sm text-red-600"> *</span>
+            Título del proyecto <span className="text-sm text-red-600"> *</span>
           </label>
           <span className="text-sm text-gray-500">Máximo 100 caracteres</span>
         </div>
         <Input 
           type="text" 
-          placeholder="MiProyecto" 
+          placeholder="Mi Proyecto" 
           {...form.register("title", {
-            required: "El nombre del proyecto es requerido",
+            required: "El título del proyecto es requerido",
             maxLength: {
               value: 100,
               message: "Máximo 100 caracteres"
