@@ -106,6 +106,9 @@ type Action =
       id: string
     }
   | {
+      type: 'REMOVE_ALL_EDITING_REQUEST_TOASTS'
+    }
+  | {
       type: 'RESET'
     }
 
@@ -179,6 +182,12 @@ function uiReducer(state: State, action: Action) {
         ),
       }
     }
+    case 'REMOVE_ALL_EDITING_REQUEST_TOASTS': {
+      return {
+        ...state,
+        editingRequestToasts: [],
+      }
+    }
     case 'RESET': {
       return initialState
     }
@@ -197,7 +206,11 @@ export const UIProvider: FC<{ children?: ReactNode }> = ({ ...props }) => {
   // Listen for cross-tab toast removal events
   useEffect(() => {
     const unsubscribe = listenToEvents('toast-removed', (toastId) => {
-      dispatch({ type: 'REMOVE_EDITING_REQUEST_TOAST', id: toastId })
+      if (toastId === 'all') {
+        dispatch({ type: 'REMOVE_ALL_EDITING_REQUEST_TOASTS' })
+      } else {
+        dispatch({ type: 'REMOVE_EDITING_REQUEST_TOAST', id: toastId })
+      }
     })
     return unsubscribe
   }, [listenToEvents])
@@ -254,6 +267,18 @@ export const UIProvider: FC<{ children?: ReactNode }> = ({ ...props }) => {
     [dispatch, broadcastEvent]
   )
 
+  const removeAllEditingRequestToasts = useCallback(
+    () => {
+      dispatch({ type: 'REMOVE_ALL_EDITING_REQUEST_TOASTS' })
+      // Broadcast to other tabs
+      broadcastEvent({
+        type: 'toast-removed',
+        data: { toastId: 'all', timestamp: Date.now() }
+      })
+    },
+    [dispatch, broadcastEvent]
+  )
+
   const value = useMemo(
     () => ({
       ...state,
@@ -266,6 +291,7 @@ export const UIProvider: FC<{ children?: ReactNode }> = ({ ...props }) => {
       addToasterBox,
       addEditingRequestToast,
       removeEditingRequestToast,
+      removeAllEditingRequestToasts,
       reset,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
