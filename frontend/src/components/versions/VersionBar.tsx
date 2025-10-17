@@ -20,6 +20,7 @@ interface VersionBarProps {
     requestId: string;
     action: "accept" | "decline";
   }) => () => void;
+  title: string;
 }
 
 const VersionBar = ({
@@ -28,6 +29,7 @@ const VersionBar = ({
   pendingEditingRequests,
   collaborators,
   handleEditingRequestEvaluation,
+  title,
 }: VersionBarProps) => {
   const { addEditingRequestToast, removeEditingRequestToast } = useUI();
   const shownRequestsRef = useRef<Set<string>>(new Set());
@@ -77,7 +79,9 @@ const VersionBar = ({
 
   return (
     <div className="bg-blue-50 h-16 flex justify-between items-center p-4">
-      <div className="">
+      <div className="flex items-center w-full justify-between">
+        <p className="text-lg font-bold">{title}</p>
+        {/* TODO: add active collaborators avatars */}
         <Button
           disabled={!canUserSendEditingRequest}
           onClick={handleRequestEditingRights}

@@ -64,6 +64,8 @@ type Assumption = {
 
 export type ConceptualModel = {
 	objective: string;
+	name: string;
+	description: string;
 	simplifications: Simplification[];
 	assumptions: Assumption[];
 	structureDiagram: Diagram;
@@ -71,4 +73,10 @@ export type ConceptualModel = {
 	inputs: Input[];
 	outputs: Output[];
 	entities: Entity[];
+};
+
+export type Version = {
+	conceptualModel: ConceptualModel;
+	imageInfos: ImageInfo[];
+	title: string;
 };

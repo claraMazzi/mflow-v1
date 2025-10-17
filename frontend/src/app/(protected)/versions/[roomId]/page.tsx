@@ -20,12 +20,13 @@ import {
 import { useSession } from "next-auth/react";
 import { useEditingRequests } from "@hooks/use-request-editing-rights";
 import { useSocketConnection } from "@hooks/use-socket-connection";
-import ObjetivosSuposiciones from "@components/conceptual-model/ObjetivosSuposiciones";
-import DiagramaEstructuraEntidades from "@components/conceptual-model/DiagramaEstructuraEntidades";
+import DescripcionDelSistema from "@components/conceptual-model/DescripcionDelSistema";
 import React from "react";
 import VersionBar from "@components/versions/VersionBar";
 import { CLIENT_WS_EVENT_TYPES, Collaborator, InitializeConceptualModelPayload, JoinRoomEventPayload, SERVER_WS_EVENT_TYPES, SocketPosition, UsersInRoomChangePayload } from "#types/collaboration";
 import { parsePropertyPath } from "@lib/utils";
+import DiagramaEstructura from "@components/conceptual-model/DiagramaEstructura";
+import DiagramaDinamicaEntidades from "@components/conceptual-model/DiagramaDinamicaEntidades";
 
 function throttle(func: any, delay: number) {
   let timeout: NodeJS.Timeout | null = null;
@@ -54,9 +55,9 @@ export default function Page({
   const { roomId } = React.use(params); // ✅ unwrap the promise
 
   // const [roomId, setRoomId] = useState(versionId); //esta hardcodeado -agregar el id a la ruta roomID y versionId son lo mismo
-  const [currentTab, setCurrentTab] = useState("objetivo-suposiciones");
+  const [currentTab, setCurrentTab] = useState("descripcion-sistema");
   const [isModelInitialized, setIsModelInitialized] = useState(false);
-
+  const [title, setTitle] = useState("");
   const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(
     new Map()
   );
@@ -84,6 +85,7 @@ export default function Page({
   );
   const { register, control, setValue, watch, getValues, reset } =
     useForm<ConceptualModel>();
+
   const simplificationList = useFieldArray({
     name: "simplifications",
     control,
@@ -234,10 +236,12 @@ export default function Page({
     }
 
     function onInitializeConceptualModel({
-      conceptualModel,
+      version,
       imageInfos,
     }: InitializeConceptualModelPayload) {
-      console.log("Initial State: ", conceptualModel);
+      console.log("Initial State: ", version);
+      const conceptualModel = version.conceptualModel;
+      setTitle(version.title);
       reset(conceptualModel);
       const newImageInfos = new Map<string, ImageInfo>();
       imageInfos
@@ -416,6 +420,7 @@ export default function Page({
         pendingEditingRequests={pendingEditingRequests}
         collaborators={collaborators}
         handleEditingRequestEvaluation={handleEditingRequestEvaluation}
+      title={title}
       />
 
       {!isModelInitialized ? (
@@ -426,27 +431,31 @@ export default function Page({
             console.log("Form Submitted");
             e.preventDefault();
           }}
-          className="flex flex-col"
+          className="flex flex-col overflow-hidden"
         >
           <br />
           <Tabs
             value={currentTab}
             onValueChange={handleCurrentTabChange}
-            defaultValue="objetivo-suposiciones"
+            defaultValue="descripcion-sistema"
+            orientation="vertical"
           >
-            <TabsList className="flex h-auto items-stretch">
-              <TabsTrigger value="objetivo-suposiciones">
-                Objetivo y Suposiciones
+            <TabsList className="h-full  flex ">
+              <TabsTrigger value="descripcion-sistema" className="word-break">
+                Descripción del Sistema
               </TabsTrigger>
-              <TabsTrigger value="diagrama-estructura-entidades">
+              <TabsTrigger value="diagrama-estructura">
                 Diagrama de Estructura
               </TabsTrigger>
               <TabsTrigger value="diagrama-dinamica-entidades">
-                Entidades y Diagramas Dinámica
+              Entidades y Diagramas Dinámica
+              </TabsTrigger>
+              <TabsTrigger value="objetivos-entradas-salidas">
+                Objetivos, Entradas y Salidas
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="objetivo-suposiciones">
-              <ObjetivosSuposiciones
+            <TabsContent value="descripcion-sistema" className="">
+              <DescripcionDelSistema
                 hasEditingRights={hasEditingRights}
                 assumptionList={assumptionList}
                 simplificationList={simplificationList}
@@ -456,8 +465,20 @@ export default function Page({
                 handleRemoveItemFromList={handleRemoveItemFromList}
               />
             </TabsContent>
-            <TabsContent value="diagrama-estructura-entidades">
-              <DiagramaEstructuraEntidades
+            
+            <TabsContent value="diagrama-estructura" className="">
+              <DiagramaEstructura
+                sessionToken={session?.auth}
+                versionId={roomId}
+                hasEditingRights={hasEditingRights}
+                imageInfos={imageInfos}
+                watch={watch}
+                customRegisterField={customRegisterField}
+              />
+            </TabsContent>
+
+            <TabsContent value="diagrama-dinamica-entidades">
+              <DiagramaDinamicaEntidades
                 sessionToken={session?.auth}
                 versionId={roomId}
                 hasEditingRights={hasEditingRights}

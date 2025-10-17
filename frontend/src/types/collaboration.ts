@@ -1,4 +1,4 @@
-import { ConceptualModel } from "./conceptual-model";
+import { Version } from "./conceptual-model";
 
 //mover a #types
 export type BaseSocketEventPayload = { type: string; timestamp: Date };
@@ -29,7 +29,7 @@ export type UsersInRoomChangePayload = BaseSocketEventPayload & {
 
 export type InitializeConceptualModelPayload = BaseSocketEventPayload & {
   type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL;
-  conceptualModel: ConceptualModel;
+  version: Version;
   imageInfos: {
     id: string;
     createdAt: string;

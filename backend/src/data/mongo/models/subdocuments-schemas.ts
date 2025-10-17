@@ -54,6 +54,14 @@ export const conceptualModelSchema = new Schema({
 		type: String,
 		default: "",
 	},
+	name : {
+		type: String,
+		default: "",
+	},
+	description: {
+		type: String,
+		default: "",
+	},
 	//The internal id automatically added by mongoose.
 	//https://mongoosejs.com/docs/subdocs.html#altsyntaxarrays
 	simplifications: [{ description: String }],

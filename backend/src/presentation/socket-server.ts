@@ -13,6 +13,7 @@ import { jwtAdapter } from "../config";
 import { UserModel } from "../data";
 import { getProperty, setValue } from "../types/socket-events";
 import { ConceptualModel } from "../data/mongo/models/subdocuments-schemas";
+import { Version } from "../data/mongo/models/version.model";
 import { VersionImage } from "../data/mongo/models/version-image.model";
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
@@ -43,7 +44,7 @@ type UsersInRoomChangePayload = BaseSocketEventPayload & {
 
 type InitializeConceptualModelPayload = BaseSocketEventPayload & {
 	type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL;
-	conceptualModel: ConceptualModel;
+	version: Version;
 	imageInfos: (Pick<
 		VersionImage,
 		"originalFilename" | "url" | "createdAt" | "sizeInBytes"
@@ -218,7 +219,7 @@ export class SocketServer {
 		const collabRoom = this.activeCollaborationRooms.get(version.id)!;
 
 		this.emitInitializeConceptualModel(socket, {
-			conceptualModel: version.conceptualModel,
+			version: version,
 			imageInfos: version.imageInfos,
 		});
 
@@ -252,7 +253,7 @@ export class SocketServer {
 		});
 	}
 
-	//agregar un handler pare el text field de plantext change. 
+	// TODO agregar un handler pare el text field de plantext change. 
 
 	/*
 	cuando el plantext code cambia el servidor es el encargado de generar la URL de la imagen plant text y enviarsela a todos los clientes para quee la actualice en el front. 
@@ -565,10 +566,10 @@ export class SocketServer {
 	public emitInitializeConceptualModel(
 		socket: Socket, 
 		{
-			conceptualModel,
+			version,
 			imageInfos,
 		}: {
-			conceptualModel: ConceptualModel;
+			version: Version;
 			imageInfos: (Pick<
 				VersionImage,
 				"originalFilename" | "url" | "createdAt" | "sizeInBytes"
@@ -581,7 +582,7 @@ export class SocketServer {
 		socket.emit(SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL, {
 			type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
 			timestamp: new Date(),
-			conceptualModel,
+			version,
 			imageInfos,
 		} satisfies InitializeConceptualModelPayload);
 	}

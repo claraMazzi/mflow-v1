@@ -141,6 +141,8 @@ export class Server {
 			title: "Version 1",
 			conceptualModel: {
 				objective: "",
+				name: "",
+				description: "",
 				structureDiagram: {
 					usesPlantText: true,
 					plantTextCode: "",
