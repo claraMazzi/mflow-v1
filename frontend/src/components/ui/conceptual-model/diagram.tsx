@@ -442,6 +442,7 @@ export const DiagramImageUpload = ({
 						<div className="relative overflow-hidden rounded-lg border h-screen">
 							<Image
 								src={plantTextImageUrl}
+								fill
 								alt="PlantText Diagram"
 								className="w-full h-full object-contain bg-white"
 							/>
