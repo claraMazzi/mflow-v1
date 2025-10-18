@@ -285,6 +285,21 @@ export default function Page({
       }
     }
 
+    function onPlantTextImageUpdate({
+      propertyPath,
+      imageUrl,
+      plantTextToken,
+    }: {
+      propertyPath: string;
+      imageUrl: string;
+      plantTextToken: string;
+    }) {
+      console.log(`PlantText image updated for ${propertyPath}:`, imageUrl);
+      // Update the plantTextToken in the form data
+      const parsedPath: any = parsePropertyPath(getValues(), propertyPath);
+      setValue(parsedPath, { ...getValues(parsedPath), plantTextToken });
+    }
+
     socket.on("field-update", onFieldUpdate);
     socket.on("item-added-to-list", onItemAddedToList);
     socket.on("item-removed-from-list", onItemRemovedFromList);
@@ -294,6 +309,7 @@ export default function Page({
       onInitializeConceptualModel
     );
     socket.on(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, onUsersInRoomChange);
+    socket.on(SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE, onPlantTextImageUpdate);
 
     return () => {
       socket.off("field-update", onFieldUpdate);
@@ -308,6 +324,7 @@ export default function Page({
         SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
         onUsersInRoomChange
       );
+      socket.off(SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE, onPlantTextImageUpdate);
     };
   }, [isSocketConnected]);
 
@@ -474,6 +491,7 @@ export default function Page({
                 imageInfos={imageInfos}
                 watch={watch}
                 customRegisterField={customRegisterField}
+                socket={socket}
               />
             </TabsContent>
 
@@ -488,6 +506,7 @@ export default function Page({
                 customRegisterField={customRegisterField}
                 handleAddItemToList={handleAddItemToList}
                 handleRemoveItemFromList={handleRemoveItemFromList}
+                socket={socket}
               />
             </TabsContent>
           </Tabs>

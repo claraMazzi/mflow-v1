@@ -15,16 +15,25 @@ import { getProperty, setValue } from "../types/socket-events";
 import { ConceptualModel } from "../data/mongo/models/subdocuments-schemas";
 import { Version } from "../data/mongo/models/version.model";
 import { VersionImage } from "../data/mongo/models/version-image.model";
+const plantumlEncoder = require("plantuml-encoder");
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
 enum CLIENT_WS_EVENT_TYPES {
 	JOIN_ROOM = "join-room",
+	PLANT_TEXT_CODE_CHANGE = "plant-text-code-change",
 }
 
 type JoinRoomEventPayload = BaseSocketEventPayload & {
 	type: CLIENT_WS_EVENT_TYPES.JOIN_ROOM;
 	roomId: string;
+};
+
+type PlantTextCodeChangePayload = BaseSocketEventPayload & {
+	type: CLIENT_WS_EVENT_TYPES.PLANT_TEXT_CODE_CHANGE;
+	versionId: string;
+	propertyPath: string;
+	plantTextCode: string;
 };
 
 type UsersInRoomChangePayload = BaseSocketEventPayload & {
@@ -53,9 +62,17 @@ type InitializeConceptualModelPayload = BaseSocketEventPayload & {
 	})[];
 };
 
+type PlantTextImageUpdatePayload = BaseSocketEventPayload & {
+	type: SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE;
+	propertyPath: string;
+	imageUrl: string;
+	plantTextToken: string;
+};
+
 enum SERVER_WS_EVENT_TYPES {
 	USERS_IN_ROOM_CHANGE = "users-in-room-change",
 	INITIALIZE_CONCEPTUAL_MODEL = "initialize-conceptual-model",
+	PLANT_TEXT_IMAGE_UPDATE = "plant-text-image-update",
 }
 
 export class SocketServer {
@@ -169,6 +186,11 @@ export class SocketServer {
 			"remove-item-from-list",
 			(payload: { roomId: string; listPropertyPath: string; itemId: string }) =>
 				this.handleRemoveItemFromList(socket, payload)
+		);
+
+		socket.on(
+			CLIENT_WS_EVENT_TYPES.PLANT_TEXT_CODE_CHANGE,
+			(payload: PlantTextCodeChangePayload) => this.handlePlantTextCodeChange(socket, payload)
 		);
 
 		socket.on("disconnecting", () => this.handleDisconnecting(socket));
@@ -286,7 +308,7 @@ export class SocketServer {
 		);
 
 		setValue(version.conceptualModel, payload.propertyPath, payload.value);
-		console.log("Version Conceptual Model: ", version.conceptualModel);
+		// console.log("Version Conceptual Model: ", version.conceptualModel);
 		version.save();
 		//agregar try catch para manejar errores 
 
@@ -522,6 +544,56 @@ export class SocketServer {
 		});
 	}
 
+	private async handlePlantTextCodeChange(
+		socket: Socket,
+		payload: PlantTextCodeChangePayload
+	) {
+		console.log('-----------plant-text-code-change')
+		try {
+			const { version } = await this.versionService.getVersionById(
+				payload.versionId
+			);
+
+			// Get the diagram object from the property path
+			const diagram = getProperty(version.conceptualModel, payload.propertyPath);
+			
+			if (!diagram) {
+				console.error(`Diagram not found at property path: ${payload.propertyPath}`);
+				return;
+			}
+
+			// Generate token for the plantTextCode
+			const plantTextToken = plantumlEncoder.encode(payload.plantTextCode);
+			
+			// Check if the token has changed to avoid unnecessary updates
+			if (diagram.plantTextToken === plantTextToken) {
+				return; // No change, skip update
+			}
+
+			// Update the diagram with new plantTextCode and token
+			diagram.plantTextCode = payload.plantTextCode;
+			diagram.plantTextToken = plantTextToken;
+			
+			// Save the version
+			await version.save();
+
+			// Generate the image URL
+			const imageUrl = `http://www.plantuml.com/plantuml/img/${plantTextToken}`;
+
+			console.log("imageUrl", imageUrl);
+			// Emit the plantText image update to all clients in the room
+			this.emitPlantTextImageUpdate(payload.versionId, {
+				propertyPath: payload.propertyPath,
+				imageUrl,
+				plantTextToken,
+			});
+
+			console.log(`PlantText image updated for property: ${payload.propertyPath}`);
+		} catch (error) {
+			console.error("Error handling plantText code change:", error);
+		}
+	}
+
 	private async handleDisconnecting(socket: Socket) {
 		console.info("Socket Disconnected ", socket.id);
 		for (const roomId of Array.from(socket.rooms)) {
@@ -709,6 +781,19 @@ export class SocketServer {
 			listPropertyPath: payload.listPropertyPath,
 			itemId: payload.itemId,
 		});
+	}
+
+	public emitPlantTextImageUpdate(
+		roomId: string,
+		payload: { propertyPath: string; imageUrl: string; plantTextToken: string }
+	) {
+		this.socketServer.to(roomId).emit(SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE, {
+			type: SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE,
+			propertyPath: payload.propertyPath,
+			imageUrl: payload.imageUrl,
+			plantTextToken: payload.plantTextToken,
+			timestamp: new Date(),
+		} satisfies PlantTextImageUpdatePayload);
 	}
 
 	public getCollaborationRoomState({ roomId }: { roomId: string }) {

@@ -51,6 +51,7 @@ interface DiagramaEstructuraEntidadesProps {
     listPropertyPath: string;
     itemId: string;
   }) => void;
+  socket?: any;
 }
 
 export default function DiagramaEstructuraEntidades({
@@ -63,6 +64,7 @@ export default function DiagramaEstructuraEntidades({
   customRegisterField,
   handleAddItemToList,
   handleRemoveItemFromList,
+  socket
 }: DiagramaEstructuraEntidadesProps) {
 
   const addItemToList = ({
@@ -104,6 +106,7 @@ export default function DiagramaEstructuraEntidades({
 
   return (
     <div className="flex flex-col gap-6 p-6 bg-white rounded-lg shadow-sm">
+        
       {/* Entities Section */}
       <div className="space-y-4">
         {/* <div className="flex items-center justify-between">

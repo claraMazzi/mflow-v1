@@ -29,6 +29,8 @@ interface DiagramaEstructuraProps {
     name: Path<ConceptualModel>;
     ref: (instance: HTMLInputElement | HTMLTextAreaElement | null) => void;
   };
+  socket?: any;
+  register?: any;
 }
 
 export default function DiagramaEstructura({
@@ -37,12 +39,13 @@ export default function DiagramaEstructura({
   hasEditingRights,
   imageInfos,
   watch,
+  socket,
+  customRegisterField
   }: DiagramaEstructuraProps) {
   return (
     <div className="flex flex-col gap-6 p-6 bg-white rounded-lg shadow-sm">
       {/* Diagram Upload Section */}
       <div className="space-y-4">
-        <h2 className="text-lg font-medium text-gray-900">Diagrama de Estructura</h2>
         <DiagramImageUpload
           sessionToken={sessionToken}
           versionId={versionId}
@@ -52,6 +55,8 @@ export default function DiagramaEstructura({
           watch={watch}
           namePathPrefix="structureDiagram"
           diagramPropertyPath="structureDiagram"
+          socket={socket}
+          register={customRegisterField}
         />
       </div>
 
