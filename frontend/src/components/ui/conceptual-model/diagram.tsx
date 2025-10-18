@@ -10,7 +10,6 @@ import {
 	useState,
 } from "react";
 import { Path } from "react-hook-form";
-import { Dialog } from "../common/dialog/dialog";
 import {
 	AlertCircle,
 	CheckCircle,
@@ -19,6 +18,7 @@ import {
 	Upload,
 	X,
 } from "lucide-react";
+import Image from "next/image";
 
 function debounce(func: any, delay: number) {
 	let timeout: NodeJS.Timeout | null = null;
@@ -189,6 +189,7 @@ export const DiagramImageUpload = ({
 	const debouncedEmitPlantTextChange = useRef(
 		debounce((value: any, propertyPath: string) => {
 			if (socket && versionId && hasEditingRights) {
+				console.log("Emitting plant-text-code-change:", value);
 				socket.emit("plant-text-code-change", {
 					type: "plant-text-code-change",
 					versionId,
@@ -200,12 +201,28 @@ export const DiagramImageUpload = ({
 		}, DEBOUNCE_DIAGRAM_RENDER_DELAY)
 	);
 
+
 	useEffect(() => {
 		if (usesPlantTextValue && plantTextCodeValue) {
 			// Emit plantTextCode change to server instead of generating image locally
 			debouncedEmitPlantTextChange.current(plantTextCodeValue, diagramPropertyPath);
 		}
 	}, [plantTextCodeValue, usesPlantTextValue, diagramPropertyPath]);
+
+	// Get existing plantText image on component mount if there's existing code
+	const hasRequestedInitialImage = useRef(false);
+	useEffect(() => {
+		if (usesPlantTextValue && plantTextCodeValue && socket && versionId && !hasRequestedInitialImage.current) {
+			// Request existing image without generating a new one
+			hasRequestedInitialImage.current = true;
+			socket.emit("plant-text-get-image", {
+				type: "plant-text-get-image",
+				versionId,
+				propertyPath: diagramPropertyPath,
+				timestamp: new Date(),
+			});
+		}
+	}, [usesPlantTextValue, plantTextCodeValue, socket, versionId, diagramPropertyPath]);
 
 	// Listen for plantText image updates from server
 	useEffect(() => {
@@ -401,6 +418,17 @@ export const DiagramImageUpload = ({
 								name: `${namePathPrefix}.plantTextCode`,
 								propertyPath: `${diagramPropertyPath}.plantTextCode`,
 							})}
+							onBlur={(e) => {
+								// Request existing image on blur to ensure the image is shown
+								if (e.target.value && socket && versionId) {
+									socket.emit("plant-text-get-image", {
+										type: "plant-text-get-image",
+										versionId,
+										propertyPath: diagramPropertyPath,
+										timestamp: new Date(),
+									});
+								}
+							}}
 							placeholder="Ingresa tu código PlantText aquí..."
 							className="w-full h-32 p-3 border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 						/>
@@ -411,11 +439,11 @@ export const DiagramImageUpload = ({
 				{usesPlantTextValue && plantTextImageUrl && (
 					<div className="space-y-2">
 						<label className="text-sm font-medium">Vista previa del diagrama:</label>
-						<div className="relative overflow-hidden rounded-lg border">
-							<img
+						<div className="relative overflow-hidden rounded-lg border h-screen">
+							<Image
 								src={plantTextImageUrl}
 								alt="PlantText Diagram"
-								className="w-full h-48 object-contain bg-white"
+								className="w-full h-full object-contain bg-white"
 							/>
 						</div>
 					</div>
@@ -438,7 +466,7 @@ export const DiagramImageUpload = ({
 				)}
 
 				{/* Upload Area or File Display */}
-				{/* {!usesPlantTextValue &&  */}
+				{!usesPlantTextValue && 
 				<>
 				{!hasFile ? (
 					<div
@@ -559,7 +587,7 @@ export const DiagramImageUpload = ({
 					)}
 				</div>
 				</>
-				{/* } */}
+				}
 			</div>
 		</div>
 	);
