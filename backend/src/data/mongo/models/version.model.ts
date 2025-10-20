@@ -15,6 +15,7 @@ const versionSchema = new Schema(
 		parentVersion: {
 			type: Schema.Types.ObjectId,
 			ref: "Version",
+			default: null,
 		},
 		sharedWithReaders: {
 			type: [Schema.Types.ObjectId],
@@ -41,6 +42,6 @@ const versionSchema = new Schema(
 	{ timestamps: true }
 );
 
-export type Version = InferSchemaType<typeof versionSchema>;
+export type Version = InferSchemaType<typeof versionSchema> & { id: string };
 
 export const VersionModel = model("Version", versionSchema);

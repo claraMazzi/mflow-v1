@@ -13,10 +13,12 @@ const verifierRequestSchema = new Schema(
 		reviewer: {
 			type: Schema.Types.ObjectId,
 			ref: "User",
+			default: null,
 		},
 		assignedVerifier: {
 			type: Schema.Types.ObjectId,
 			ref: "User",
+			default: null,
 		},
 		version: {
 			type: Schema.Types.ObjectId,

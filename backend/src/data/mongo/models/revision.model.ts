@@ -6,6 +6,7 @@ const revisionSchema = new Schema(
 		verifierRequest: {
 			type: Schema.Types.ObjectId,
 			ref: "VerifierRequest",
+			default: null,
 		},
 		verifier: {
 			type: Schema.Types.ObjectId,

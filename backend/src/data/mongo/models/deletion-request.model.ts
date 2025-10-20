@@ -14,14 +14,12 @@ const deletionRequestSchema = new Schema(
 		requestingUser: {
 			type: Schema.Types.ObjectId,
 			ref: "User",
-			required: [
-				true,
-				"El campo usuario solicitante es obligatorio.",
-			],
+			required: [true, "El campo usuario solicitante es obligatorio."],
 		},
 		reviewer: {
 			type: Schema.Types.ObjectId,
 			ref: "User",
+			default: null,
 		},
 		state: {
 			type: String,
@@ -35,4 +33,7 @@ const deletionRequestSchema = new Schema(
 	//Renamed createdAt field so that its name is more similar to the diagram
 ); //https://mongoosejs.com/docs/timestamps.html
 
-export const DeletionRequestModel = model("DeletionRequest", deletionRequestSchema);
+export const DeletionRequestModel = model(
+	"DeletionRequest",
+	deletionRequestSchema
+);
