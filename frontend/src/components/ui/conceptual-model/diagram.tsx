@@ -20,9 +20,9 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 
-function debounce(func: any, delay: number) {
+function debounce<TArgs extends unknown[]>(func: (...args: TArgs) => void, delay: number) {
 	let timeout: NodeJS.Timeout | null = null;
-	return (...args: any) => {
+	return (...args: TArgs) => {
 		if (timeout) {
 			clearTimeout(timeout);
 		}
@@ -160,10 +160,18 @@ export const DiagramImageUpload = ({
 	imageInfos: Map<string, ImageInfo>;
 	title: string;
 	diagramPropertyPath: string;
-	watch: any;
+	watch: (name?: string) => unknown;
 	namePathPrefix: Path<ConceptualModel>;
-	socket?: any;
-	register?: any;
+	socket?: {
+		emit: (event: string, payload: Record<string, unknown>) => void;
+		on: (event: string, handler: (...args: unknown[]) => void) => void;
+		off: (event: string, handler: (...args: unknown[]) => void) => void;
+	};
+	register?: (config: {
+		name: string;
+		propertyPath?: string;
+		propagateUpdateOnChange?: boolean;
+	}) => Record<string, unknown>;
 }) => {
 	const [uploadState, setUploadState] = useState<{
 		success: boolean;
@@ -184,10 +192,11 @@ export const DiagramImageUpload = ({
 
 	// PlantText functionality
 	const usesPlantTextValue = watch(`${namePathPrefix}.usesPlantText`);
+	const usesPlantText = Boolean(usesPlantTextValue);
 	const plantTextCodeValue = watch(`${namePathPrefix}.plantTextCode`);
 
 	const debouncedEmitPlantTextChange = useRef(
-		debounce((value: any, propertyPath: string) => {
+		debounce<[string, string]>((value: string, propertyPath: string) => {
 			if (socket && versionId && hasEditingRights) {
 				console.log("Emitting plant-text-code-change:", value);
 				socket.emit("plant-text-code-change", {
@@ -203,16 +212,16 @@ export const DiagramImageUpload = ({
 
 
 	useEffect(() => {
-		if (usesPlantTextValue && plantTextCodeValue) {
+		if (usesPlantText && plantTextCodeValue) {
 			// Emit plantTextCode change to server instead of generating image locally
-			debouncedEmitPlantTextChange.current(plantTextCodeValue, diagramPropertyPath);
+			debouncedEmitPlantTextChange.current(String(plantTextCodeValue), diagramPropertyPath);
 		}
-	}, [plantTextCodeValue, usesPlantTextValue, diagramPropertyPath]);
+	}, [plantTextCodeValue, usesPlantText, diagramPropertyPath]);
 
 	// Get existing plantText image on component mount if there's existing code
 	const hasRequestedInitialImage = useRef(false);
 	useEffect(() => {
-		if (usesPlantTextValue && plantTextCodeValue && socket && versionId && !hasRequestedInitialImage.current) {
+	if (usesPlantText && plantTextCodeValue && socket && versionId && !hasRequestedInitialImage.current) {
 			// Request existing image without generating a new one
 			hasRequestedInitialImage.current = true;
 			socket.emit("plant-text-get-image", {
@@ -222,17 +231,18 @@ export const DiagramImageUpload = ({
 				timestamp: new Date(),
 			});
 		}
-	}, [usesPlantTextValue, plantTextCodeValue, socket, versionId, diagramPropertyPath]);
+	}, [usesPlantText, plantTextCodeValue, socket, versionId, diagramPropertyPath]);
 
 	// Listen for plantText image updates from server
 	useEffect(() => {
 		if (!socket) return;
 
-		const handlePlantTextImageUpdate = (payload: {
-			propertyPath: string;
-			imageUrl: string;
-			plantTextToken: string;
-		}) => {
+		const handlePlantTextImageUpdate = (...args: unknown[]) => {
+			const payload = args[0] as {
+				propertyPath: string;
+				imageUrl: string;
+				plantTextToken: string;
+			};
 			console.log("payload", payload);
 			// Check if this update is for our diagram
 			if (payload.propertyPath === diagramPropertyPath) {
@@ -247,12 +257,39 @@ export const DiagramImageUpload = ({
 		};
 	}, [socket, diagramPropertyPath]);
 
-	const imageFileId = watch(`${namePathPrefix}.imageFileId`);
+	const imageFileField = watch(`${namePathPrefix}.imageFileId`) as unknown;
+
+	type PopulatedImageInfo = {
+		id?: string;
+		_id?: string;
+		url?: string;
+		sizeInBytes?: number;
+		originalFilename?: string;
+		filename?: string;
+		createdAt?: string | Date;
+	};
 
 	const file = useMemo(() => {
-		if (!imageFileId) return null;
-		return imageInfos.get(imageFileId) ?? null;
-	}, [imageFileId, imageInfos]);
+		if (!imageFileField) return null;
+		// If backend populated the image object directly (after aggregation)
+		if (typeof imageFileField === "object" && imageFileField !== null && "url" in (imageFileField as Record<string, unknown>)) {
+			const populated = imageFileField as PopulatedImageInfo;
+			const createdAt = populated.createdAt;
+			const originalFilename = populated.originalFilename;
+			return {
+				id: populated.id ?? populated._id ?? "",
+				url: populated.url ?? "",
+				sizeInBytes: populated.sizeInBytes ?? 0,
+				filename: originalFilename || populated.filename || "image",
+				uploadedAt: createdAt ? new Date(createdAt) : new Date(),
+			} as ImageInfo;
+		}
+		// Else, it's likely an id string – resolve from the provided map
+		if (typeof imageFileField === "string") {
+			return imageInfos.get(imageFileField) ?? null;
+		}
+		return null;
+	}, [imageFileField, imageInfos]);
 
 	const formatFileSize = (bytes: number) => {
 		if (bytes === 0) return "0 Bytes";
@@ -371,13 +408,33 @@ export const DiagramImageUpload = ({
 	};
 
 	useEffect(() => {
-	  console.log("file", plantTextImageUrl);
-	
-	}, [plantTextImageUrl])
+		// no-op placeholder to react to url changes if needed later
+		return () => {};
+	}, [plantTextImageUrl]);
 	
 
 	const hasFile = !!file;
 	const canUpload = !hasFile && !isUploadPending && hasEditingRights;
+
+	console.log('file', file);
+
+// Precompute register props to avoid inline conditional spreads confusing TSX
+const checkboxRegisterProps = register
+		? register({
+			name: `${namePathPrefix}.usesPlantText`,
+			propertyPath: `${diagramPropertyPath}.usesPlantText`,
+			propagateUpdateOnChange: true,
+		})
+		: undefined;
+	const checkboxProps: React.InputHTMLAttributes<HTMLInputElement> | undefined = checkboxRegisterProps as unknown as React.InputHTMLAttributes<HTMLInputElement>;
+
+const plantTextRegisterProps = register
+		? register({
+			name: `${namePathPrefix}.plantTextCode`,
+			propertyPath: `${diagramPropertyPath}.plantTextCode`,
+		})
+		: undefined;
+	const textareaProps: React.TextareaHTMLAttributes<HTMLTextAreaElement> | undefined = plantTextRegisterProps as unknown as React.TextareaHTMLAttributes<HTMLTextAreaElement>;
 
 	return (
 		<div className="w-full space-y-4">
@@ -397,13 +454,9 @@ export const DiagramImageUpload = ({
 				{/* PlantText Toggle */}
 				<div className="flex items-center gap-2">
 					<label className="flex items-center gap-2 cursor-pointer">
-						<input
+					<input
 							type="checkbox"
-							{...register?.({
-								name: `${namePathPrefix}.usesPlantText`,
-								propertyPath: `${diagramPropertyPath}.usesPlantText`,
-								propagateUpdateOnChange: true,
-							})}
+						{...(checkboxProps as React.InputHTMLAttributes<HTMLInputElement> || {})}
 							className="rounded border-gray-300"
 						/>
 						<span className="text-sm font-medium">Usar PlantText</span>
@@ -411,14 +464,11 @@ export const DiagramImageUpload = ({
 				</div>
 
 				{/* PlantText Code Input */}
-				{usesPlantTextValue && (
+	{usesPlantText ? (
 					<div className="space-y-2">
 						<label className="text-sm font-medium">Código PlantText:</label>
-						<textarea
-							{...register?.({
-								name: `${namePathPrefix}.plantTextCode`,
-								propertyPath: `${diagramPropertyPath}.plantTextCode`,
-							})}
+					<textarea
+					{...(textareaProps as React.TextareaHTMLAttributes<HTMLTextAreaElement> || {})}
 							onBlur={(e) => {
 								// Request existing image on blur to ensure the image is shown
 								if (e.target.value && socket && versionId) {
@@ -434,10 +484,10 @@ export const DiagramImageUpload = ({
 							className="w-full h-32 p-3 border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 						/>
 					</div>
-				)}
+				) : null}
 
 				{/* PlantText Image Display */}
-				{usesPlantTextValue && plantTextImageUrl && (
+				{usesPlantText && plantTextImageUrl ? (
 					<div className="space-y-2">
 						<label className="text-sm font-medium">Vista previa del diagrama:</label>
 						<div className="relative overflow-hidden rounded-lg border h-screen">
@@ -449,7 +499,7 @@ export const DiagramImageUpload = ({
 							/>
 						</div>
 					</div>
-				)}
+				) : null}
 
 				{/* Error Alert */}
 				{error && (
@@ -468,7 +518,7 @@ export const DiagramImageUpload = ({
 				)}
 
 				{/* Upload Area or File Display */}
-				{!usesPlantTextValue && 
+	{!usesPlantText ? (
 				<>
 				{!hasFile ? (
 					<div
@@ -591,7 +641,7 @@ export const DiagramImageUpload = ({
 					)}
 				</div>
 				</>
-				}
+				) : null}
 			</div>
 		</div>
 	);
