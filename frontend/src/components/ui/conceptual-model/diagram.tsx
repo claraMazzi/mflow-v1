@@ -285,6 +285,7 @@ export const DiagramImageUpload = ({
 
 			if (!response.ok) {
 				const errorData = await response.json().catch(() => ({}));
+				console.log("errorData", errorData);
 				setUploadState({
 					success: false,
 					error: errorData.error || "Image upload failed.",
@@ -546,10 +547,12 @@ export const DiagramImageUpload = ({
 
 						{/* Image Preview */}
 						<div className="relative overflow-hidden rounded-lg border">
-							<img
+							
+							<Image
 								src={file.url}
 								alt={file.filename}
-								className="w-full h-48 object-cover"
+								fill
+								className="w-full h-full object-contain bg-white"
 							/>
 						</div>
 					</div>

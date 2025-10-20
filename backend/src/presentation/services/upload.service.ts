@@ -75,22 +75,24 @@ export class UploadService {
 		}
 
 		if (
-			!("imageFileId" in diagramPropertyPath) ||
+			!("imageFileId" in property) ||
 			property["imageFileId"] !== null
 		) {
 			throw CustomError.conflict("There is an image file already present in the specified path.");
 		}
 
 		try {
-			const { mimetype, originalname, filename, size, path } = file;
+			const { mimetype, originalname, filename, size, path: filePath } = file;
 
 			const newVersionImage = new VersionImageModel({
 				filename,
 				originalFilename: originalname,
 				sizeInBytes: size,
 				mimeType: mimetype,
+				path: filePath,
+				version: version.id,
 			});
-			newVersionImage.url = `uploads/${newVersionImage.id}`;
+			newVersionImage.url = `${this.uploadServiceBaseUrl}/${newVersionImage.id}`;
 			await newVersionImage.save();
 
 			const imageIdPropertyPath = `${diagramPropertyPath}.imageFileId`;

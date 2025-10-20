@@ -4,13 +4,10 @@ import { UploadController } from "./controller";
 import { envs } from "../../config";
 import { FileFilterCallback } from "multer";
 import { CheckVersionAccessMiddleware } from "../middlewares/checkVersionAccess.middleware";
-import { VersionImageModel } from "../../data/mongo/models/version-image.model";
-import { VersionModel } from "../../data";
-import { getProperty, setValue } from "../../types/socket-events";
 import { SocketServer } from "../socket-server";
-import { Diagram } from "../../data/mongo/models/subdocuments-schemas";
 import path from "path";
 import { randomUUID } from "crypto";
+import fs from "fs";
 
 export class UploadRoutes {
 	private socketServer: SocketServer;
@@ -45,7 +42,13 @@ export class UploadRoutes {
 					cb(new Error("The version id is missing."), "uploads/errors");
 				}
 
-				cb(null, `${baseUploadDirectory}/${versionId}/conceptual-model`);
+				const destination = `${baseUploadDirectory}/${versionId}/conceptual-model`;
+				try {
+					fs.mkdirSync(destination, { recursive: true });
+					cb(null, destination);
+				} catch (err: any) {
+					cb(err, destination);
+				}
 			},
 			filename: (req: Request, file: Express.Multer.File, cb: any) => {
 				const uniqueName = `${randomUUID()}${path.extname(file.originalname)}`;

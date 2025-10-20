@@ -560,7 +560,6 @@ export class SocketServer {
 		socket: Socket,
 		payload: PlantTextCodeChangePayload
 	) {
-		console.log('-----------plant-text-code-change')
 		try {
 			const { version } = await this.versionService.getVersionById(
 				payload.versionId
@@ -611,7 +610,6 @@ export class SocketServer {
 		socket: Socket,
 		payload: PlantTextGetImagePayload
 	) {
-		console.log('-----------plant-text-get-image')
 		try {
 			const { version } = await this.versionService.getVersionById(
 				payload.versionId
