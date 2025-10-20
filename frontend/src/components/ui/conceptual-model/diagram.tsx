@@ -180,6 +180,7 @@ export const DiagramImageUpload = ({
 	const [error, setError] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const [plantTextImageUrl, setPlantTextImageUrl] = useState<string | undefined>();
+	const [optimisticFile, setOptimisticFile] = useState<ImageInfo | null>(null);
 
 	useEffect(() => {
 		if (uploadState.error) {
@@ -289,6 +290,14 @@ export const DiagramImageUpload = ({
 		return null;
 	}, [imageFileField, imageInfos]);
 
+	// Clear optimistic preview when authoritative id changes
+	useEffect(() => {
+		if (optimisticFile && imageFileField) {
+			setOptimisticFile(null);
+		}
+		return () => {};
+	}, [imageFileField, optimisticFile]);
+
 	const formatFileSize = (bytes: number) => {
 		if (bytes === 0) return "0 Bytes";
 		const k = 1024;
@@ -326,6 +335,19 @@ export const DiagramImageUpload = ({
 					error: errorData.error || "Image upload failed.",
 				});
 				return;
+			}
+
+			const data = (await response.json().catch(() => null)) as
+				| { imageInfo?: { id: string; url: string; originalFilename?: string; sizeInBytes?: number; createdAt?: string } }
+				| null;
+			if (data && data.imageInfo) {
+				setOptimisticFile({
+					id: data.imageInfo.id,
+					url: data.imageInfo.url,
+					filename: data.imageInfo.originalFilename || "image",
+					sizeInBytes: data.imageInfo.sizeInBytes ?? 0,
+					uploadedAt: data.imageInfo.createdAt ? new Date(data.imageInfo.createdAt) : new Date(),
+				});
 			}
 
 			setUploadState({ success: true });
@@ -369,6 +391,19 @@ export const DiagramImageUpload = ({
 					error: errorData.error || "Image replace failed.",
 				});
 				return;
+			}
+
+			const data = (await response.json().catch(() => null)) as
+				| { imageInfo?: { id: string; url: string; originalFilename?: string; sizeInBytes?: number; createdAt?: string } }
+				| null;
+			if (data && data.imageInfo) {
+				setOptimisticFile({
+					id: data.imageInfo.id,
+					url: data.imageInfo.url,
+					filename: data.imageInfo.originalFilename || "image",
+					sizeInBytes: data.imageInfo.sizeInBytes ?? 0,
+					uploadedAt: data.imageInfo.createdAt ? new Date(data.imageInfo.createdAt) : new Date(),
+				});
 			}
 
 			setUploadState({ success: true });
@@ -635,11 +670,11 @@ const plantTextRegisterProps = register
 						{/* Image Preview */}
 						<div className="relative overflow-hidden rounded-lg border h-screen">
 							
-							<img
-								src={file.url}
-								alt={file.filename}
-								className="w-full h-full object-contain bg-white"
-							/>
+						<img
+							src={optimisticFile?.url || file.url}
+							alt={optimisticFile?.filename || file.filename}
+							className="w-full h-full object-contain bg-white"
+						/>
 						</div>
 					</div>
 				)}

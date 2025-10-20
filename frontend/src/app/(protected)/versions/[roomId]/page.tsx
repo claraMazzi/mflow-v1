@@ -301,6 +301,27 @@ export default function Page({
     }
 
     socket.on("field-update", onFieldUpdate);
+    function onImageAdded(payload: { imageInfo: { id: string; url: string; originalFilename?: string } }) {
+      setImageInfos((prev) => {
+        const next = new Map(prev);
+        next.set(payload.imageInfo.id, {
+          id: payload.imageInfo.id,
+          url: payload.imageInfo.url,
+          filename: payload.imageInfo.originalFilename || "image",
+          uploadedAt: new Date(),
+        } as ImageInfo);
+        return next;
+      });
+    }
+    function onImageRemoved(payload: { imageId: string }) {
+      setImageInfos((prev) => {
+        const next = new Map(prev);
+        next.delete(payload.imageId);
+        return next;
+      });
+    }
+    socket.on("image-added", onImageAdded);
+    socket.on("image-removed", onImageRemoved);
     socket.on("item-added-to-list", onItemAddedToList);
     socket.on("item-removed-from-list", onItemRemovedFromList);
     socket.on("server-volatile-broadcast", onServerVolatileBroadcast);
@@ -313,6 +334,8 @@ export default function Page({
 
     return () => {
       socket.off("field-update", onFieldUpdate);
+      socket.off("image-added", onImageAdded);
+      socket.off("image-removed", onImageRemoved);
       socket.off("item-added-to-list", onItemAddedToList);
       socket.off("item-removed-from-list", onItemRemovedFromList);
       socket.off("server-volatile-broadcast", onServerVolatileBroadcast);
