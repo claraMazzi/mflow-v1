@@ -12,11 +12,9 @@ import {
 import { Path } from "react-hook-form";
 import {
 	AlertCircle,
-	CheckCircle,
 	ImageIcon,
 	Loader2,
 	Upload,
-	X,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -342,9 +340,52 @@ export const DiagramImageUpload = ({
 		}
 	};
 
-	const deleteFileFromServer = async () => {
-		if (!file) return;
+	const replaceFileOnServer = async (selectedFile: File) => {
+		setError(null);
+		setUploadState({ success: false });
+		setIsUploadPending(true);
+
+		const formData = new FormData();
+		formData.append("image", selectedFile);
+		formData.append("diagramPropertyPath", diagramPropertyPath);
+
+		try {
+			const response = await fetch(
+				`${process.env.NEXT_PUBLIC_API_URL}/api/uploads/${versionId}/diagrams/replace`,
+				{
+					method: "PUT",
+					headers: {
+						Authorization: `Bearer ${sessionToken}`,
+					},
+					body: formData,
+				}
+			);
+
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				console.log("errorData", errorData);
+				setUploadState({
+					success: false,
+					error: errorData.error || "Image replace failed.",
+				});
+				return;
+			}
+
+			setUploadState({ success: true });
+		} catch (error) {
+			console.error("Unexpected error during diagram image replace:", error);
+			setUploadState({
+				success: false,
+				error: "Something went wrong.",
+			});
+		} finally {
+			setIsUploadPending(false);
+		}
 	};
+
+// const deleteFileFromServer = async () => {
+// 	if (!file) return;
+// };
 
 	const validateAndUploadFile = (selectedFile: File) => {
 		// Validate file type
@@ -394,12 +435,34 @@ export const DiagramImageUpload = ({
 	};
 
 	const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-		if (file || isUploadPending) return;
+		if (isUploadPending) return;
 
 		const selectedFile = e.target.files?.[0];
-		if (selectedFile) {
-			validateAndUploadFile(selectedFile);
+		if (!selectedFile) {
+			e.target.value = "";
+			return;
 		}
+
+		// Validate first
+		if (!selectedFile.type.startsWith("image/")) {
+			setError("Please select an image file");
+			e.target.value = "";
+			return;
+		}
+		const maxSize = 5 * 1024 * 1024;
+		if (selectedFile.size > maxSize) {
+			setError(`File size must be less than ${formatFileSize(maxSize)}`);
+			e.target.value = "";
+			return;
+		}
+
+		// Decide: new upload or replace existing
+		if (file) {
+			replaceFileOnServer(selectedFile);
+		} else {
+			uploadFileToServer(selectedFile);
+		}
+
 		e.target.value = ""; // Reset input
 	};
 
@@ -438,6 +501,14 @@ const plantTextRegisterProps = register
 
 	return (
 		<div className="w-full space-y-4">
+			{/* Hidden file input always available for upload/replace */}
+			<input
+				ref={fileInputRef}
+				type="file"
+				accept="image/*"
+				onChange={handleFileInputChange}
+				className="hidden"
+			/>
 			{/* Header */}
 			<div >
 				<div className="flex items-center gap-2 text-lg font-semibold text-card-foreground mb-2">
@@ -533,15 +604,7 @@ const plantTextRegisterProps = register
 						onDragOver={handleDragOver}
 						onDragLeave={handleDragLeave}
 					>
-						{canUpload && (
-							<input
-								ref={fileInputRef}
-								type="file"
-								accept="image/*"
-								onChange={handleFileInputChange}
-								className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-							/>
-						)}
+						{canUpload && null}
 
 						{isUploadPending ? (
 							<div className="space-y-4">
@@ -567,41 +630,14 @@ const plantTextRegisterProps = register
 				) : (
 					/* File Display */
 					<div className="space-y-4">
-						<div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-							<div className="flex items-center space-x-3">
-								<CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-								<div>
-									<p className="text-sm font-medium">{file.filename}</p>
-									<div className="flex items-center gap-2">
-										<span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-secondary text-secondary-foreground">
-											{formatFileSize(file.sizeInBytes)}
-										</span>
-										<span className="text-xs text-muted-foreground">
-											{file.uploadedAt.toLocaleString()}
-										</span>
-									</div>
-								</div>
-							</div>
-							<button
-								onClick={deleteFileFromServer}
-								disabled={isUploadPending}
-								className="p-2 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
-							>
-								{isUploadPending ? (
-									<Loader2 className="w-4 h-4 animate-spin" />
-								) : (
-									<X className="w-4 h-4" />
-								)}
-							</button>
-						</div>
+						
 
 						{/* Image Preview */}
-						<div className="relative overflow-hidden rounded-lg border">
+						<div className="relative overflow-hidden rounded-lg border h-screen">
 							
-							<Image
+							<img
 								src={file.url}
 								alt={file.filename}
-								fill
 								className="w-full h-full object-contain bg-white"
 							/>
 						</div>

@@ -25,12 +25,12 @@ export class AppRoutes {
 		router.use("/api/auth", Authroutes.routes);
 		//user routes
 		router.use("/api/users", UserRoutes.routes);
-
-		//-----------user needs to be logged in routes
-		router.use(AuthMiddleware.validateJWT);
-
+		
 		//file upload routes
 		router.use("/api/uploads", this.uploadRoutes.routes);
+		
+		//-----------user needs to be logged in routes
+		router.use(AuthMiddleware.validateJWT);
 
 		//projects routes
 		router.use("/api/projects", ProjectRoutes.routes);

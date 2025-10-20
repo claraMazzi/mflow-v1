@@ -14,6 +14,7 @@ import { Diagram } from "../../data/mongo/models/subdocuments-schemas";
 import { VersionImageModel } from "../../data/mongo/models/version-image.model";
 import { getProperty, setValue } from "../../types/socket-events";
 import { existsSync } from "fs";
+import { unlink } from "fs/promises";
 
 export class UploadService {
 	private readonly baseUploadDirectory: string;
@@ -147,6 +148,94 @@ export class UploadService {
 			console.error("middleware error", error);
 
 			throw CustomError.internalServer("Internal server error");
+		}
+	}
+
+	async replaceImageInVersion(
+		versionId: string,
+		diagramPropertyPath: string,
+		file: Express.Multer.File
+	) {
+		const version = await VersionModel.findById(versionId).exec();
+
+		if (!version) {
+			throw CustomError.badRequest("Version not found.");
+		}
+
+		const property = getProperty(
+			version.conceptualModel,
+			diagramPropertyPath
+		) as Diagram | undefined;
+
+		if (!property) {
+			throw CustomError.badRequest(
+				"The specified property path wasn't found in the version."
+			);
+		}
+
+		if (!("imageFileId" in property) || property["imageFileId"] === null) {
+			throw CustomError.conflict(
+				"There is no image to replace in the specified path."
+			);
+		}
+
+		const previousImageId = String(property["imageFileId"]);
+		const previousImage = await VersionImageModel.findById(previousImageId);
+
+		try {
+			// Create and save the new image first
+			const { mimetype, originalname, filename, size, path: filePath } = file;
+			const newVersionImage = new VersionImageModel({
+				filename,
+				originalFilename: originalname,
+				sizeInBytes: size,
+				mimeType: mimetype,
+				path: filePath,
+				version: version.id,
+			});
+			newVersionImage.url = `${this.uploadServiceBaseUrl}/${newVersionImage.id}`;
+			await newVersionImage.save();
+
+			// Update conceptual model to point to new image id
+			const imageIdPropertyPath = `${diagramPropertyPath}.imageFileId`;
+			setValue(version.conceptualModel!, imageIdPropertyPath, newVersionImage.id);
+			await version.save();
+
+			// Emit add + field update first so clients swap immediately
+			this.socketServer.emitImageFileAdded(versionId, {
+				id: newVersionImage.id,
+				url: newVersionImage.url,
+				originalFilename: newVersionImage.originalFilename,
+			});
+			this.socketServer.emitFieldUpdate(versionId, {
+				value: newVersionImage.id,
+				propertyPath: imageIdPropertyPath,
+			});
+
+			// Clean up previous image (best-effort)
+			if (previousImage) {
+				try {
+					if (previousImage.path && existsSync(previousImage.path)) {
+						await unlink(previousImage.path);
+					}
+				} catch (e) {
+					console.warn(
+						`Failed to remove previous image file from disk: ${previousImage.path}`
+					);
+				}
+				await previousImage.deleteOne();
+				this.socketServer.emitImageFileRemoved(versionId, {
+					imageId: previousImageId,
+				});
+			}
+
+			return {
+				updatedVersion: version,
+				imageInfo: newVersionImage,
+			};
+		} catch (error) {
+			console.error("Error replacing image in version:", error);
+			throw CustomError.internalServer("Error replacing image in version.");
 		}
 	}
 
