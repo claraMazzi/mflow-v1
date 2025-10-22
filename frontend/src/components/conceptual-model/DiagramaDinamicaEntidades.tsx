@@ -28,7 +28,9 @@ interface DiagramaEstructuraEntidadesProps {
     propagateUpdateOnChange?: boolean;
   }) => {
     onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-    onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+    onBlur: (
+      e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
+    ) => void;
     readOnly: boolean;
     name: Path<ConceptualModel>;
     ref: (instance: HTMLInputElement | HTMLTextAreaElement | null) => void;
@@ -51,7 +53,16 @@ interface DiagramaEstructuraEntidadesProps {
     listPropertyPath: string;
     itemId: string;
   }) => void;
-  socket?: any;
+  socket?: {
+		emit: (event: string, payload: Record<string, unknown>) => void;
+		on: (event: string, handler: (...args: unknown[]) => void) => void;
+		off: (event: string, handler: (...args: unknown[]) => void) => void;
+	};
+  register?: (config: {
+		name: Path<ConceptualModel>;
+		propertyPath?: string;
+		propagateUpdateOnChange?: boolean;
+	}) => Record<string, unknown>;
 }
 
 export default function DiagramaEstructuraEntidades({
@@ -64,9 +75,8 @@ export default function DiagramaEstructuraEntidades({
   customRegisterField,
   handleAddItemToList,
   handleRemoveItemFromList,
-  socket
+  socket,
 }: DiagramaEstructuraEntidadesProps) {
-
   const addItemToList = ({
     listPropertyPath,
     itemType,
@@ -76,37 +86,31 @@ export default function DiagramaEstructuraEntidades({
     itemType: "entity";
     e: MouseEvent;
   }) => {
+    // Get current form values instead of using assumptionList.fields
+    const currentEntities = (watch("entities") as { name?: string }[]) || [];
+    const firstEmptyIndex = currentEntities.findIndex(
+      (entity: { name?: string }) => !entity?.name || entity.name.trim() === ""
+    );
 
-          // Get current form values instead of using assumptionList.fields
-          const currentEntities =
-            (watch("entities") as { name?: string }[]) || [];
-          const firstEmptyIndex = currentEntities.findIndex(
-            (entity: { name?: string }) =>
-              !entity?.name || entity.name.trim() === ""
-          );
+    if (firstEmptyIndex !== -1) {
+      const input = document.querySelector<
+        HTMLInputElement | HTMLTextAreaElement
+      >(`[name="entities.${firstEmptyIndex}.name"]`);
+      if (input) {
+        input.focus();
+      }
+      return;
+    }
 
-          if (firstEmptyIndex !== -1) {
-            const input = document.querySelector<
-              HTMLInputElement | HTMLTextAreaElement
-            >(`[name="entities.${firstEmptyIndex}.name"]`);
-            if (input) {
-              input.focus();
-            }
-            return;
-          }
-
-          handleAddItemToList({
-            e: e,
-            listPropertyPath,
-            itemType,
-          });
-      
-
+    handleAddItemToList({
+      e: e,
+      listPropertyPath,
+      itemType,
+    });
   };
 
   return (
     <div className="flex flex-col gap-6 p-6 bg-white rounded-lg shadow-sm">
-        
       {/* Entities Section */}
       <div className="space-y-4">
         {/* <div className="flex items-center justify-between">
@@ -159,16 +163,40 @@ export default function DiagramaEstructuraEntidades({
           <div className="space-y-3">
             {entitiesList.fields.map((field, index) => {
               return (
-                <div key={field.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+                <div
+                  key={field.id}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border"
+                >
                   <div className="flex-1">
-                    <Input
-                      {...customRegisterField({
-                        name: `entities.${index}.name`,
-                        propertyPath: `entities:${field._id}.name`,
-                      })}
-                      placeholder="Nombre de la entidad..."
-                      className="border-2 border-gray-200 focus:border-purple-400"
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Nombre de la entidad
+                      </label>
+                      <Input
+                        {...customRegisterField({
+                          name: `entities.${index}.name`,
+                          propertyPath: `entities:${field._id}.name`,
+                        })}
+                        placeholder="Nombre de la entidad..."
+                        className="border-2 border-gray-200 focus:border-purple-400"
+                      />
+                    </div>
+
+                       {/** TODO: Actualizar para cada entidades */}
+                    <DiagramImageUpload
+                      sessionToken={sessionToken}
+                      versionId={versionId}
+                      hasEditingRights={hasEditingRights}
+                      imageInfos={imageInfos}
+                      title="Diagrama de Dinamica de la entidad"
+                      watch={watch}
+                      namePathPrefix="structureDiagram"
+                      diagramPropertyPath="structureDiagram"
+                      socket={socket}
+                      register={customRegisterField}
                     />
+
+                   
                   </div>
                   <Button
                     variant="ghost"
@@ -192,7 +220,9 @@ export default function DiagramaEstructuraEntidades({
         ) : (
           <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
             <p>No hay entidades agregadas</p>
-            <p className="text-sm">Haz clic en &quot;Agregar Entidad&quot; para comenzar</p>
+            <p className="text-sm">
+              Haz clic en &quot;Agregar Entidad&quot; para comenzar
+            </p>
           </div>
         )}
       </div>

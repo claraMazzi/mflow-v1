@@ -29,8 +29,16 @@ interface DiagramaEstructuraProps {
     name: Path<ConceptualModel>;
     ref: (instance: HTMLInputElement | HTMLTextAreaElement | null) => void;
   };
-  socket?: any;
-  register?: any;
+  socket?: {
+		emit: (event: string, payload: Record<string, unknown>) => void;
+		on: (event: string, handler: (...args: unknown[]) => void) => void;
+		off: (event: string, handler: (...args: unknown[]) => void) => void;
+	};
+  register?: (config: {
+		name: Path<ConceptualModel>;
+		propertyPath?: string;
+		propagateUpdateOnChange?: boolean;
+	}) => Record<string, unknown>;
 }
 
 export default function DiagramaEstructura({

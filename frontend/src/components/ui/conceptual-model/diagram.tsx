@@ -45,7 +45,11 @@ const DEBOUNCE_DIAGRAM_RENDER_DELAY = 3000;
 // 	watch: any;
 // 	namePrefix: Path<ConceptualModel>;
 // 	propertyPathPrefix?: string;
-// 	socket?: any;
+// 	socket?: {
+// 	emit: (event: string, payload: Record<string, unknown>) => void;
+// 	on: (event: string, handler: (...args: unknown[]) => void) => void;
+// 	off: (event: string, handler: (...args: unknown[]) => void) => void;
+// };
 // 	roomId?: string;
 // 	hasEditingRights?: boolean;
 // }) {
@@ -166,7 +170,7 @@ export const DiagramImageUpload = ({
 		off: (event: string, handler: (...args: unknown[]) => void) => void;
 	};
 	register?: (config: {
-		name: string;
+		name: Path<ConceptualModel>;
 		propertyPath?: string;
 		propagateUpdateOnChange?: boolean;
 	}) => Record<string, unknown>;
@@ -519,7 +523,7 @@ export const DiagramImageUpload = ({
 // Precompute register props to avoid inline conditional spreads confusing TSX
 const checkboxRegisterProps = register
 		? register({
-			name: `${namePathPrefix}.usesPlantText`,
+			name: `${namePathPrefix}.usesPlantText` as Path<ConceptualModel>,
 			propertyPath: `${diagramPropertyPath}.usesPlantText`,
 			propagateUpdateOnChange: true,
 		})
@@ -528,7 +532,7 @@ const checkboxRegisterProps = register
 
 const plantTextRegisterProps = register
 		? register({
-			name: `${namePathPrefix}.plantTextCode`,
+			name: `${namePathPrefix}.plantTextCode` as Path<ConceptualModel>,
 			propertyPath: `${diagramPropertyPath}.plantTextCode`,
 		})
 		: undefined;
