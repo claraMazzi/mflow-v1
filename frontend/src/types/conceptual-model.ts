@@ -42,7 +42,7 @@ type Entity = {
 type Input = {
 	_id: string;
 	description: string;
-	entity: string;
+	//entity: string;
 	type: "PARAMETRO" | "FACTOR EXPERIMENTAL";
 };
 

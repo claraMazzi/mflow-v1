@@ -27,6 +27,7 @@ import { CLIENT_WS_EVENT_TYPES, Collaborator, InitializeConceptualModelPayload, 
 import { parsePropertyPath } from "@lib/utils";
 import DiagramaEstructura from "@components/conceptual-model/DiagramaEstructura";
 import DiagramaDinamicaEntidades from "@components/conceptual-model/DiagramaDinamicaEntidades";
+import ObjetivosEntradasSalidas from "@components/conceptual-model/ObjetivosEntradasSalidas";
 
 function throttle(func: any, delay: number) {
   let timeout: NodeJS.Timeout | null = null;
@@ -92,6 +93,14 @@ export default function Page({
   });
   const assumptionList = useFieldArray({
     name: "assumptions",
+    control,
+  });
+  const inputList = useFieldArray({
+    name: "inputs",
+    control,
+  });
+  const outputList = useFieldArray({
+    name: "outputs",
     control,
   });
   const entitiesList = useFieldArray({
@@ -388,7 +397,7 @@ export default function Page({
   }: {
     e: MouseEvent;
     listPropertyPath: string;
-    itemType: "assumption" | "simplification" | "entity";
+    itemType: "assumption" | "simplification" | "entity" | "input" | "output";
   }) => {
     e.preventDefault();
     socket.emit("add-item-to-list", { roomId, listPropertyPath, itemType });
@@ -530,6 +539,18 @@ export default function Page({
                 handleAddItemToList={handleAddItemToList}
                 handleRemoveItemFromList={handleRemoveItemFromList}
                 socket={socket}
+              />
+            </TabsContent>
+
+            <TabsContent value="objetivos-entradas-salidas">
+              <ObjetivosEntradasSalidas
+                hasEditingRights={hasEditingRights}
+                inputList={inputList}
+                outputList={outputList}
+                watch={watch}
+                customRegisterField={customRegisterField}
+                handleAddItemToList={handleAddItemToList}
+                handleRemoveItemFromList={handleRemoveItemFromList}
               />
             </TabsContent>
           </Tabs>

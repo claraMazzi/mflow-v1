@@ -7,13 +7,13 @@ import { Input } from "@components/ui/common/input";
 import { Button } from "@components/ui/common/button";
 import { X, Plus } from "lucide-react";
 
-interface DescripcionDelSistemaProps {
+interface ObjetivosEntradasSalidasProps {
   hasEditingRights: boolean;
-  assumptionList: ReturnType<
-    typeof useFieldArray<ConceptualModel, "assumptions">
+  inputList: ReturnType<
+    typeof useFieldArray<ConceptualModel, "inputs">
   >;
-  simplificationList: ReturnType<
-    typeof useFieldArray<ConceptualModel, "simplifications">
+  outputList: ReturnType<
+    typeof useFieldArray<ConceptualModel, "outputs">
   >;
   watch: (name?: Path<ConceptualModel>) => unknown;
   customRegisterField: ({
@@ -42,7 +42,7 @@ interface DescripcionDelSistemaProps {
   }: {
     e: MouseEvent;
     listPropertyPath: string;
-    itemType: "assumption" | "simplification" | "entity";
+    itemType: "input" | "output" | "entity";
   }) => void;
   handleRemoveItemFromList: ({
     e,
@@ -55,28 +55,28 @@ interface DescripcionDelSistemaProps {
   }) => void;
 }
 
-export default function DescripcionDelSistema({
+export default function ObjetivosEntradasSalidas({
   hasEditingRights,
-  assumptionList,
-  simplificationList,
+  inputList,
+  outputList,
   watch,
   customRegisterField,
   handleAddItemToList,
   handleRemoveItemFromList,
-}: DescripcionDelSistemaProps) {
-  const previousAssumptionsLength = useRef(assumptionList.fields.length);
-  const previousSimplificationsLength = useRef(
-    simplificationList.fields.length
+}: ObjetivosEntradasSalidasProps) {
+  const previousInputsLength = useRef(inputList.fields.length);
+  const previousOutputsLength = useRef(
+    outputList.fields.length
   );
 
   // Focus on the last added item when the list changes
   useEffect(() => {
-    if (assumptionList.fields.length > previousAssumptionsLength.current) {
+    if (inputList.fields.length > previousInputsLength.current) {
       // A new item was added, focus on the last one
-      const lastIndex = assumptionList.fields.length - 1;
+      const lastIndex = inputList.fields.length - 1;
       const input = document.querySelector<
         HTMLInputElement | HTMLTextAreaElement
-      >(`[name="assumptions.${lastIndex}.description"]`);
+      >(`[name="inputs.${lastIndex}.description"]`);
       if (input) {
         // Use setTimeout to ensure the DOM is updated
         setTimeout(() => {
@@ -84,18 +84,18 @@ export default function DescripcionDelSistema({
         }, 0);
       }
     }
-    previousAssumptionsLength.current = assumptionList.fields.length;
-  }, [assumptionList.fields.length]);
+    previousInputsLength.current = inputList.fields.length;
+  }, [inputList.fields.length]);
 
   useEffect(() => {
     if (
-      simplificationList.fields.length > previousSimplificationsLength.current
+      outputList.fields.length > previousOutputsLength.current
     ) {
       // A new item was added, focus on the last one
-      const lastIndex = simplificationList.fields.length - 1;
+      const lastIndex = outputList.fields.length - 1;
       const input = document.querySelector<
         HTMLInputElement | HTMLTextAreaElement
-      >(`[name="simplifications.${lastIndex}.description"]`);
+      >(`[name="outputs.${lastIndex}.description"]`);
       if (input) {
         // Use setTimeout to ensure the DOM is updated
         setTimeout(() => {
@@ -103,8 +103,8 @@ export default function DescripcionDelSistema({
         }, 0);
       }
     }
-    previousSimplificationsLength.current = simplificationList.fields.length;
-  }, [simplificationList.fields.length]);
+    previousOutputsLength.current = outputList.fields.length;
+  }, [outputList.fields.length]);
 
   const addItemToList = ({
     listPropertyPath,
@@ -112,24 +112,24 @@ export default function DescripcionDelSistema({
     e,
   }: {
     listPropertyPath: string;
-    itemType: "assumption" | "simplification";
+    itemType: "input" | "output";
     e: MouseEvent;
   }) => {
     switch (listPropertyPath) {
-      case "assumptions":
+      case "inputs":
         {
-          // Get current form values instead of using assumptionList.fields
-          const currentAssumptions =
-            (watch("assumptions") as { description?: string }[]) || [];
-          const firstEmptyIndex = currentAssumptions.findIndex(
-            (assumption: { description?: string }) =>
-              !assumption?.description || assumption.description.trim() === ""
+          // Get current form values instead of using inputList.fields
+          const currentInputs =
+            (watch("inputs") as { description?: string }[]) || [];
+          const firstEmptyIndex = currentInputs.findIndex(
+            (input: { description?: string }) =>
+              !input?.description || input.description.trim() === ""
           );
 
           if (firstEmptyIndex !== -1) {
             const input = document.querySelector<
               HTMLInputElement | HTMLTextAreaElement
-            >(`[name="assumptions.${firstEmptyIndex}.description"]`);
+            >(`[name="inputs.${firstEmptyIndex}.description"]`);
             if (input) {
               input.focus();
             }
@@ -143,22 +143,21 @@ export default function DescripcionDelSistema({
           });
         }
         break;
-      case "simplifications":
+      case "outputs":
         {
-          // Get current form values instead of using assumptionList.fields
-          const currentSimplifications =
-            (watch("simplifications") as { description?: string }[]) || [];
-          console.log("currentSimplifications", currentSimplifications);
-          const firstEmptyIndex = currentSimplifications.findIndex(
-            (simplification: { description?: string }) =>
-              !simplification?.description ||
-              simplification.description.trim() === ""
+          // Get current form values instead of using outputList.fields
+          const currentOutputs =
+            (watch("outputs") as { description?: string }[]) || [];
+          const firstEmptyIndex = currentOutputs.findIndex(
+            (output: { description?: string }) =>
+              !output?.description ||
+              output.description.trim() === ""
           );
 
           if (firstEmptyIndex !== -1) {
             const input = document.querySelector<
               HTMLInputElement | HTMLTextAreaElement
-            >(`[name="simplifications.${firstEmptyIndex}.description"]`);
+            >(`[name="outputs.${firstEmptyIndex}.description"]`);
             if (input) {
               input.focus();
             }
@@ -174,10 +173,10 @@ export default function DescripcionDelSistema({
   return (
     <div className="flex flex-col gap-6 p-6 bg-white rounded-lg shadow-sm">
       <div className="space-y-2">
-        <p className="text-lg font-bold text-center">Descripción inicial del sistema</p>
+        <p className="text-lg font-bold text-center">Objetivos, Entradas y Salidas del Sistema</p>
         <p className="text-sm text-gray-500">
-          Es necesaria para poder establecer los objetivos, suposiciones y
-          simplificaciones del modelo de simulación
+          Es necesaria para poder establecer los objetivos, entradas y
+          salidas del modelo de simulación
         </p>
       </div>
 
@@ -193,50 +192,61 @@ export default function DescripcionDelSistema({
         />
       </div>
 
-      {/* Assumptions Section */}
+      {/* Inputs Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium text-gray-900">Suposiciones</h2>
+          <h2 className="text-lg font-medium text-gray-900">Entradas</h2>
           <Button
             variant="outline"
             size="sm"
             disabled={!hasEditingRights}
             onClick={(e) =>
-              //   handleAddItemToList({
-              //     e,
-              //     listPropertyPath: "assumptions",
-              //     itemType: "assumption",
-              //   })
               addItemToList({
                 e,
-                listPropertyPath: "assumptions",
-                itemType: "assumption",
+                listPropertyPath: "inputs",
+                itemType: "input",
               })
             }
             className="flex items-center gap-2"
           >
             <Plus size={16} />
-            Agregar Suposición
+            Agregar Entrada
           </Button>
         </div>
 
-        {assumptionList.fields.length > 0 ? (
+        {inputList.fields.length > 0 ? (
           <div className="space-y-3">
-            {assumptionList.fields.map((field, index) => {
+            {inputList.fields.map((field, index) => {
               return (
                 <div
                   key={field.id}
-                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border"
+                  className="flex items-end gap-3 p-3 bg-gray-50 rounded-lg border"
                 >
-                  <div className="flex-1">
+                  <div className="space-y-2 flex-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                         {index + 1}. Descripción de la entrada
+                        </label>
                     <Input
                       {...customRegisterField({
-                        name: `assumptions.${index}.description`,
-                        propertyPath: `assumptions:${field._id}.description`,
+                        name: `inputs.${index}.description`,
+                        propertyPath: `inputs:${field._id}.description`,
                       })}
-                      placeholder="Describe la suposición..."
+                      placeholder="Describe la entrada..."
                       className="border-2 border-gray-200 focus:border-purple-400"
                     />
+                  </div>
+                  <div className="w-48 space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                         Tipo de entrada
+                        </label>
+                    <select
+                      name={`inputs.${index}.type`}
+                      className="w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
+                      disabled={!hasEditingRights}
+                    >
+                      <option value="PARAMETRO">Parámetro</option>
+                      <option value="FACTOR EXPERIMENTAL">Factor Experimental</option>
+                    </select>
                   </div>
                   <Button
                     variant="ghost"
@@ -245,7 +255,7 @@ export default function DescripcionDelSistema({
                     onClick={(e) =>
                       handleRemoveItemFromList({
                         e,
-                        listPropertyPath: "assumptions",
+                        listPropertyPath: "inputs",
                         itemId: field._id,
                       })
                     }
@@ -259,19 +269,19 @@ export default function DescripcionDelSistema({
           </div>
         ) : (
           <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-            <p>No hay suposiciones agregadas</p>
+            <p>No hay entradas agregadas</p>
             <p className="text-sm">
-              Haz clic en &quot;Agregar Suposición&quot; para comenzar
+              Haz clic en &quot;Agregar Entrada&quot; para comenzar
             </p>
           </div>
         )}
       </div>
 
-      {/* Simplifications Section */}
+      {/* Outputs Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium text-gray-900">
-            Simplificaciones
+            Salidas
           </h2>
           <Button
             variant="outline"
@@ -280,59 +290,74 @@ export default function DescripcionDelSistema({
             onClick={(e) =>
               addItemToList({
                 e,
-                listPropertyPath: "simplifications",
-                itemType: "simplification",
+                listPropertyPath: "outputs",
+                itemType: "output",
               })
             }
             className="flex items-center gap-2"
           >
             <Plus size={16} />
-            Agregar Simplificación
+            Agregar Salida
           </Button>
         </div>
 
-        {simplificationList.fields.length > 0 ? (
+        {outputList.fields.length > 0 ? (
           <div className="space-y-3">
-            {simplificationList.fields.map((field, index) => {
+            {outputList.fields.map((field, index) => {
               return (
                 <div
                   key={field.id}
-                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border"
+                  className="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg border"
                 >
-                  <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <Input
+                        {...customRegisterField({
+                          name: `outputs.${index}.description`,
+                          propertyPath: `outputs:${field._id}.description`,
+                        })}
+                        placeholder="Describe la salida..."
+                        className="border-2 border-gray-200 focus:border-purple-400"
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={!hasEditingRights}
+                      onClick={(e) =>
+                        handleRemoveItemFromList({
+                          e,
+                          listPropertyPath: "outputs",
+                          itemId: field._id,
+                        })
+                      }
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <X size={16} />
+                    </Button>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Entidad
+                    </label>
                     <Input
                       {...customRegisterField({
-                        name: `simplifications.${index}.description`,
-                        propertyPath: `simplifications:${field._id}.description`,
+                        name: `outputs.${index}.entity`,
+                        propertyPath: `outputs:${field._id}.entity`,
                       })}
-                      placeholder="Describe la simplificación..."
+                      placeholder="ID de la entidad..."
                       className="border-2 border-gray-200 focus:border-purple-400"
                     />
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={!hasEditingRights}
-                    onClick={(e) =>
-                      handleRemoveItemFromList({
-                        e,
-                        listPropertyPath: "simplifications",
-                        itemId: field._id,
-                      })
-                    }
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <X size={16} />
-                  </Button>
                 </div>
               );
             })}
           </div>
         ) : (
           <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-            <p>No hay simplificaciones agregadas</p>
+            <p>No hay salidas agregadas</p>
             <p className="text-sm">
-              Haz clic en &quot;Agregar Simplificación&quot; para comenzar
+              Haz clic en &quot;Agregar Salida&quot; para comenzar
             </p>
           </div>
         )}

@@ -480,7 +480,7 @@ export class SocketServer {
 		payload: {
 			roomId: string;
 			listPropertyPath: string;
-			itemType: "assumption" | "simplification" | "entity";
+			itemType: "assumption" | "simplification" | "entity" | "input" | "output";
 		}
 	) {
 		//add try catch 
@@ -509,6 +509,12 @@ export class SocketServer {
 					dynamicDiagram: {},
 					properties: [],
 				});
+				break;
+			case "input":
+				listField.push({ description: "", type: "PARAMETRO" });
+				break;
+			case "output":
+				listField.push({ description: "", entity: null});
 				break;
 			case "simplification":
 				listField.push({ description: "" });

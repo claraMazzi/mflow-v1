@@ -70,20 +70,22 @@ export const conceptualModelSchema = new Schema({
 	flowDiagram: diagramSchema,
 	inputs: [
 		{
-			description: {
-				type: String,
-				required: [true, "El campo descripción de la entrada es obligatorio."],
-			},
-			entity: Schema.Types.ObjectId,
+			description: String, //TODO: Add final validation of empty descriptions
+			// description: {
+			// 	type: String,
+			// 	required: [true, "El campo descripción de la entrada es obligatorio."],
+			// },
+			//entity: Schema.Types.ObjectId, //TODO: see if its used in the future
 			type: { type: String, enum: ["PARAMETRO", "FACTOR EXPERIMENTAL"] },
 		},
 	],
 	outputs: [
 		{
-			description: {
-				type: String,
-				required: [true, "El campo descripción de la salida es obligatorio."],
-			},
+			description: String, //TODO: Add final validation of empty descriptions
+			// description: {
+			// 	type: String,
+			// 	required: [true, "El campo descripción de la salida es obligatorio."],
+			// },
 			entity: Schema.Types.ObjectId,
 		},
 	],
