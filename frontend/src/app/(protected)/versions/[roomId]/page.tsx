@@ -547,6 +547,7 @@ export default function Page({
                 hasEditingRights={hasEditingRights}
                 inputList={inputList}
                 outputList={outputList}
+                entitiesList={entitiesList}
                 watch={watch}
                 customRegisterField={customRegisterField}
                 handleAddItemToList={handleAddItemToList}
