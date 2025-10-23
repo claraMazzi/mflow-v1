@@ -37,6 +37,7 @@ import { parsePropertyPath } from "@lib/utils";
 import DiagramaEstructura from "@components/conceptual-model/DiagramaEstructura";
 import DiagramaDinamicaEntidades from "@components/conceptual-model/DiagramaDinamicaEntidades";
 import ObjetivosEntradasSalidas from "@components/conceptual-model/ObjetivosEntradasSalidas";
+import Alcance from "@components/conceptual-model/Alcance";
 
 function throttle(func: any, delay: number) {
   let timeout: NodeJS.Timeout | null = null;
@@ -93,25 +94,30 @@ export default function Page({
   const [imageInfos, setImageInfos] = useState<Map<string, ImageInfo>>(
     new Map()
   );
-  const { register, control, setValue, watch, getValues, reset, trigger } =
+
+  const { register, control, setValue, watch, getValues, reset } =
     useForm<ConceptualModel>();
 
   const simplificationList = useFieldArray({
     name: "simplifications",
     control,
   });
+
   const assumptionList = useFieldArray({
     name: "assumptions",
     control,
   });
+
   const inputList = useFieldArray({
     name: "inputs",
     control,
   });
+
   const outputList = useFieldArray({
     name: "outputs",
     control,
   });
+
   const entitiesList = useFieldArray({
     name: "entities",
     control,
@@ -540,6 +546,9 @@ export default function Page({
               <TabsTrigger value="objetivos-entradas-salidas">
                 Objetivos, Entradas y Salidas
               </TabsTrigger>
+              <TabsTrigger value="alcance">
+                Alcance
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="descripcion-sistema" className="">
               <DescripcionDelSistema
@@ -582,6 +591,18 @@ export default function Page({
 
             <TabsContent value="objetivos-entradas-salidas">
               <ObjetivosEntradasSalidas
+                hasEditingRights={hasEditingRights}
+                inputList={inputList}
+                outputList={outputList}
+                entitiesList={entitiesList}
+                watch={watch}
+                customRegisterField={customRegisterField}
+                handleAddItemToList={handleAddItemToList}
+                handleRemoveItemFromList={handleRemoveItemFromList}
+              />
+            </TabsContent>
+            <TabsContent value="alcance">
+            <Alcance
                 hasEditingRights={hasEditingRights}
                 inputList={inputList}
                 outputList={outputList}
