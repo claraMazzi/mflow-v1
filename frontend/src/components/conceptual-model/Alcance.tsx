@@ -1,19 +1,15 @@
 "use client";
 
-import { MouseEvent, ChangeEvent, useEffect, useRef } from "react";
+import { ChangeEvent, useState } from "react";
 import { useFieldArray, RegisterOptions, Path } from "react-hook-form";
 import { ConceptualModel } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
-import { Button } from "@components/ui/common/button";
-import { X, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import cn from "clsx";
 
 interface AlcanceProps {
   hasEditingRights: boolean;
-  inputList: ReturnType<typeof useFieldArray<ConceptualModel, "inputs">>;
-  outputList: ReturnType<typeof useFieldArray<ConceptualModel, "outputs">>;
   entitiesList: ReturnType<typeof useFieldArray<ConceptualModel, "entities">>;
-  watch: (name?: Path<ConceptualModel>) => unknown;
   customRegisterField: ({
     name,
     propertyPath,
@@ -33,24 +29,6 @@ interface AlcanceProps {
     name: Path<ConceptualModel>;
     ref: (instance: HTMLInputElement | HTMLTextAreaElement | null) => void;
   };
-  handleAddItemToList: ({
-    e,
-    listPropertyPath,
-    itemType,
-  }: {
-    e: MouseEvent;
-    listPropertyPath: string;
-    itemType: "input" | "output" | "entity";
-  }) => void;
-  handleRemoveItemFromList: ({
-    e,
-    listPropertyPath,
-    itemId,
-  }: {
-    e: MouseEvent;
-    listPropertyPath: string;
-    itemId: string;
-  }) => void;
 }
 
 export default function Alcance({
@@ -58,111 +36,21 @@ export default function Alcance({
   entitiesList,
   customRegisterField,
 }: AlcanceProps) {
-  // const previousInputsLength = useRef(inputList.fields.length);
-  // const previousOutputsLength = useRef(
-  //   outputList.fields.length
-  // );
+  // State to track which entities are collapsed
+  const [collapsedEntities, setCollapsedEntities] = useState<Set<string>>(new Set());
 
-  // // Focus on the last added item when the list changes
-  // useEffect(() => {
-  //   if (inputList.fields.length > previousInputsLength.current) {
-  //     // A new item was added, focus on the last one
-  //     const lastIndex = inputList.fields.length - 1;
-  //     const input = document.querySelector<
-  //       HTMLInputElement | HTMLTextAreaElement
-  //     >(`[name="inputs.${lastIndex}.description"]`);
-  //     if (input) {
-  //       // Use setTimeout to ensure the DOM is updated
-  //       setTimeout(() => {
-  //         input.focus();
-  //       }, 0);
-  //     }
-  //   }
-  //   previousInputsLength.current = inputList.fields.length;
-  // }, [inputList.fields.length]);
-
-  // useEffect(() => {
-  //   if (
-  //     outputList.fields.length > previousOutputsLength.current
-  //   ) {
-  //     // A new item was added, focus on the last one
-  //     const lastIndex = outputList.fields.length - 1;
-  //     const input = document.querySelector<
-  //       HTMLInputElement | HTMLTextAreaElement
-  //     >(`[name="outputs.${lastIndex}.description"]`);
-  //     if (input) {
-  //       // Use setTimeout to ensure the DOM is updated
-  //       setTimeout(() => {
-  //         input.focus();
-  //       }, 0);
-  //     }
-  //   }
-  //   previousOutputsLength.current = outputList.fields.length;
-  // }, [outputList.fields.length]);
-
-  // const addItemToList = ({
-  //   listPropertyPath,
-  //   itemType,
-  //   e,
-  // }: {
-  //   listPropertyPath: string;
-  //   itemType: "input" | "output";
-  //   e: MouseEvent;
-  // }) => {
-  //   switch (listPropertyPath) {
-  //     case "inputs":
-  //       {
-  //         // Get current form values instead of using inputList.fields
-  //         const currentInputs =
-  //           (watch("inputs") as { description?: string }[]) || [];
-  //         const firstEmptyIndex = currentInputs.findIndex(
-  //           (input: { description?: string }) =>
-  //             !input?.description || input.description.trim() === ""
-  //         );
-
-  //         if (firstEmptyIndex !== -1) {
-  //           const input = document.querySelector<
-  //             HTMLInputElement | HTMLTextAreaElement
-  //           >(`[name="inputs.${firstEmptyIndex}.description"]`);
-  //           if (input) {
-  //             input.focus();
-  //           }
-  //           return;
-  //         }
-
-  //         handleAddItemToList({
-  //           e: e,
-  //           listPropertyPath,
-  //           itemType,
-  //         });
-  //       }
-  //       break;
-  //     case "outputs":
-  //       {
-  //         // Get current form values instead of using outputList.fields
-  //         const currentOutputs =
-  //           (watch("outputs") as { description?: string }[]) || [];
-  //         const firstEmptyIndex = currentOutputs.findIndex(
-  //           (output: { description?: string }) =>
-  //             !output?.description ||
-  //             output.description.trim() === ""
-  //         );
-
-  //         if (firstEmptyIndex !== -1) {
-  //           const input = document.querySelector<
-  //             HTMLInputElement | HTMLTextAreaElement
-  //           >(`[name="outputs.${firstEmptyIndex}.description"]`);
-  //           if (input) {
-  //             input.focus();
-  //           }
-  //           return;
-  //         }
-
-  //         handleAddItemToList({ e, listPropertyPath, itemType });
-  //       }
-  //       break;
-  //   }
-  // };
+  // Toggle collapse state for a specific entity
+  const toggleCollapse = (entityId: string) => {
+    setCollapsedEntities(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(entityId)) {
+        newSet.delete(entityId);
+      } else {
+        newSet.add(entityId);
+      }
+      return newSet;
+    });
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6 bg-white rounded-lg shadow-sm">
@@ -176,61 +64,89 @@ export default function Alcance({
         </p>
       </div>
 
-      {entitiesList.fields.map((entity, index) => (
-        <div key={entity._id} className="flex flex-col gap-4">
-          <p>
-            Entidad: <strong>{entity.name}</strong>
-          </p>
-          {/* make a select box for the scope decision of each entity, iclude should be a select box, justification should be an imput and type of argument should be a select box with predefined values in the version.model schema, the select box should be disabled if the user does not have editing rights, matchin the same style as the other conceptual-model components  */}
+      {entitiesList.fields.map((entity, index) => {
+        const isCollapsed = collapsedEntities.has(entity._id);
+        
+        return (
+          <div key={entity._id} className="border border-gray-200 rounded-lg bg-gray-50">
+            {/* Collapsible Header */}
+            <button
+              onClick={() => toggleCollapse(entity._id)}
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-100 transition-colors duration-200 rounded-lg"
+            >
+              <div className="flex items-center gap-3">
+                {isCollapsed ? (
+                  <ChevronRight className="w-5 h-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-500" />
+                )}
+                <p className="text-lg font-medium text-gray-900">
+                  Entidad: <strong>{entity.name}</strong>
+                </p>
+              </div>
+            </button>
 
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Incluir
-            </label>
-            <select
-              name={`entities.${index}.scopeDecision.include`}
+            {/* Collapsible Content */}
+            <div
               className={cn(
-                "w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
+                "overflow-hidden transition-all duration-300 ease-in-out",
+                isCollapsed ? "max-h-0 opacity-0" : "max-h-[500px] opacity-100"
               )}
-              disabled={!hasEditingRights}
             >
-              <option value="true">Incluir</option>
-              <option value="false">Excluir</option>
-            </select>
-          </div>
+              <div className="p-4 pt-0 space-y-4">
+                {/* make a select box for the scope decision of each entity, iclude should be a select box, justification should be an imput and type of argument should be a select box with predefined values in the version.model schema, the select box should be disabled if the user does not have editing rights, matchin the same style as the other conceptual-model components  */}
 
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Justificación
-            </label>
-            <Input
-              {...customRegisterField({
-                name: `entities.${index}.scopeDecision.justification`,
-              })}
-              placeholder="Describe la justificación..."
-              className="border-2 border-gray-200 focus:border-purple-400"
-            />
-          </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Incluir
+                  </label>
+                  <select
+                    name={`entities.${index}.scopeDecision.include`}
+                    className={cn(
+                      "w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
+                    )}
+                    disabled={!hasEditingRights}
+                  >
+                    <option value="true">Incluir</option>
+                    <option value="false">Excluir</option>
+                  </select>
+                </div>
 
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Tipo de argumento
-            </label>
-            <select
-              name={`entities.${index}.scopeDecision.argumentType`}
-              className="w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
-              disabled={!hasEditingRights}
-            >
-              <option value="SALIDA">Salida</option>
-              <option value="ENTRADA">Entrada</option>
-              <option value="NO VINCULADO A OBJETIVOS">
-                No Vinculado a Objetivos
-              </option>
-              <option value="SIMPLIFICACION">Simplificación</option>
-            </select>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Justificación
+                  </label>
+                  <Input
+                    {...customRegisterField({
+                      name: `entities.${index}.scopeDecision.justification`,
+                    })}
+                    placeholder="Describe la justificación..."
+                    className="border-2 border-gray-200 focus:border-purple-400"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Tipo de argumento
+                  </label>
+                  <select
+                    name={`entities.${index}.scopeDecision.argumentType`}
+                    className="w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
+                    disabled={!hasEditingRights}
+                  >
+                    <option value="SALIDA">Salida</option>
+                    <option value="ENTRADA">Entrada</option>
+                    <option value="NO VINCULADO A OBJETIVOS">
+                      No Vinculado a Objetivos
+                    </option>
+                    <option value="SIMPLIFICACION">Simplificación</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
