@@ -604,13 +604,8 @@ export default function Page({
             <TabsContent value="alcance">
             <Alcance
                 hasEditingRights={hasEditingRights}
-                inputList={inputList}
-                outputList={outputList}
                 entitiesList={entitiesList}
-                watch={watch}
                 customRegisterField={customRegisterField}
-                handleAddItemToList={handleAddItemToList}
-                handleRemoveItemFromList={handleRemoveItemFromList}
               />
             </TabsContent>
           </Tabs>
