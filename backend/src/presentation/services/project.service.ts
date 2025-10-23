@@ -115,6 +115,7 @@ export class ProjectService {
 		const project = await ProjectModel.findById(projectId)
 			.populate({
 				path: "versions",
+				match: { state: { $ne: "ELIMINADA" } },
 				select: ["title", "parentVersion", "state", "updatedAt", "createdAt"],
 				populate: {
 					path: "parentVersion",
@@ -189,7 +190,14 @@ export class ProjectService {
 		const { id, title, description, owner } = projectData;
 
 		const project = await ProjectModel.findOne({ _id: id });
-		if (!project) throw CustomError.badRequest("Project does not exist");
+
+		if (!project) throw CustomError.notFound("Project does not exist");
+
+		if (!project.owner.equals(owner)) {
+			throw CustomError.forbidden(
+				"No puede modificar el proyecto especificado."
+			);
+		}
 
 		if (!title && !description)
 			throw CustomError.badRequest("No data sent to update");
@@ -223,6 +231,7 @@ export class ProjectService {
 	async deleteProject(projectId: string) {
 		const project = await ProjectModel.findOne({ _id: projectId });
 		if (!project) throw CustomError.badRequest("Project does not exists");
+
 		switch (project.state) {
 			case projectState.deleted:
 				throw CustomError.badRequest("Project already deleted");

@@ -9,7 +9,7 @@ const versionSchema = new Schema(
 		},
 		state: {
 			type: String,
-			enum: ["EN EDICION", "FINALIZADA", "PENDIENTE DE REVISION", "REVISADA"],
+			enum: ["EN EDICION", "FINALIZADA", "PENDIENTE DE REVISION", "REVISADA", "ELIMINADA"],
 			default: "EN EDICION",
 		},
 		parentVersion: {
