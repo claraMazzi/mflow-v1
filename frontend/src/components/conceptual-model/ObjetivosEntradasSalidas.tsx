@@ -110,74 +110,6 @@ export default function ObjetivosEntradasSalidas({
     previousOutputsLength.current = outputList.fields.length;
   }, [outputList.fields.length]);
 
-  // Set default entity for new outputs
-  useEffect(() => {
-    if (outputList.fields.length > 0 && entitiesList.fields.length > 0) {
-      const currentOutputs = watch("outputs") as { entity?: string }[] || [];
-      const firstEntityId = entitiesList.fields[0]?._id;
-      
-      // Check if any output doesn't have an entity selected and set the first one as default
-      currentOutputs.forEach((output, index) => {
-        if (!output?.entity && firstEntityId) {
-          const selectElement = document.querySelector(`select[name="outputs.${index}.entity"]`) as HTMLSelectElement;
-          if (selectElement && selectElement.value === "") {
-            selectElement.value = firstEntityId;
-            selectElement.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-        }
-      });
-    }
-  }, [outputList.fields.length, entitiesList.fields, watch]);
-
-  // Handle setting default entity when a new output is added
-  useEffect(() => {
-    if (outputList.fields.length > previousOutputsLength.current && entitiesList.fields.length > 0) {
-      // A new output was added, set the first entity as default
-      const newOutputIndex = outputList.fields.length - 1;
-      const firstEntityId = entitiesList.fields[0]._id;
-      
-      setTimeout(() => {
-        const selectElement = document.querySelector(
-          `select[name="outputs.${newOutputIndex}.entity"]`
-        ) as HTMLSelectElement;
-        if (selectElement && firstEntityId) {
-          selectElement.value = firstEntityId;
-          selectElement.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-      }, 50); // Small delay to ensure the DOM is updated
-    }
-  }, [outputList.fields.length, entitiesList.fields]);
-
-  // Handle select element registration for entity fields
-  useEffect(() => {
-    const selectElements = document.querySelectorAll('select[name*="outputs."][name*=".entity"]');
-    selectElements.forEach((select) => {
-      const name = select.getAttribute('name');
-      if (name) {
-        const { onChange, onBlur, ref } = customRegisterField({
-          name: name as Path<ConceptualModel>,
-        });
-        
-        // Apply the handlers
-        select.addEventListener('change', onChange as unknown as EventListener);
-        select.addEventListener('blur', onBlur as unknown as EventListener);
-        ref(select as HTMLInputElement | HTMLTextAreaElement | null);
-      }
-    });
-
-    return () => {
-      selectElements.forEach((select) => {
-        const name = select.getAttribute('name');
-        if (name) {
-          const { onChange, onBlur } = customRegisterField({
-            name: name as Path<ConceptualModel>,
-          });
-          select.removeEventListener('change', onChange as unknown as EventListener);
-          select.removeEventListener('blur', onBlur as unknown as EventListener);
-        }
-      });
-    };
-  }, [outputList.fields.length, customRegisterField]);
 
   const addItemToList = ({
     listPropertyPath,
@@ -384,6 +316,9 @@ export default function ObjetivosEntradasSalidas({
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                         Descripción de la salida
+                        </label>
                       <Input
                         {...customRegisterField({
                           name: `outputs.${index}.description`,
@@ -417,7 +352,19 @@ export default function ObjetivosEntradasSalidas({
                       name={`outputs.${index}.entity`}
                       className="w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
                       disabled={!hasEditingRights}
-                      defaultValue={entitiesList.fields[0]?._id || ""}
+                      value={watch(`outputs.${index}.entity`) as string || entitiesList.fields[0]?._id || ""}
+                      onChange={(e) => {
+                        const { onChange } = customRegisterField({
+                          name: `outputs.${index}.entity` as Path<ConceptualModel>,
+                        });
+                        onChange(e as unknown as ChangeEvent<HTMLInputElement | HTMLTextAreaElement>);
+                      }}
+                      onBlur={(e) => {
+                        const { onBlur } = customRegisterField({
+                          name: `outputs.${index}.entity` as Path<ConceptualModel>,
+                        });
+                        onBlur(e as unknown as React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>);
+                      }}
                     >
                       {entitiesList.fields.map((entity) => (
                         <option key={entity._id} value={entity._id}>
