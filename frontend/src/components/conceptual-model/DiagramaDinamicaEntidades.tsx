@@ -1,6 +1,6 @@
 "use client";
 
-import { MouseEvent, ChangeEvent, useState } from "react";
+import { MouseEvent, ChangeEvent, useState, useCallback, useMemo, memo } from "react";
 import { DiagramImageUpload } from "@components/ui/conceptual-model/diagram";
 import { ImageInfo } from "#types/conceptual-model";
 import { useFieldArray, RegisterOptions, Path } from "react-hook-form";
@@ -65,7 +65,7 @@ interface DiagramaEstructuraEntidadesProps {
 	}) => Record<string, unknown>;
 }
 
-export default function DiagramaEstructuraEntidades({
+const DiagramaDinamicaEntidadesComponent = ({
   sessionToken,
   versionId,
   hasEditingRights,
@@ -76,10 +76,21 @@ export default function DiagramaEstructuraEntidades({
   handleAddItemToList,
   handleRemoveItemFromList,
   socket,
-}: DiagramaEstructuraEntidadesProps) {
+}: DiagramaEstructuraEntidadesProps) => {
   const [collapsedEntities, setCollapsedEntities] = useState<Set<string>>(new Set());
+  
+  // Memoize entitiesList.fields to prevent unnecessary re-renders
+  const memoizedEntitiesFields = useMemo(() => entitiesList.fields, [entitiesList.fields]);
 
-  const toggleEntityCollapse = (entityId: string) => {
+
+                        // watch={watch}
+                        // namePathPrefix={`entities.${index}.dynamicDiagram`}
+                        // diagramPropertyPath={`entities:${field._id}.dynamicDiagram`}
+
+
+
+
+  const toggleEntityCollapse = useCallback((entityId: string) => {
     setCollapsedEntities(prev => {
       const newSet = new Set(prev);
       if (newSet.has(entityId)) {
@@ -89,9 +100,9 @@ export default function DiagramaEstructuraEntidades({
       }
       return newSet;
     });
-  };
+  }, []);
 
-  const addItemToList = ({
+  const addItemToList = useCallback(({
     listPropertyPath,
     itemType,
     e,
@@ -121,7 +132,19 @@ export default function DiagramaEstructuraEntidades({
       listPropertyPath,
       itemType,
     });
-  };
+  }, [watch, handleAddItemToList]);
+
+  // Memoize DiagramImageUpload props to prevent unnecessary re-renders
+  const diagramImageUploadProps = useMemo(() => ({
+    sessionToken,
+    versionId,
+    hasEditingRights,
+    imageInfos,
+    title: "Diagrama de Dinamica de la entidad",
+    watch,
+    socket,
+    register: customRegisterField,
+  }), [sessionToken, versionId, hasEditingRights, imageInfos, watch, socket, customRegisterField]);
 
   return (
     <div className="flex flex-col gap-6 p-6 bg-white rounded-lg shadow-sm">
@@ -147,9 +170,9 @@ export default function DiagramaEstructuraEntidades({
           </Button>
         </div>
 
-        {entitiesList.fields.length > 0 ? (
+        {memoizedEntitiesFields.length > 0 ? (
           <div className="space-y-3">
-            {entitiesList.fields.map((field, index) => {
+            {memoizedEntitiesFields.map((field, index) => {
               const isCollapsed = collapsedEntities.has(field._id);
               
               return (
@@ -208,16 +231,9 @@ export default function DiagramaEstructuraEntidades({
                     <div className="px-3 pb-3">
                       {/** TODO: Actualizar para cada entidades */}
                       <DiagramImageUpload
-                        sessionToken={sessionToken}
-                        versionId={versionId}
-                        hasEditingRights={hasEditingRights}
-                        imageInfos={imageInfos}
-                        title="Diagrama de Dinamica de la entidad"
-                        watch={watch}
+                        {...diagramImageUploadProps}
                         namePathPrefix={`entities.${index}.dynamicDiagram`}
                         diagramPropertyPath={`entities:${field._id}.dynamicDiagram`}
-                        socket={socket}
-                        register={customRegisterField}
                       />
                     </div>
                   )}
@@ -236,4 +252,8 @@ export default function DiagramaEstructuraEntidades({
       </div>
     </div>
   );
-}
+};
+
+DiagramaDinamicaEntidadesComponent.displayName = 'DiagramaDinamicaEntidades';
+
+export default memo(DiagramaDinamicaEntidadesComponent);

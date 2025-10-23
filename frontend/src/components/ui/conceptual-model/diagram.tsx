@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  memo,
 } from "react";
 import { Path } from "react-hook-form";
 import { AlertCircle, ImageIcon, Loader2, Upload } from "lucide-react";
@@ -142,7 +143,7 @@ const DEBOUNCE_DIAGRAM_RENDER_DELAY = 3000;
 // 	);
 // }
 
-export const DiagramImageUpload = ({
+const DiagramImageUploadComponent = ({
   title,
   versionId,
   diagramPropertyPath, //path absoluto del servidor a la propiedad del diagrama
@@ -712,10 +713,11 @@ export const DiagramImageUpload = ({
               <div className="space-y-4">
                 {/* Image Preview */}
                 <div className="relative overflow-hidden rounded-lg border h-screen">
-                  <img
+                  <Image
                     src={optimisticFile?.url || file.url}
                     alt={optimisticFile?.filename || file.filename}
-                    className="w-full h-full object-contain bg-white"
+                    fill
+                    className="object-contain bg-white"
                   />
                 </div>
               </div>
@@ -759,3 +761,7 @@ export const DiagramImageUpload = ({
     </div>
   );
 };
+
+DiagramImageUploadComponent.displayName = 'DiagramImageUpload';
+
+export const DiagramImageUpload = memo(DiagramImageUploadComponent);

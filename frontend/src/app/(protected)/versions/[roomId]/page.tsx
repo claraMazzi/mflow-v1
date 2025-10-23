@@ -7,6 +7,7 @@ import {
   useRef,
   ChangeEvent,
   useMemo,
+  useCallback,
 } from "react";
 import { socket } from "@lib/socket";
 import { Path, RegisterOptions, useFieldArray, useForm } from "react-hook-form";
@@ -23,7 +24,15 @@ import { useSocketConnection } from "@hooks/use-socket-connection";
 import DescripcionDelSistema from "@components/conceptual-model/DescripcionDelSistema";
 import React from "react";
 import VersionBar from "@components/versions/VersionBar";
-import { CLIENT_WS_EVENT_TYPES, Collaborator, InitializeConceptualModelPayload, JoinRoomEventPayload, SERVER_WS_EVENT_TYPES, SocketPosition, UsersInRoomChangePayload } from "#types/collaboration";
+import {
+  CLIENT_WS_EVENT_TYPES,
+  Collaborator,
+  InitializeConceptualModelPayload,
+  JoinRoomEventPayload,
+  SERVER_WS_EVENT_TYPES,
+  SocketPosition,
+  UsersInRoomChangePayload,
+} from "#types/collaboration";
 import { parsePropertyPath } from "@lib/utils";
 import DiagramaEstructura from "@components/conceptual-model/DiagramaEstructura";
 import DiagramaDinamicaEntidades from "@components/conceptual-model/DiagramaDinamicaEntidades";
@@ -84,7 +93,7 @@ export default function Page({
   const [imageInfos, setImageInfos] = useState<Map<string, ImageInfo>>(
     new Map()
   );
-  const { register, control, setValue, watch, getValues, reset } =
+  const { register, control, setValue, watch, getValues, reset, trigger } =
     useForm<ConceptualModel>();
 
   const simplificationList = useFieldArray({
@@ -128,17 +137,38 @@ export default function Page({
       } satisfies JoinRoomEventPayload);
     }
 
-    function onFieldUpdate(payload: { propertyPath: any; value: any }) {
+    function onFieldUpdate(payload: {
+      propertyPath: Path<ConceptualModel>;
+      value: any;
+    }) {
       console.log(
         `Server Sent Update ${payload.propertyPath}: ${payload.value}`
       );
       const parsedPath = parsePropertyPath(getValues(), payload.propertyPath);
-      setValue(parsedPath as any, payload.value);
 
-      //objective - para acceder objetivo
-      // para acceder a la image id del diagrama de estructura -- structureDiagram.imageFileId
-      //suposiciones.0.description
-      //
+      setValue(parsedPath as Path<ConceptualModel>, payload.value, {
+        shouldDirty: true,
+        shouldValidate: true,
+        shouldTouch: true,
+      });
+
+      /**
+       * The issue is that when you update a nested property like entities.0.name,
+       * React Hook Form doesn't automatically update the parent entities array reference,
+       * so components that depend on the entities array don't re-render.
+       */
+
+      if (parsedPath?.trim()) {
+        const path = parsedPath.split(".");
+        if (path.length > 0 && path[0] === "entities") {
+          const currentEntities = getValues("entities");
+          setValue("entities", [...currentEntities], {
+            shouldDirty: true,
+            shouldValidate: true,
+            shouldTouch: true,
+          });
+        }
+      }
     }
 
     function onServerVolatileBroadcast(payload: {
@@ -310,7 +340,9 @@ export default function Page({
     }
 
     socket.on("field-update", onFieldUpdate);
-    function onImageAdded(payload: { imageInfo: { id: string; url: string; originalFilename?: string } }) {
+    function onImageAdded(payload: {
+      imageInfo: { id: string; url: string; originalFilename?: string };
+    }) {
       setImageInfos((prev) => {
         const next = new Map(prev);
         next.set(payload.imageInfo.id, {
@@ -339,7 +371,10 @@ export default function Page({
       onInitializeConceptualModel
     );
     socket.on(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, onUsersInRoomChange);
-    socket.on(SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE, onPlantTextImageUpdate);
+    socket.on(
+      SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE,
+      onPlantTextImageUpdate
+    );
 
     return () => {
       socket.off("field-update", onFieldUpdate);
@@ -356,14 +391,17 @@ export default function Page({
         SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
         onUsersInRoomChange
       );
-      socket.off(SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE, onPlantTextImageUpdate);
+      socket.off(
+        SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE,
+        onPlantTextImageUpdate
+      );
     };
   }, [isSocketConnected]);
 
-  const sendPropertyUpdate = (value: any, propertyPath: string) => {
+  const sendPropertyUpdate = useCallback((value: any, propertyPath: string) => {
     if (!hasEditingRights) return;
     socket.emit("field-update", { roomId, propertyPath, value }); // Emit partial form data
-  };
+  }, [hasEditingRights, socket, roomId]);
 
   const handleMouseMove = (e: MouseEvent) => {
     //Had to change the previous implementation because using offsetX and offsetY caused inconsistent values
@@ -416,7 +454,7 @@ export default function Page({
     socket.emit("remove-item-from-list", { roomId, listPropertyPath, itemId });
   };
 
-  const customRegisterField = ({
+  const customRegisterField = useCallback(({
     name,
     propertyPath = name,
     options = {},
@@ -456,7 +494,7 @@ export default function Page({
     };
 
     return enhancedRegister;
-  };
+  }, [register, getValues, hasEditingRights, sendPropertyUpdate]);
 
   //todo: enhance error message
   if (!roomId) return <>No version ID</>;
@@ -469,7 +507,7 @@ export default function Page({
         pendingEditingRequests={pendingEditingRequests}
         collaborators={collaborators}
         handleEditingRequestEvaluation={handleEditingRequestEvaluation}
-      title={title}
+        title={title}
       />
 
       {!isModelInitialized ? (
@@ -497,7 +535,7 @@ export default function Page({
                 Diagrama de Estructura
               </TabsTrigger>
               <TabsTrigger value="diagrama-dinamica-entidades">
-              Entidades y Diagramas Dinámica
+                Entidades y Diagramas Dinámica
               </TabsTrigger>
               <TabsTrigger value="objetivos-entradas-salidas">
                 Objetivos, Entradas y Salidas
@@ -514,7 +552,7 @@ export default function Page({
                 handleRemoveItemFromList={handleRemoveItemFromList}
               />
             </TabsContent>
-            
+
             <TabsContent value="diagrama-estructura" className="">
               <DiagramaEstructura
                 sessionToken={session?.auth}
@@ -557,8 +595,8 @@ export default function Page({
           </Tabs>
         </form>
       )}
-{/* DELETE AFTER */}
-<p>Status: {isSocketConnected ? "connected" : "disconnected"}</p>
+      {/* DELETE AFTER */}
+      <p>Status: {isSocketConnected ? "connected" : "disconnected"}</p>
       <p>Id: {isSocketConnected ? socket.id : "No disponible"}</p>
       <p>Transport: {transport}</p>
       <p>Current Room: {roomId}</p>

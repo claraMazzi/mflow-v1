@@ -417,8 +417,8 @@ export default function ObjetivosEntradasSalidas({
                       name={`outputs.${index}.entity`}
                       className="w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
                       disabled={!hasEditingRights}
+                      defaultValue={entitiesList.fields[0]?._id || ""}
                     >
-                      <option value="">Seleccionar entidad...</option>
                       {entitiesList.fields.map((entity) => (
                         <option key={entity._id} value={entity._id}>
                           {entity.name || `Entidad ${entity._id.slice(-4)}`}
