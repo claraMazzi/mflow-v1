@@ -6,7 +6,7 @@ import { ConceptualModel } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
 import { Button } from "@components/ui/common/button";
 import { X, Plus } from "lucide-react";
-import cn from 'clsx';
+import cn from "clsx";
 
 interface AlcanceProps {
   hasEditingRights: boolean;
@@ -316,16 +316,20 @@ export default function Alcance({
 
       {entitiesList.fields.map((entity, index) => (
         <div key={entity._id} className="flex flex-col gap-4">
-          <p>Entidad: <strong>{entity.name}</strong></p>
+          <p>
+            Entidad: <strong>{entity.name}</strong>
+          </p>
           {/* make a select box for the scope decision of each entity, iclude should be a select box, justification should be an imput and type of argument should be a select box with predefined values in the version.model schema, the select box should be disabled if the user does not have editing rights, matchin the same style as the other conceptual-model components  */}
 
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
-                Incluir
+              Incluir
             </label>
             <select
               name={`entities.${index}.scopeDecision.include`}
-              className={cn("w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none")}
+              className={cn(
+                "w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
+              )}
               disabled={!hasEditingRights}
             >
               <option value="true">Incluir</option>
@@ -334,15 +338,17 @@ export default function Alcance({
           </div>
 
           <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">
-          Justificación
-        </label>
-        <Input
-          {...customRegisterField({ name: `entities.${index}.scopeDecision.justification` })}
-          placeholder="Describe la justificación..."
-          className="border-2 border-gray-200 focus:border-purple-400"
-        />
-      </div>
+            <label className="block text-sm font-medium text-gray-700">
+              Justificación
+            </label>
+            <Input
+              {...customRegisterField({
+                name: `entities.${index}.scopeDecision.justification`,
+              })}
+              placeholder="Describe la justificación..."
+              className="border-2 border-gray-200 focus:border-purple-400"
+            />
+          </div>
 
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
