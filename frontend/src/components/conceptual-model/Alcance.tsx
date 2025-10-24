@@ -106,6 +106,24 @@ export default function Alcance({
                       "w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
                     )}
                     disabled={!hasEditingRights}
+                    onChange={(e) => {
+                      const { onChange } = customRegisterField({
+                        name: `entities.${index}.scopeDecision.include` as Path<ConceptualModel>,
+                      });
+                      onChange(e as unknown as ChangeEvent<HTMLInputElement | HTMLTextAreaElement>);
+                    }}
+                    onBlur={(e) => {
+                      const { onBlur } = customRegisterField({
+                        name: `entities.${index}.scopeDecision.include` as Path<ConceptualModel>,
+                      });
+                      onBlur(e as unknown as React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>);
+                    }}
+                    ref={(el) => {
+                      const { ref } = customRegisterField({
+                        name: `entities.${index}.scopeDecision.include` as Path<ConceptualModel>,
+                      });
+                      ref(el as HTMLInputElement | HTMLTextAreaElement | null);
+                    }}
                   >
                     <option value="true">Incluir</option>
                     <option value="false">Excluir</option>
@@ -133,6 +151,24 @@ export default function Alcance({
                     name={`entities.${index}.scopeDecision.argumentType`}
                     className="w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
                     disabled={!hasEditingRights}
+                    onChange={(e) => {
+                      const { onChange } = customRegisterField({
+                        name: `entities.${index}.scopeDecision.argumentType` as Path<ConceptualModel>,
+                      });
+                      onChange(e as unknown as ChangeEvent<HTMLInputElement | HTMLTextAreaElement>);
+                    }}
+                    onBlur={(e) => {
+                      const { onBlur } = customRegisterField({
+                        name: `entities.${index}.scopeDecision.argumentType` as Path<ConceptualModel>,
+                      });
+                      onBlur(e as unknown as React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>);
+                    }}
+                    ref={(el) => {
+                      const { ref } = customRegisterField({
+                        name: `entities.${index}.scopeDecision.argumentType` as Path<ConceptualModel>,
+                      });
+                      ref(el as HTMLInputElement | HTMLTextAreaElement | null);
+                    }}
                   >
                     <option value="SALIDA">Salida</option>
                     <option value="ENTRADA">Entrada</option>
