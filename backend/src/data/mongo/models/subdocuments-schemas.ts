@@ -18,9 +18,9 @@ export const diagramSchema = new Schema(
 export type Diagram = InferSchemaType<typeof diagramSchema>;
 
 const propertySchema = new Schema({
-	nombre: {
+	name: {
 		type: String,
-		required: [true, "El campo nombre de la propiedad es obligatorio."],
+		//required: [true, "El campo nombre de la propiedad es obligatorio."],
 	},
 	detailLevelDecision: {
 		include: Boolean,

@@ -15,7 +15,7 @@ type Diagram = {
 
 type Property = {
 	_id: string;
-	nombre: string;
+	name: string;
 	detailLevelDecision: {
 		include: boolean;
 		justification: string;

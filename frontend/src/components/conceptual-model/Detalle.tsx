@@ -84,7 +84,7 @@ export default function Detalle({
                     <label className="block text-sm font-medium text-gray-700">Nombre de la propiedad</label>
                     <Input
                       {...customRegisterField({
-                        name: (`entities.${entityIndex}.properties.${propIndex}.nombre` as unknown) as Path<ConceptualModel>,
+                        name: (`entities.${entityIndex}.properties.${propIndex}.name` as unknown) as Path<ConceptualModel>,
                       })}
                       placeholder="Nombre..."
                       className="border-2 border-gray-200 focus:border-purple-400"
