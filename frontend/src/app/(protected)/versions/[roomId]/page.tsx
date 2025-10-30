@@ -39,6 +39,7 @@ import DiagramaDinamicaEntidades from "@components/conceptual-model/DiagramaDina
 import ObjetivosEntradasSalidas from "@components/conceptual-model/ObjetivosEntradasSalidas";
 import Alcance from "@components/conceptual-model/Alcance";
 import Detalle from "@components/conceptual-model/Detalle";
+import DiagramaFlujo from "@components/conceptual-model/DiagramaDeFlujo";
 
 function throttle(func: any, delay: number) {
   let timeout: NodeJS.Timeout | null = null;
@@ -553,6 +554,9 @@ export default function Page({
               <TabsTrigger value="detalle">
                 Nivel de Detalle
               </TabsTrigger>
+              <TabsTrigger value="flujo">
+                Diagrama de Flujo              
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="descripcion-sistema" className="">
               <DescripcionDelSistema
@@ -606,18 +610,31 @@ export default function Page({
               />
             </TabsContent>
             <TabsContent value="alcance">
-            <Alcance
+              <Alcance
                 hasEditingRights={hasEditingRights}
                 entitiesList={entitiesList}
                 customRegisterField={customRegisterField}
               />
             </TabsContent>
+
             <TabsContent value="detalle">
               <Detalle
                 hasEditingRights={hasEditingRights}
                 entitiesList={entitiesList}
                 control={control}
                 customRegisterField={customRegisterField}
+              />
+            </TabsContent>
+
+            <TabsContent value="flujo">
+              <DiagramaFlujo
+                sessionToken={session?.auth}
+                versionId={roomId}
+                hasEditingRights={hasEditingRights}
+                imageInfos={imageInfos}
+                watch={watch}
+                customRegisterField={customRegisterField}
+                socket={socket}
               />
             </TabsContent>
           </Tabs>
