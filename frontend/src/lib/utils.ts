@@ -63,3 +63,26 @@ export const parsePropertyPath = (conceptualModel: ConceptualModel, path: string
   }
   return parsedPath.join(".");
 }
+
+/**
+ * Generates a consistent color from a userId string
+ * Uses a simple hash function to convert userId to a hue value
+ */
+export const getUserColor = (userId: string): string => {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash % 360);
+  // Use a fixed saturation and lightness for good visibility
+  return `hsl(${hue}, 70%, 50%)`;
+}
+
+/**
+ * Gets the initial letter(s) from a user's name
+ */
+export const getUserInitials = (name: string, lastName: string): string => {
+  const firstInitial = name?.[0]?.toUpperCase() || "";
+  const lastInitial = lastName?.[0]?.toUpperCase() || "";
+  return `${firstInitial}${lastInitial}` || "?";
+}

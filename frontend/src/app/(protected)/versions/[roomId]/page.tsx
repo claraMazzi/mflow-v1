@@ -40,6 +40,7 @@ import ObjetivosEntradasSalidas from "@components/conceptual-model/ObjetivosEntr
 import Alcance from "@components/conceptual-model/Alcance";
 import Detalle from "@components/conceptual-model/Detalle";
 import DiagramaFlujo from "@components/conceptual-model/DiagramaDeFlujo";
+import { RemoteCursor } from "@components/versions/RemoteCursor";
 
 function throttle(func: any, delay: number) {
   let timeout: NodeJS.Timeout | null = null;
@@ -74,6 +75,8 @@ export default function Page({
   const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(
     new Map()
   );
+  const [followingUserId, setFollowingUserId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const hasEditingRights = useMemo(() => {
     // console.log("Has Editing Rights was recalculated.");
     if (!session?.user.id) return false;
@@ -462,6 +465,36 @@ export default function Page({
     socket.emit("remove-item-from-list", { roomId, listPropertyPath, itemId });
   };
 
+  const handleFollowUser = useCallback((userId: string) => {
+    if (followingUserId === userId) {
+      // Unfollow if already following
+      setFollowingUserId(null);
+    } else {
+      setFollowingUserId(userId);
+      
+      // Scroll to the user's position
+      const collaborator = collaborators.get(userId);
+      if (collaborator && containerRef.current) {
+        // Find the first socket with a mouse position in the current tab
+        for (const socket of collaborator.sockets.values()) {
+          if (socket.mousePosition && socket.currentTab === currentTab) {
+            const rect = containerRef.current.getBoundingClientRect();
+            const targetX = rect.left + socket.mousePosition.relativeX * rect.width;
+            const targetY = rect.top + socket.mousePosition.relativeY * rect.height;
+            
+            // Scroll to position smoothly
+            window.scrollTo({
+              left: targetX - window.innerWidth / 2,
+              top: targetY - window.innerHeight / 2,
+              behavior: "smooth",
+            });
+            break;
+          }
+        }
+      }
+    }
+  }, [followingUserId, collaborators, currentTab]);
+
   const customRegisterField = useCallback(({
     name,
     propertyPath = name,
@@ -504,11 +537,89 @@ export default function Page({
     return enhancedRegister;
   }, [register, getValues, hasEditingRights, sendPropertyUpdate]);
 
+  // Get all active cursors for the current tab
+  const activeCursors = useMemo(() => {
+    const cursors: Array<{
+      collaborator: Collaborator;
+      socketId: string;
+      mousePosition: { relativeX: number; relativeY: number };
+    }> = [];
+
+    for (const collaborator of collaborators.values()) {
+      // Skip current user
+      if (collaborator.userId === session?.user.id) continue;
+
+      for (const socket of collaborator.sockets.values()) {
+        // Only show cursors for users in the same tab
+        if (socket.mousePosition && socket.currentTab === currentTab) {
+          cursors.push({
+            collaborator,
+            socketId: socket.socketId,
+            mousePosition: socket.mousePosition,
+          });
+        }
+      }
+    }
+
+    return cursors;
+  }, [collaborators, currentTab, session?.user.id]);
+
+  // Auto-scroll to followed user
+  React.useEffect(() => {
+    if (!followingUserId || !containerRef.current) return;
+
+    const collaborator = collaborators.get(followingUserId);
+    if (!collaborator) return;
+
+    // Find the first socket with a mouse position in the current tab
+    for (const socket of collaborator.sockets.values()) {
+      if (socket.mousePosition && socket.currentTab === currentTab) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const targetX = rect.left + socket.mousePosition.relativeX * rect.width;
+        const targetY = rect.top + socket.mousePosition.relativeY * rect.height;
+        
+        // Smooth scroll to position
+        const currentScrollX = window.scrollX + window.innerWidth / 2;
+        const currentScrollY = window.scrollY + window.innerHeight / 2;
+        const targetScrollX = targetX;
+        const targetScrollY = targetY;
+        
+        // Only scroll if significantly different (avoid jitter)
+        const distanceX = Math.abs(currentScrollX - targetScrollX);
+        const distanceY = Math.abs(currentScrollY - targetScrollY);
+        
+        if (distanceX > 50 || distanceY > 50) {
+          window.scrollTo({
+            left: targetScrollX - window.innerWidth / 2,
+            top: targetScrollY - window.innerHeight / 2,
+            behavior: "smooth",
+          });
+        }
+        break;
+      }
+    }
+  }, [followingUserId, collaborators, currentTab, activeCursors]);
+
   //todo: enhance error message
   if (!roomId) return <>No version ID</>;
 
   return (
-    <div className="flex-grow bg-grey-0" onMouseMove={handleMouseMove}>
+    <div 
+      ref={containerRef}
+      className="flex-grow bg-grey-0 relative" 
+      onMouseMove={handleMouseMove}
+    >
+      {/* Remote cursors */}
+      {activeCursors.map((cursor) => (
+        <RemoteCursor
+          key={cursor.socketId}
+          collaborator={cursor.collaborator}
+          socketId={cursor.socketId}
+          mousePosition={cursor.mousePosition}
+          containerRef={containerRef}
+        />
+      ))}
+      
       <VersionBar
         canUserSendEditingRequest={canUserSendEditingRequest}
         handleRequestEditingRights={handleRequestEditingRights}
@@ -516,6 +627,9 @@ export default function Page({
         collaborators={collaborators}
         handleEditingRequestEvaluation={handleEditingRequestEvaluation}
         title={title}
+        onFollowUser={handleFollowUser}
+        followingUserId={followingUserId}
+        currentUserId={session?.user.id}
       />
 
       {!isModelInitialized ? (

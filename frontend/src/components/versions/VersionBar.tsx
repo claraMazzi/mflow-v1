@@ -7,6 +7,7 @@ import {
 import { Collaborator } from "#types/collaboration";
 import { Edit } from "lucide-react";
 import { useUI } from "../ui/context";
+import { CollaboratorAvatar } from "./CollaboratorAvatar";
 
 interface VersionBarProps {
   canUserSendEditingRequest: boolean;
@@ -21,6 +22,9 @@ interface VersionBarProps {
     action: "accept" | "decline";
   }) => () => void;
   title: string;
+  onFollowUser?: (userId: string) => void;
+  followingUserId?: string | null;
+  currentUserId?: string | null;
 }
 
 const VersionBar = ({
@@ -30,6 +34,9 @@ const VersionBar = ({
   collaborators,
   handleEditingRequestEvaluation,
   title,
+  onFollowUser,
+  followingUserId,
+  currentUserId,
 }: VersionBarProps) => {
   const { addEditingRequestToast, removeEditingRequestToast } = useUI();
   const shownRequestsRef = useRef<Set<string>>(new Set());
@@ -77,18 +84,36 @@ const VersionBar = ({
     // handleEditingRequestEvaluation
   ]);
 
+  const collaboratorList = Array.from(collaborators.values());
+
   return (
     <div className="bg-blue-50 h-16 flex justify-between items-center p-4">
       <div className="flex items-center w-full justify-between">
         <p className="text-lg font-bold">{title}</p>
-        {/* TODO: add active collaborators avatars */}
-        <Button
-          disabled={!canUserSendEditingRequest}
-          onClick={handleRequestEditingRights}
-        >
-          <Edit className="h-4 w-4" />
-          SOLICITAR EDICIÓN
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Active collaborators avatars */}
+          <div className="flex items-center gap-2 -space-x-2">
+            {collaboratorList.map((collaborator) => {
+              if (collaborator.userId === currentUserId) return null;
+              return (
+                <CollaboratorAvatar
+                  key={collaborator.userId}
+                  collaborator={collaborator}
+                  isFollowing={followingUserId === collaborator.userId}
+                  onClick={() => onFollowUser?.(collaborator.userId)}
+                  size="sm"
+                />
+              );
+            })}
+          </div>
+          <Button
+            disabled={!canUserSendEditingRequest}
+            onClick={handleRequestEditingRights}
+          >
+            <Edit className="h-4 w-4" />
+            SOLICITAR EDICIÓN
+          </Button>
+        </div>
       </div>
     </div>
   );
