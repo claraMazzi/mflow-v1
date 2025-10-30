@@ -185,7 +185,7 @@ export class SocketServer {
 			(payload: {
 				roomId: string;
 				listPropertyPath: string;
-				itemType: "assumption" | "simplification" | "entity";
+				itemType: "assumption" | "simplification" | "entity" | "input" | "output" | "property";
 			}) => this.handleAddItemToList(socket, payload)
 		);
 
@@ -480,7 +480,7 @@ export class SocketServer {
 		payload: {
 			roomId: string;
 			listPropertyPath: string;
-			itemType: "assumption" | "simplification" | "entity" | "input" | "output";
+			itemType: "assumption" | "simplification" | "entity" | "input" | "output" | "property";
 		}
 	) {
 		//add try catch 
@@ -519,6 +519,16 @@ export class SocketServer {
 			case "simplification":
 				listField.push({ description: "" });
 				break;
+			case "property":
+				listField.push({
+					name: "",
+					detailLevelDecision: {
+						include: true,
+						justification: "",
+						argumentType: "CALCULO SALIDA",
+					},
+				});
+				break;
 		}
 
 		version.save();
@@ -549,7 +559,8 @@ export class SocketServer {
 			version.conceptualModel,
 			payload.listPropertyPath
 		);
-		const itemToDelete = listField.find((s: any) =>
+		console.log("List Field: ", listField);
+		const itemToDelete = listField.find((s: any) => 
 			s._id.equals(payload.itemId)
 		);
 		listField.remove(itemToDelete);

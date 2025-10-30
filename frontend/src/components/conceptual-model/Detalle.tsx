@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useFieldArray, RegisterOptions, Path, Control } from "react-hook-form";
 import { ConceptualModel } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
@@ -32,6 +32,25 @@ interface DetalleProps {
     name: Path<ConceptualModel>;
     ref: (instance: HTMLInputElement | HTMLTextAreaElement | null) => void;
   };
+  handleAddItemToList: ({
+    e,
+    listPropertyPath,
+    itemType,
+  }: {
+    e: MouseEvent;
+    listPropertyPath: string;
+    itemType: "property";
+  }) => void;
+  handleRemoveItemFromList: ({
+    e,
+    listPropertyPath,
+    itemId,
+  }: {
+    e: MouseEvent;
+    listPropertyPath: string;
+    itemId: string;
+  }) => void;
+  watch: (name?: Path<ConceptualModel>) => unknown;
 }
 
 export default function Detalle({
@@ -39,13 +58,55 @@ export default function Detalle({
   entitiesList,
   control,
   customRegisterField,
+  handleAddItemToList,
+  handleRemoveItemFromList,
 }: DetalleProps) {
+
   function EntityPropertiesEditor({ entityIndex }: { entityIndex: number }) {
-    const propertiesList = useFieldArray({
+    const propertiesList:  ReturnType<
+    typeof useFieldArray<ConceptualModel, `entities.${number}.properties`>
+  > = useFieldArray({
       // TS cast because react-hook-form lacks template literal support for nested paths here
-      name: (`entities.${entityIndex}.properties` as unknown) as never,
+      name: (`entities.${entityIndex}.properties` as const),
       control,
     });
+  const previousPropertiesLength = useRef(propertiesList.fields.length);
+  console.log("Properties List: ", propertiesList);
+
+
+      // Focus on the last added item when the list changes
+  useEffect(() => {
+    if (propertiesList.fields.length > previousPropertiesLength.current) {
+      // A new item was added, focus on the last one
+      const lastIndex = propertiesList.fields.length - 1;
+      const input = document.querySelector<
+        HTMLInputElement | HTMLTextAreaElement
+      >(`[name="entities.${entityIndex}.properties.${lastIndex}.name"]`);
+      if (input) {
+        // Use setTimeout to ensure the DOM is updated
+        setTimeout(() => {
+          input.focus();
+        }, 0);
+      }
+    }   
+    previousPropertiesLength.current = propertiesList.fields.length;
+  }, [propertiesList.fields.length, entityIndex]);
+
+    const addItemToList = useCallback(({
+      listPropertyPath,
+      itemType,
+      e,
+    }: {
+      listPropertyPath: string;
+      itemType: "property";
+      e: MouseEvent;
+    }) => {
+      handleAddItemToList({
+        e: e,
+        listPropertyPath,
+        itemType,
+      });
+    }, [handleAddItemToList, entityIndex]);
 
     return (
       <div className="space-y-4">
@@ -55,15 +116,12 @@ export default function Detalle({
             variant="outline"
             size="sm"
             disabled={!hasEditingRights}
-            onClick={() =>
-              propertiesList.append({
-                nombre: "",
-                detailLevelDecision: {
-                  include: true,
-                  justification: "",
-                  argumentType: "CALCULO SALIDA",
-                },
-              } as unknown as never)
+            onClick={(e) =>
+              addItemToList({
+                e: e,
+                listPropertyPath: `entities.${entityIndex}.properties`,
+                itemType: "property",
+              })
             }
             className="flex items-center gap-2"
           >
@@ -94,7 +152,11 @@ export default function Detalle({
                     variant="ghost"
                     size="sm"
                     disabled={!hasEditingRights}
-                    onClick={() => propertiesList.remove(propIndex)}
+                    onClick={(e) => handleRemoveItemFromList({
+                      e: e,
+                      listPropertyPath: `entities.${entityIndex}.properties`,
+                      itemId: field._id,
+                    })}
                     className="text-red-500 hover:text-red-700 hover:bg-red-50"
                   >
                     <X size={16} />

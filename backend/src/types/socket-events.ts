@@ -1,9 +1,9 @@
 import { ConceptualModel } from "../data/mongo/models/subdocuments-schemas";
 
 function parsePropertyPath(conceptualModel: ConceptualModel, path: string) {
-    const pathParts = path.split(".");
-    const parsedPath: (string | number)[] = [];
-    let current: any = conceptualModel;
+	const pathParts = path.split(".");
+	const parsedPath = [];
+	let current: any = conceptualModel;
 
 	//. dividen las propiedades anidades y cuando tengo una propiedad que es una lista coloco : si quiero acceder a un item especifico de la lsita. 
 	//quiero la lista -> entidad.lista 
@@ -27,30 +27,13 @@ function parsePropertyPath(conceptualModel: ConceptualModel, path: string) {
 			parsedPath.push(listProperty);
 			parsedPath.push(itemIndex);
 			current = current[listProperty][itemIndex];
-        } else {
-            const isNumericIndex = /^\d+$/.test(part);
-            // Handle numeric index for arrays, e.g., properties.0.nombre
-            if (isNumericIndex && Array.isArray(current)) {
-                const index = parseInt(part, 10);
-                // Ensure array is large enough and slot is initialized
-                while (current.length <= index) {
-                    current.push({});
-                }
-                if (current[index] == null) {
-                    current[index] = {};
-                }
-                parsedPath.push(index);
-                current = current[index];
-                continue;
-            }
-
-            if (!(part in current)) {
-                // Auto-initialize missing object path segments to allow deep set
-                current[part] = {};
-            }
-            parsedPath.push(part);
-            current = current[part];
-        }
+		} else {
+			if (!(part in current)) {
+				return undefined;
+			}
+			parsedPath.push(part)
+			current = current[part];
+		}
 	}
 	console.log("Parsed Path: ", parsedPath);
 	return parsedPath;
@@ -62,13 +45,18 @@ export const getProperty = (
 ) => {
 	const pathParts = parsePropertyPath(conceptualModel, propertyPath);
 	let current: any = conceptualModel;
+	console.log("Path Parts: ", pathParts);
+	console.log("Current: ", current);
+
 	while (
 		pathParts!.length > 1
 		//parts.length > 1 &&
 		//conceptualModel.hasOwnProperty(parts[0])
 	) {
 		current = current[pathParts!.shift()!];
+		console.log("Current: ", current);
 	}
+	console.log("Current[pathParts![0]]: ", current[pathParts![0]]);
 	return current[pathParts![0]];
 };
 

@@ -443,7 +443,7 @@ export default function Page({
   }: {
     e: MouseEvent;
     listPropertyPath: string;
-    itemType: "assumption" | "simplification" | "entity" | "input" | "output";
+    itemType: "assumption" | "simplification" | "entity" | "input" | "output" | "property";
   }) => {
     e.preventDefault();
     socket.emit("add-item-to-list", { roomId, listPropertyPath, itemType });
@@ -623,6 +623,9 @@ export default function Page({
                 entitiesList={entitiesList}
                 control={control}
                 customRegisterField={customRegisterField}
+                handleAddItemToList={handleAddItemToList}
+                handleRemoveItemFromList={handleRemoveItemFromList}
+                watch={watch}
               />
             </TabsContent>
 
@@ -634,6 +637,7 @@ export default function Page({
                 imageInfos={imageInfos}
                 watch={watch}
                 customRegisterField={customRegisterField}
+
                 socket={socket}
               />
             </TabsContent>
