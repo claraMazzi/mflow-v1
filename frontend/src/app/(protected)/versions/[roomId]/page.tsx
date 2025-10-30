@@ -38,6 +38,7 @@ import DiagramaEstructura from "@components/conceptual-model/DiagramaEstructura"
 import DiagramaDinamicaEntidades from "@components/conceptual-model/DiagramaDinamicaEntidades";
 import ObjetivosEntradasSalidas from "@components/conceptual-model/ObjetivosEntradasSalidas";
 import Alcance from "@components/conceptual-model/Alcance";
+import Detalle from "@components/conceptual-model/Detalle";
 
 function throttle(func: any, delay: number) {
   let timeout: NodeJS.Timeout | null = null;
@@ -549,6 +550,9 @@ export default function Page({
               <TabsTrigger value="alcance">
                 Alcance
               </TabsTrigger>
+              <TabsTrigger value="detalle">
+                Nivel de Detalle
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="descripcion-sistema" className="">
               <DescripcionDelSistema
@@ -605,6 +609,14 @@ export default function Page({
             <Alcance
                 hasEditingRights={hasEditingRights}
                 entitiesList={entitiesList}
+                customRegisterField={customRegisterField}
+              />
+            </TabsContent>
+            <TabsContent value="detalle">
+              <Detalle
+                hasEditingRights={hasEditingRights}
+                entitiesList={entitiesList}
+                control={control}
                 customRegisterField={customRegisterField}
               />
             </TabsContent>
