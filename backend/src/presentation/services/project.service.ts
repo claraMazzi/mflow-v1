@@ -65,7 +65,7 @@ export class ProjectService {
 
 	//get user active projects
 	async getUserProjects(owner: string) {
-		const projects = await ProjectModel.find({ owner: owner })
+		const projects = await ProjectModel.find({ owner: owner, state: { $ne: projectState.deleted } })
 			.populate("collaborators")
 			.exec();
 
@@ -86,7 +86,7 @@ export class ProjectService {
 
 	//get user active shared projects
 	async getUserSharedProjects(userId: string) {
-		const projects = await ProjectModel.find({ collaborators: userId })
+		const projects = await ProjectModel.find({ collaborators: userId, state: { $ne: projectState.deleted } })
 			.populate("collaborators")
 			.exec();
 
