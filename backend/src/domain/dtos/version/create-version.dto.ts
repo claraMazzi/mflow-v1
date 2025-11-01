@@ -10,8 +10,8 @@ export class CreateVersionDto {
 
     static create( object: {[key:string]:any}): [string?, CreateVersionDto?] {
         const {title, parentVersion, projectId} = object;
-        if (!title) return ['Title is missing'];
-        if (!projectId) return ['Missing Old Password'];
+        if (!title) return ['El título de la versión es obligatorio.'];
+        if (!projectId) return ['Debe especificarse el proyecto al que pertenece esta versión.'];
         return [undefined, new CreateVersionDto(title, parentVersion, projectId)]
     }
 }

@@ -72,7 +72,9 @@ export async function modifyUserRoles(
 	try {
 		const session = await auth();
 		if (!session?.user) {
-			return { error: "Not authenticated" };
+			return {
+				error: "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.",
+			};
 		}
 		const id = formData.get("id") as string;
 		const roles = JSON.parse(formData.get("roles") as string) as string[];
@@ -80,14 +82,14 @@ export async function modifyUserRoles(
 		// Basic validation
 		if (!id) {
 			return {
-				error: "ID de usuario requerido",
+				error: "El identificador del usuario es obligatorio.",
 				success: false,
 			};
 		}
 
 		if (!roles || roles.length === 0) {
 			return {
-				error: "Al menos un rol es requerido",
+				error: "El usuario debe tener al menos un rol asignado.",
 				success: false,
 			};
 		}
@@ -95,7 +97,11 @@ export async function modifyUserRoles(
 		const accessToken = session.auth;
 
 		if (!accessToken) {
-			return { error: "No access token available" };
+			return {
+				error:
+					"No se pudo obtener el token de autenticación. Intenta cerrar sesión e iniciar sesión nuevamente.",
+				success: false,
+			};
 		}
 
 		const response = await fetch(
@@ -113,24 +119,10 @@ export async function modifyUserRoles(
 		);
 
 		if (!response.ok) {
-			const errorText = await response.text();
-
-			if (response.status === 401) {
-				return {
-					error: "No autenticado",
-					success: false,
-				};
-			}
-
-			if (response.status === 400) {
-				return {
-					error: "Datos no actualizados",
-					success: false,
-				};
-			}
+			const errorBody : {error: string}  = await response.json();
 
 			return {
-				error: "Algo salió mal.",
+				error: errorBody.error,
 				success: false,
 			};
 		}
@@ -139,9 +131,9 @@ export async function modifyUserRoles(
 			success: true,
 		};
 	} catch (error) {
-		console.log("Error ocurred while updating the User Roles: ", error);
+		console.log("Unexpected error modifying the User Roles: ", error);
 		return {
-			error: "Algo salió mal.",
+			error: "Se ha producido un error, por favor inténtelo de nuevo más tarde.",
 			success: false,
 		};
 	}

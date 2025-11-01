@@ -35,7 +35,7 @@ export class AuthMiddleware {
       //errores no controlados
       console.log("middleware error", error);
 
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: "Ocurrió un error interno en el servidor." });
     }
   }
 

@@ -18,8 +18,8 @@ export class UserController {
       return res.status(error.statusCode).json({ error: error.message });
     }
 
-    console.log(`${error}`);
-    return res.status(500).json({ error: "Internal server error" });
+    console.log(`Unexpected Unhandled Error: ${error}`);
+    return res.status(500).json({ error: "Ha ocurrido un error interno en el servidor." });
   };
 
   getUserById = (req: Request, res: Response) => {
@@ -75,14 +75,10 @@ export class UserController {
   updateUserRolesById = (req: Request, res: Response) => {
     const { id: userId } = req.params;
     const userData = req.body;
-    const adminId = req.session?.userId ?? "";
+    const adminId = req.session!.userId;
 
     if (adminId === userId)
-      return res.status(400).json({ error: "You can't update your own roles" });
-
-    if (!userId) {
-      return res.status(401).json({ error: "No User id provided" });
-    }
+      return res.status(400).json({ error: "No puedes modificar tus propios roles." });
 
     const [error, updateUserRolesDto] = UpdateUserRolesDto.create({
       id: userId,

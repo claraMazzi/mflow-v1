@@ -1,5 +1,7 @@
 import { Schema, SchemaTypes, model } from "mongoose";
 
+export const USER_ROLES = ["VERIFICADOR", "MODELADOR", "ADMIN"] as const;
+
 const userSchema = new Schema(
 	{
 		name: {
@@ -25,7 +27,7 @@ const userSchema = new Schema(
 		},
 		roles: {
 			type: [String],
-			enum: ["VERIFICADOR", "MODELADOR", "ADMIN"],
+			enum: USER_ROLES,
 			default: ["MODELADOR"],
 		},
 		sharedProjects: [{ type: Schema.Types.ObjectId, ref: "Project" }],
