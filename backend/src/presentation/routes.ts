@@ -35,6 +35,8 @@ export class AppRoutes {
 		//projects routes
 		router.use("/api/projects", ProjectRoutes.routes);
 
+		//router.use("/api/versions", VersionRoutes.routes)
+
 		//-----------user needs to be admin routes
 		router.use(AuthMiddleware.validateRequiredRoles(["ADMIN"]));
 		

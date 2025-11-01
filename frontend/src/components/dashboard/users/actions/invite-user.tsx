@@ -64,7 +64,7 @@ export async function inviteUsers(prevState: ActionState, formData: FormData): P
   
       if (!response.ok) {
         const errorText = await response.text()
-        console.error("[v0] API Error Response:", errorText)
+        console.error("API Error Response:", errorText)
   
         if (response.status === 401) {
           return {
