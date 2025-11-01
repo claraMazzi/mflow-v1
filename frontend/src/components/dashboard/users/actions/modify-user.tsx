@@ -73,7 +73,7 @@ export async function modifyUserRoles(
 		const session = await auth();
 		if (!session?.user) {
 			return {
-				error: "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.",
+				error: "Tu sesión ha expirado. Por favor, inicie sesión nuevamente.",
 			};
 		}
 		const id = formData.get("id") as string;
