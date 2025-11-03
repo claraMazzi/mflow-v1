@@ -1,36 +1,36 @@
+import { emailRegex } from "../../../config";
+
 //pongo los campos que necesito pasar por la request no mas
-export class UpdateUsersRolesDto {
+export class SendInvitationWithRolesDto {
   constructor(public readonly email: string, public readonly roles: string[]) {}
 
   static create(object: {
     [key: string]: any;
-  }): [string?, UpdateUsersRolesDto[]?] {
+  }): [string?, SendInvitationWithRolesDto[]?] {
     const { users } = object;
 
-    if (!users || !Array.isArray(users) || !users.length) {
-      return ["Users data should be a non-empty array"];
+    if (!users || !Array.isArray(users) || users.length === 0) {
+      return ["No se proporcionaron invitaciones para enviar."];
     }
 
-    const usersDto: UpdateUsersRolesDto[] = [];
+    const usersDto: SendInvitationWithRolesDto[] = [];
 
     for (const user of users) {
       const { roles, email} = user;
 
       if (!email) {
-        return ["Missing email"];
-      }
-      if (!roles || !Array.isArray(roles)) {
-        return ["Roles should be an array"];
-      }
-      if (roles && Array.isArray(roles) && !roles.length) {
-        return ["Roles can't be empty"];
+        return ["Todas las invitaciones deben tener un correo electrónico asociado."];
       }
 
-      usersDto.push(new UpdateUsersRolesDto(email, roles));
-    }
+      if(!emailRegex.test(email)) {
+        return [`El email '${email}' no tiene un formato válido.`];
+      }
 
-    if (!usersDto.length) {
-      return ["No valid user data provided"];
+      if (!roles || !Array.isArray(roles) || roles.length === 0) {
+        return ["Todas las invitaciones deben tener al menos un rol asociado."];
+      }
+
+      usersDto.push(new SendInvitationWithRolesDto(email, roles));
     }
 
     return [undefined, usersDto];

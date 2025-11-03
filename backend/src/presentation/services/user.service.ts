@@ -6,7 +6,7 @@ import {
 	UserEntity,
 } from "../../domain";
 import { UpdateUserRolesDto } from "../../domain/dtos/user/update-user-roles.dto";
-import { UpdateUsersRolesDto } from "../../domain/dtos/user/update-users-roles.dto";
+import { SendInvitationWithRolesDto } from "../../domain/dtos/user/update-users-roles.dto";
 import { EmailService } from "./email.service";
 import { bcryptAdapter, jwtAdapter } from "../../config";
 
@@ -21,21 +21,25 @@ export class UserService {
 		senderId,
 	}: {
 		senderId: string;
-		user: UpdateUsersRolesDto;
+		user: SendInvitationWithRolesDto;
 	}) => {
 		const token = await jwtAdapter.generateToken(
 			{ senderId: senderId, userEmail: user.email, roles: user.roles },
 			"7d"
 		);
 
-		if (!token) throw CustomError.internalServer("Error getting token");
-		//link de retorno
-		const link = `${this.frontEndUrl}/share/user/?token=${token}`;
+		if (!token) {
+			throw CustomError.internalServer(
+				"Ocurrió un error al generar las invitaciones."
+			);
+		}
+
+		const frontendInvitationLink = `${this.frontEndUrl}/share/user/?token=${token}`;
 
 		const html = `<h1>Has sido invitado/a a ser ${user.roles.map(
 			(role) => role
 		)}</h1>
-        <p> Hace Click en el siguiente <a href=${link}>link</a> para aceptar la invitación </p>`;
+        <p> Hace Click en el siguiente <a href=${frontendInvitationLink}>link</a> para aceptar la invitación </p>`;
 
 		const options = {
 			to: user.email,
@@ -45,8 +49,11 @@ export class UserService {
 
 		const isSent = await this.emailService.sendEmail(options);
 
-		if (!isSent)
-			throw CustomError.internalServer("Error sending sharing email");
+		if (!isSent) {
+			throw CustomError.internalServer(
+				"Ocurrió un error al enviar las invitaciones."
+			);
+		}
 	};
 
 	async getUserById(id: string) {
@@ -124,22 +131,12 @@ export class UserService {
 		}
 	}
 
-	async inviteUsersWithRole(dto: UpdateUsersRolesDto[], senderId: string) {
+	async inviteUsersWithRole(
+		invitations: SendInvitationWithRolesDto[],
+		senderId: string
+	) {
 		await Promise.all(
-			dto.map(async (userData) => {
-				const { email } = userData;
-
-				const adminUser = await UserModel.findOne({
-					_id: senderId,
-					deletedAt: null,
-				});
-
-				if (!adminUser)
-					throw CustomError.badRequest("Admin user does not exists");
-
-				if (adminUser.email === email)
-					throw CustomError.badRequest("You can't update your own roles");
-
+			invitations.map(async (userData) => {
 				await this.sendEmailInvitationLink({
 					user: userData,
 					senderId,
@@ -148,7 +145,7 @@ export class UserService {
 		);
 
 		return {
-			message: "Invitations sent successfully",
+			message: "Las invitaciones fueron enviadas exitosamente.",
 		};
 	}
 
