@@ -202,7 +202,6 @@ const DiagramImageUploadComponent = ({
   const debouncedEmitPlantTextChange = useRef(
     debounce<[string, string]>((value: string, propertyPath: string) => {
       if (socket && versionId && hasEditingRights) {
-        console.log("Emitting plant-text-code-change:", value);
         socket.emit("plant-text-code-change", {
           type: "plant-text-code-change",
           versionId,
@@ -261,7 +260,6 @@ const DiagramImageUploadComponent = ({
         imageUrl: string;
         plantTextToken: string;
       };
-      console.log("payload", payload);
       // Check if this update is for our diagram
       if (payload.propertyPath === diagramPropertyPath) {
         setPlantTextImageUrl(payload.imageUrl);
@@ -616,23 +614,39 @@ const DiagramImageUploadComponent = ({
         {usesPlantText ? (
           <div className="space-y-2">
             <label className="text-sm font-medium">Código PlantText:</label>
-            <textarea
-              {...((textareaProps as React.TextareaHTMLAttributes<HTMLTextAreaElement>) ||
-                {})}
-              onBlur={(e) => {
-                // Request existing image on blur to ensure the image is shown
-                if (e.target.value && socket && versionId) {
-                  socket.emit("plant-text-get-image", {
-                    type: "plant-text-get-image",
-                    versionId,
-                    propertyPath: diagramPropertyPath,
-                    timestamp: new Date(),
-                  });
-                }
-              }}
-              placeholder="Ingresa tu código PlantText aquí..."
-              className="w-full h-32 p-3 border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+            {(() => {
+              const props = (textareaProps as React.TextareaHTMLAttributes<HTMLTextAreaElement>) || {};
+              const { onChange: originalOnChange, onBlur: originalOnBlur, ...restProps } = props;
+              return (
+                <textarea
+                  {...restProps}
+                  onChange={(e) => {
+                    // Call the original onChange from textareaProps to update React Hook Form state
+                    if (originalOnChange) {
+                      originalOnChange(e);
+                    }
+                  }}
+                  onBlur={(e) => {
+                    // Call the original onBlur from textareaProps to update React Hook Form state
+                    if (originalOnBlur) {
+                      originalOnBlur(e);
+                    }
+
+                    // Request existing image on blur to ensure the image is shown
+                    if (e.target.value && socket && versionId) {
+                      socket.emit("plant-text-get-image", {
+                        type: "plant-text-get-image",
+                        versionId,
+                        propertyPath: diagramPropertyPath,
+                        timestamp: new Date(),
+                      });
+                    }
+                  }}
+                  placeholder="Ingresa tu código PlantText aquí..."
+                  className="w-full h-32 p-3 border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              );
+            })()}
           </div>
         ) : null}
 
@@ -648,6 +662,11 @@ const DiagramImageUploadComponent = ({
                 fill
                 alt="PlantText Diagram"
                 className="w-full h-full object-contain bg-white"
+                unoptimized
+                onError={() => {
+                  console.error("Failed to load PlantText image:", plantTextImageUrl);
+                  // Image will show broken image icon, but won't crash
+                }}
               />
             </div>
           </div>

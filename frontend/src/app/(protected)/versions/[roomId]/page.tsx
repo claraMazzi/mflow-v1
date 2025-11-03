@@ -759,7 +759,7 @@ export default function Page({
         </form>
       )}
       {/* DELETE AFTER */}
-      <p>Status: {isSocketConnected ? "connected" : "disconnected"}</p>
+      {/* <p>Status: {isSocketConnected ? "connected" : "disconnected"}</p>
       <p>Id: {isSocketConnected ? socket.id : "No disponible"}</p>
       <p>Transport: {transport}</p>
       <p>Current Room: {roomId}</p>
@@ -805,7 +805,7 @@ export default function Page({
             </li>
           );
         })}
-      </ul>
+      </ul> */}
     </div>
   );
 }
