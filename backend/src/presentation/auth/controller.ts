@@ -10,13 +10,12 @@ export class AuthController {
       return res.status(error.statusCode).json({ error: error.message });
     }
 
-    console.log(`${error}`);
-    return res.status(500).json({ error: "Internal server error" });
+    console.log(`Unexpected Unhandled Error: ${error}`);
+    return res.status(500).json({ error: "Ha ocurrido un error interno en el servidor." });
   };
 
   registerUser = (req: Request, res: Response) => {
     const [error, registerDto] = RegisterUserDto.create(req.body);
-console.log('REGISTER USER DTO', registerDto, error);
     if (error) return res.status(400).json({ error });
 
     this.authService

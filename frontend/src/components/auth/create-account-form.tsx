@@ -5,18 +5,11 @@ import { useForm } from "react-hook-form";
 import { Input } from "@components/ui/common/input";
 import { Button } from "@components/ui/common/button";
 import { Checkbox } from "@components/ui/common/checkbox";
-import { createAccount } from "./actions/create-account";
+import { createAccount, RegisterUserFormData } from "./actions/create-account";
 import cn from "clsx";
-interface FormData {
-  name: string;
-  lastName: string;
-  email: string;
-  password: string;
-  role: "MODELADOR" | "VERIFICADOR" | "ADMIN" | string[];
-}
 
 interface CreateAccountFormProps {
-  defaultValues?: Partial<FormData>;
+  defaultValues?: Partial<RegisterUserFormData>;
   successMessage?: string;
   title?: string;
   submitButtonText?: string;
@@ -33,9 +26,9 @@ export default function CreateAccountForm({
     lastName: "",
     email: "",
     password: "",
-    role: "MODELADOR",
+    roles: ["MODELADOR"],
   },
-  successMessage = "Te registraste correctamente! Por favor revisa tu casilla de correo. Recibiras un email con un link para validar el correo electronico ingresado",
+  successMessage = "¡Te registraste correctamente! Por favor revisa tu casilla de correo. Recibirás un email con un link para validar el correo electronico ingresado.",
   title = "MFLOW",
   submitButtonText = "CREAR CUENTA",
   showLoginLink = true,
@@ -48,24 +41,12 @@ export default function CreateAccountForm({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const form = useForm<FormData>({
+  const form = useForm<RegisterUserFormData>({
     defaultValues: { ...defaultValues },
     mode: "onBlur",
   });
 
-  const parseErrorMessage = () => {
-    if (!errorMessage) return;
-
-    switch (errorMessage) {
-      case "Registration failed":
-        return "Ocurrio un error inesperado";
-        
-      default:
-        return "Ocurrio un error inesperado";
-    }
-  };
-
-  const handleSubmit = async (data: FormData) => {
+  const handleSubmit = async (data: RegisterUserFormData) => {
     setIsLoading(true);
     setErrorMessage(null);
 
@@ -75,7 +56,7 @@ export default function CreateAccountForm({
       setIsSubmitted(true);
       onSuccess?.();
     } else {
-      setErrorMessage(result.error || "An error occurred during registration");
+      setErrorMessage(result.error || "Se ha producido un error, por favor inténtelo de nuevo más tarde.");
     }
 
     setIsLoading(false);
@@ -114,7 +95,7 @@ export default function CreateAccountForm({
                 <Input
                   placeholder="Tu nombre"
                   {...form.register("name", {
-                    required: "Nombre es requerido"
+                    required: "Nombre es requerido."
                   })}
                   value={form.watch("name") || ""}
                 />
@@ -130,7 +111,7 @@ export default function CreateAccountForm({
                 <Input
                   placeholder="Tu apellido"
                   {...form.register("lastName", {
-                    required: "Apellido es requerido"
+                    required: "Apellido es requerido."
                   })}
                   value={form.watch("lastName") || ""}
                 />
@@ -147,10 +128,10 @@ export default function CreateAccountForm({
                 <Input
                   placeholder="tu@email.com"
                   {...form.register("email", {
-                    required: "Correo electrónico es requerido",
+                    required: "Correo electrónico es requerido.",
                     pattern: {
                       value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                      message: "Correo electrónico invalido",
+                      message: "Correo electrónico inválido.",
                     },
                   })}
                   value={form.watch("email") || ""}
@@ -168,12 +149,12 @@ export default function CreateAccountForm({
                   type="password"
                   placeholder="Tu contraseña"
                   {...form.register("password", {
-                    required: "Contraseña es requerida",
+                    required: "Contraseña es requerida.",
                     pattern: {
                       value:
                         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,25}$/,
                       message:
-                        "Contraseña debe tener entre 6-25 caracteres con al menos una minúscula, una mayúscula, un número y un caracter especial (@$!%*?&)",
+                        "Contraseña debe tener entre 6-25 caracteres con al menos una minúscula, una mayúscula, un número y un caracter especial (@$!%*?&).",
                     },
                   })}
                   value={form.watch("password") || ""}
@@ -192,7 +173,7 @@ export default function CreateAccountForm({
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="modelador"
-                        checked={form.watch("role")?.includes("MODELADOR")}
+                        checked={form.watch("roles")?.includes("MODELADOR")}
                         disabled
                         className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
                       />
@@ -206,12 +187,12 @@ export default function CreateAccountForm({
                     <div
                       className={cn(
                         "flex items-center space-x-2",
-                        !form.watch("role")?.includes("ADMIN") ? "hidden" : ""
+                        !form.watch("roles")?.includes("ADMIN") ? "hidden" : ""
                       )}
                     >
                       <Checkbox
                         id="admin"
-                        checked={form.watch("role")?.includes("ADMIN")}
+                        checked={form.watch("roles")?.includes("ADMIN")}
                         disabled
                         className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
                       />
@@ -226,14 +207,14 @@ export default function CreateAccountForm({
                     <div
                       className={cn(
                         "flex items-center space-x-2",
-                        !form.watch("role")?.includes("VERIFICADOR")
+                        !form.watch("roles")?.includes("VERIFICADOR")
                           ? "hidden"
                           : ""
                       )}
                     >
                       <Checkbox
                         id="verificador"
-                        checked={form.watch("role")?.includes("VERIFICADOR")}
+                        checked={form.watch("roles")?.includes("VERIFICADOR")}
                         disabled
                         className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
                       />
@@ -245,8 +226,8 @@ export default function CreateAccountForm({
                       </label>
                     </div>
                   </div>
-                  {form.formState.errors.role && (
-                    <p className="text-sm text-red-600">{form.formState.errors.role.message}</p>
+                  {form.formState.errors.roles && (
+                    <p className="text-sm text-red-600">{form.formState.errors.roles.message}</p>
                   )}
                 </div>
               </div>
@@ -262,7 +243,7 @@ export default function CreateAccountForm({
             </div>
 
             {errorMessage && (
-              <p className="text-sm text-red-600">{parseErrorMessage()}</p>
+              <p className="text-sm text-red-600">{errorMessage}</p>
             )}
           </form>
         )}

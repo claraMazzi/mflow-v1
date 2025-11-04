@@ -1,6 +1,6 @@
 import { emailRegex } from "../../../config";
+import { USER_ROLES } from "../../../data";
 
-//pongo los campos que necesito pasar por la request no mas
 export class SendInvitationWithRolesDto {
   constructor(public readonly email: string, public readonly roles: string[]) {}
 
@@ -13,7 +13,8 @@ export class SendInvitationWithRolesDto {
       return ["No se proporcionaron invitaciones para enviar."];
     }
 
-    const usersDto: SendInvitationWithRolesDto[] = [];
+    const validUserRoles = new Set(USER_ROLES);
+    const invitationsDtos: SendInvitationWithRolesDto[] = [];
 
     for (const user of users) {
       const { roles, email} = user;
@@ -30,9 +31,14 @@ export class SendInvitationWithRolesDto {
         return ["Todas las invitaciones deben tener al menos un rol asociado."];
       }
 
-      usersDto.push(new SendInvitationWithRolesDto(email, roles));
+      const invalidRoles = roles.filter((r) => !validUserRoles.has(r));
+      if(invalidRoles.length !== 0) {
+        return [`Los siguientes valores no son roles válidos para un usuario: ${invalidRoles.join(", ")}.`];
+      }
+
+      invitationsDtos.push(new SendInvitationWithRolesDto(email, roles));
     }
 
-    return [undefined, usersDto];
+    return [undefined, invitationsDtos];
   }
 }

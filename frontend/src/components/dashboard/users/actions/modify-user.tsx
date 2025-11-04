@@ -131,7 +131,7 @@ export async function modifyUserRoles(
 			success: true,
 		};
 	} catch (error) {
-		console.log("Unexpected error modifying the User Roles: ", error);
+		console.error("Unexpected error modifying the User Roles: ", error);
 		return {
 			error: "Se ha producido un error, por favor inténtelo de nuevo más tarde.",
 			success: false,

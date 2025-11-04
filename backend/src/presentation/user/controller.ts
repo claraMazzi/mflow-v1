@@ -8,7 +8,7 @@ import {
 } from "../../domain";
 import { UserService } from "../services";
 import { UpdateUserRolesDto } from "../../domain/dtos/user/update-user-roles.dto";
-import { SendInvitationWithRolesDto } from "../../domain/dtos/user/update-users-roles.dto";
+import { SendInvitationWithRolesDto } from "../../domain/dtos/user/send-invitation-with-roles.dto";
 
 export class UserController {
   constructor(readonly userService: UserService) {}

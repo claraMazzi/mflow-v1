@@ -6,7 +6,7 @@ import {
 	UserEntity,
 } from "../../domain";
 import { UpdateUserRolesDto } from "../../domain/dtos/user/update-user-roles.dto";
-import { SendInvitationWithRolesDto } from "../../domain/dtos/user/update-users-roles.dto";
+import { SendInvitationWithRolesDto } from "../../domain/dtos/user/send-invitation-with-roles.dto";
 import { EmailService } from "./email.service";
 import { bcryptAdapter, jwtAdapter } from "../../config";
 
@@ -151,7 +151,7 @@ export class UserService {
 
 	async getUserDataFromInvitation(token: string) {
 		const payload = await jwtAdapter.validateToken(token);
-		if (!payload) throw CustomError.unauthorized("Invalid token");
+		if (!payload) throw CustomError.badRequest("Token de invitación inválido.");
 
 		const { senderId, userEmail, roles } = payload as {
 			userEmail: string;
@@ -159,7 +159,7 @@ export class UserService {
 			roles: string[];
 		};
 		if (!userEmail || !senderId)
-			throw CustomError.internalServer("Not valid token");
+			throw CustomError.internalServer("Token de invitación inválido.");
 
 		return {
 			email: userEmail,

@@ -22,7 +22,7 @@ export default async function AcceptInvitation({
 
   const data = (await getUserRolesFromInviteRequest(token)) as {
     email: string;
-    roles: string[];
+    roles: ("VERIFICADOR" | "ADMIN")[];
   };
 
   if (!data)
@@ -36,7 +36,7 @@ export default async function AcceptInvitation({
     );
   return (
     <CreateAccountForm
-      defaultValues={{ email: data.email, role: [...data.roles, "MODELADOR"] }}
+      defaultValues={{ email: data.email, roles: [...data.roles, "MODELADOR"] }}
       showLoginLink={false}
     />
   );

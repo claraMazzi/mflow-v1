@@ -16,10 +16,13 @@ import {
   TableRow,
 } from "@components/ui/table";
 import { useUI } from "@src/components/ui/context";
+import { UserRole } from "@src/types/user";
+
+type AssignableUserRole = Extract<UserRole, "VERIFICADOR" | "ADMIN">;
 
 export type InviteUserFormData = {
   email: string;
-  roles: string[];
+  roles: AssignableUserRole[];
 };
 
 interface InviteUserFormProps {
@@ -37,7 +40,7 @@ export const InviteUserForm = ({ onSuccess }: InviteUserFormProps) => {
     initialState
   );
   const [pendingInvitations, setPendingInvitations] = useState<
-    Array<{ email: string; roles: string[] }>
+    Array<{ email: string; roles: AssignableUserRole[] }>
   >([]);
   const { closeModal } = useUI();
 
@@ -49,9 +52,9 @@ export const InviteUserForm = ({ onSuccess }: InviteUserFormProps) => {
     mode: "onBlur",
   });
 
-  const handleRoleChange = (role: string, checked: boolean) => {
+  const handleRoleChange = (role: AssignableUserRole, checked: boolean) => {
     const currentRoles = form.getValues("roles") || [];
-    let newRoles: string[];
+    let newRoles: AssignableUserRole[];
 
     if (checked) {
       newRoles = [...currentRoles.filter((r) => r !== role), role];
