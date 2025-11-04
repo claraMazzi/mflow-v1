@@ -10,11 +10,47 @@ import {
 } from "../../domain";
 import { version } from "os";
 import { VersionImage } from "../../data/mongo/models/version-image.model";
+import { ProjectService } from "./project.service";
 
 export class VersionService {
-	constructor() {}
+	// private projectService: ProjectService;
 
-	async createVersion({}: CreateVersionDto) {}
+	/* constructor(projectService: ProjectService) {
+		this.projectService = projectService;
+	} */
+
+	async createVersion(createDto: CreateVersionDto) {
+		const project = await ProjectModel.findById(createDto.projectId)
+			.populate({
+				path: "versions",
+				match: { state: { $ne: "ELIMINADA" } },
+				select: ["title", "state"],
+			})
+			.exec();
+
+		if (true) {
+		}
+
+		const nameAlreadyExists = await VersionModel.findOne({
+			title: createDto.title,
+		});
+		if (nameAlreadyExists)
+			throw CustomError.badRequest(
+				"Ya existe un proyecto con el nombre especificado."
+			);
+
+		try {
+			const project = new VersionModel(createDto);
+
+			await project.save();
+
+			// const projectEntity = Cre.fromObject(project);
+
+			return { user: null };
+		} catch (error) {
+			throw CustomError.internalServer(`${error}`);
+		}
+	}
 
 	async getVersionById(id: string) {
 		const version = await VersionModel.findById(id).exec();

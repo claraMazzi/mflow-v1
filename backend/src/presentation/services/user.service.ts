@@ -1,211 +1,204 @@
 import { UserModel } from "../../data";
 import {
-  CustomError,
-  PasswordUpdateDto,
-  UpdateUserDto,
-  UserEntity,
+	CustomError,
+	PasswordUpdateDto,
+	UpdateUserDto,
+	UserEntity,
 } from "../../domain";
 import { UpdateUserRolesDto } from "../../domain/dtos/user/update-user-roles.dto";
-import { UpdateUsersRolesDto } from "../../domain/dtos/user/update-users-roles.dto";
+import { SendInvitationWithRolesDto } from "../../domain/dtos/user/send-invitation-with-roles.dto";
 import { EmailService } from "./email.service";
 import { bcryptAdapter, jwtAdapter } from "../../config";
 
 export class UserService {
-  constructor(
-    private readonly frontEndUrl: string,
-    private readonly emailService: EmailService
-  ) {}
+	constructor(
+		private readonly frontEndUrl: string,
+		private readonly emailService: EmailService
+	) {}
 
-  private sendEmailInvitationLink = async ({
-    user,
-    senderId,
-  }: {
-    senderId: string;
-    user: UpdateUsersRolesDto;
-  }) => {
-    const token = await jwtAdapter.generateToken(
-      { senderId: senderId, userEmail: user.email, roles: user.roles },
-      "7d"
-    );
+	private sendEmailInvitationLink = async ({
+		user,
+		senderId,
+	}: {
+		senderId: string;
+		user: SendInvitationWithRolesDto;
+	}) => {
+		const token = await jwtAdapter.generateToken(
+			{ senderId: senderId, userEmail: user.email, roles: user.roles },
+			"7d"
+		);
 
-    if (!token) throw CustomError.internalServer("Error getting token");
-    //link de retorno
-    const link = `${this.frontEndUrl}/share/user/?token=${token}`;
+		if (!token) {
+			throw CustomError.internalServer(
+				"Ocurrió un error al generar las invitaciones."
+			);
+		}
 
-    const html = `<h1>Has sido invitado/a a ser ${user.roles.map(
-      (role) => role
-    )}</h1>
-        <p> Hace Click en el siguiente <a href=${link}>link</a> para aceptar la invitación </p>`;
+		const frontendInvitationLink = `${this.frontEndUrl}/share/user/?token=${token}`;
 
-    const options = {
-      to: user.email,
-      subject: "MFLOW - Invitación a la plataforma",
-      htmlBody: html,
-    };
+		const html = `<h1>Has sido invitado/a a ser ${user.roles.map(
+			(role) => role
+		)}</h1>
+        <p> Hace Click en el siguiente <a href=${frontendInvitationLink}>link</a> para aceptar la invitación </p>`;
 
-    const isSent = await this.emailService.sendEmail(options);
+		const options = {
+			to: user.email,
+			subject: "MFLOW - Invitación a la plataforma",
+			htmlBody: html,
+		};
 
-    if (!isSent)
-      throw CustomError.internalServer("Error sending sharing email");
-  };
+		const isSent = await this.emailService.sendEmail(options);
 
-  async getUserById(id: string) {
-    const user = await UserModel.findOne({ _id: id, deletedAt: null });
-    if (!user) throw CustomError.badRequest("User does not exists");
+		if (!isSent) {
+			throw CustomError.internalServer(
+				"Ocurrió un error al enviar las invitaciones."
+			);
+		}
+	};
 
-    const { password, ...userEntity } = UserEntity.fromObject(user);
-    return {
-      user: userEntity,
-    };
-  }
+	async getUserById(id: string) {
+		const user = await UserModel.findOne({ _id: id, deletedAt: null });
+		if (!user) throw CustomError.badRequest("User does not exists");
 
-  async getAllUsers(id: string) {
-    const users = await UserModel.find({ _id: { $ne: id }, deletedAt: null });
+		const { password, ...userEntity } = UserEntity.fromObject(user);
+		return {
+			user: userEntity,
+		};
+	}
 
-    if (!users) throw CustomError.badRequest("No Users to query");
+	async getAllUsers(id: string) {
+		const users = await UserModel.find({ _id: { $ne: id }, deletedAt: null });
 
-    const usersEntity = users.map((user) => {
-      const { password, ...userEntity } = UserEntity.fromObject(user);
-      return userEntity;
-    });
-    return {
-      users: usersEntity,
-      count: usersEntity.length,
-    };
-  }
+		if (!users) throw CustomError.badRequest("No Users to query");
 
-  async updateUserById({ name, lastName, id }: UpdateUserDto) {
-    const user = await UserModel.findOne({ _id: id, deletedAt: null });
-    if (!user) throw CustomError.badRequest("User does not exists");
+		const usersEntity = users.map((user) => {
+			const { password, ...userEntity } = UserEntity.fromObject(user);
+			return userEntity;
+		});
+		return {
+			users: usersEntity,
+			count: usersEntity.length,
+		};
+	}
 
-    if (!name && !lastName)
-      throw CustomError.badRequest("No data sent to update");
+	async updateUserById({ name, lastName, id }: UpdateUserDto) {
+		const user = await UserModel.findOne({ _id: id, deletedAt: null });
+		if (!user) throw CustomError.badRequest("User does not exists");
 
-    if (name === user.name && lastName === user.lastName)
-      throw CustomError.badRequest("No updated data");
+		if (!name && !lastName)
+			throw CustomError.badRequest("No data sent to update");
 
-    try {
-      if (name) user.name = name;
-      if (lastName) user.lastName = lastName;
+		if (name === user.name && lastName === user.lastName)
+			throw CustomError.badRequest("No updated data");
 
-      user.save();
-    } catch (error) {
-      throw CustomError.internalServer(`${error}`);
-    }
-  }
+		if (name) user.name = name;
+		if (lastName) user.lastName = lastName;
 
-  async updateUserRolesById({ roles, id }: UpdateUserRolesDto) {
-    const user = await UserModel.findOne({ _id: id, deletedAt: null });
-    if (!user) throw CustomError.badRequest("User does not exists");
+		await user.save();
+	}
 
-    if (!roles || !Array.isArray(roles) || !roles.length)
-      throw CustomError.badRequest("No data sent to update");
+	async updateUserRolesById({ roles: newRoles, id }: UpdateUserRolesDto) {
+		const user = await UserModel.findOne({ _id: id, deletedAt: null });
+		if (!user) throw CustomError.notFound("El usuario no pudo ser encontrado.");
 
-    if (
-      roles.length === user.roles.length &&
-      roles.every((role, index) => role === user.roles[index])
-    )
-      throw CustomError.badRequest("No data was updated");
+		if (
+			newRoles.length === user.roles.length &&
+			newRoles.every((role) => user.roles.includes(role))
+		) {
+			throw CustomError.badRequest(
+				"No se detectaron cambios en los roles asignados al usuario."
+			);
+		}
 
-    try {
-      user.roles = roles;
-      user.save();
-      return {
-        user: UserEntity.fromObject(user),
-        message: "User roles updated successfully",
-      };
-    } catch (error) {
-      throw CustomError.internalServer(`${error}`);
-    }
-  }
+		user.roles = newRoles;
+		await user.save();
 
-  async deleteUser(id: string) {
-    const user = await UserModel.findOne({ _id: id, deletedAt: null });
-    if (!user) throw CustomError.badRequest("User does not exists");
+		return {
+			user: UserEntity.fromObject(user),
+			message: "Los roles del usuario se han modificado exitosamente.",
+		};
+	}
 
-    try {
-      user.deletedAt = new Date();
-      await user.save();
-    } catch (error) {
-      throw CustomError.internalServer(`${error}`);
-    }
-  }
+	async deleteUser(id: string) {
+		const user = await UserModel.findOne({ _id: id, deletedAt: null });
+		if (!user) throw CustomError.badRequest("User does not exists");
 
-  async inviteUsersWithRole(dto: UpdateUsersRolesDto[], senderId: string) {
-    await Promise.all(
-      dto.map(async (userData) => {
-        const { email } = userData;
+		try {
+			user.deletedAt = new Date();
+			await user.save();
+		} catch (error) {
+			throw CustomError.internalServer(`${error}`);
+		}
+	}
 
-        const adminUser = await UserModel.findOne({ _id: senderId, deletedAt: null });
-     
-        if(!adminUser)
-          throw CustomError.badRequest("Admin user does not exists");
+	async inviteUsersWithRole(
+		invitations: SendInvitationWithRolesDto[],
+		senderId: string
+	) {
+		await Promise.all(
+			invitations.map(async (userData) => {
+				await this.sendEmailInvitationLink({
+					user: userData,
+					senderId,
+				});
+			})
+		);
 
-        if (adminUser.email === email)
-          throw CustomError.badRequest("You can't update your own roles");
+		return {
+			message: "Las invitaciones fueron enviadas exitosamente.",
+		};
+	}
 
-      
-        await this.sendEmailInvitationLink({
-          user: userData,
-          senderId,
-        });
-      })
-    );
+	async getUserDataFromInvitation(token: string) {
+		const payload = await jwtAdapter.validateToken(token);
+		if (!payload) throw CustomError.badRequest("Token de invitación inválido.");
 
-    return {
-      message: "Invitations sent successfully",
-    };
-  }
+		const { senderId, userEmail, roles } = payload as {
+			userEmail: string;
+			senderId: string;
+			roles: string[];
+		};
+		if (!userEmail || !senderId)
+			throw CustomError.internalServer("Token de invitación inválido.");
 
+		return {
+			email: userEmail,
+			roles: roles,
+		};
+	}
+	/** Esto actualizar y sacar la old password, esto es para un UPDATE PASSOWRD */
 
-  async getUserDataFromInvitation (token: string) {
-    const payload = await jwtAdapter.validateToken(token);
-    if (!payload) throw CustomError.unauthorized("Invalid token");
+	public passwordUpdate = async (recoverDto: PasswordUpdateDto) => {
+		//1. verificar que no exista ese correo en la BD
+		const user = await UserModel.findOne({
+			email: recoverDto.email,
+			deletedAt: null,
+		});
 
-    const { senderId, userEmail, roles } = payload as {
-      userEmail: string;
-      senderId: string;
-      roles: string[];
-    };
-    if (!userEmail || !senderId) throw CustomError.internalServer("Not valid token");
+		console.log(user, recoverDto.email);
+		if (!user) throw CustomError.badRequest("User doesn't exists");
 
-    return {
-      email: userEmail,
-      roles: roles,
-    };
+		const passwordMatch = bcryptAdapter.compare(
+			recoverDto.oldPassword,
+			user.password
+		);
+		if (!passwordMatch)
+			throw CustomError.badRequest("Old password doesn't match");
 
+		if (recoverDto.oldPassword.trim() === recoverDto.newPassword.trim())
+			throw CustomError.badRequest(
+				"New password cant be the same as old password"
+			);
+		try {
+			//Encriptar la contraseña
+			user.password = bcryptAdapter.hash(recoverDto.newPassword);
+			await user.save();
 
-  }
-  /** Esto actualizar y sacar la old password, esto es para un UPDATE PASSOWRD */
+			const { password, ...userEntity } = UserEntity.fromObject(user);
 
-  public passwordUpdate = async (recoverDto: PasswordUpdateDto) => {
-    //1. verificar que no exista ese correo en la BD
-    const user = await UserModel.findOne({ email: recoverDto.email, deletedAt: null });
-
-    console.log(user, recoverDto.email);
-    if (!user) throw CustomError.badRequest("User doesn't exists");
-
-    const passwordMatch = bcryptAdapter.compare(
-      recoverDto.oldPassword,
-      user.password
-    );
-    if (!passwordMatch)
-      throw CustomError.badRequest("Old password doesn't match");
-
-    if (recoverDto.oldPassword.trim() === recoverDto.newPassword.trim())
-      throw CustomError.badRequest(
-        "New password cant be the same as old password"
-      );
-    try {
-      //Encriptar la contraseña
-      user.password = bcryptAdapter.hash(recoverDto.newPassword);
-      await user.save();
-
-      const { password, ...userEntity } = UserEntity.fromObject(user);
-
-      return { user: userEntity };
-    } catch (error) {
-      throw CustomError.internalServer(`${error}`);
-    }
-  };
+			return { user: userEntity };
+		} catch (error) {
+			throw CustomError.internalServer(`${error}`);
+		}
+	};
 }

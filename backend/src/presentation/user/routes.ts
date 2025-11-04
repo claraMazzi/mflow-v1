@@ -13,42 +13,44 @@ export class UserRoutes {
       envs.MAILER_SECRET_KEY,
       envs.SEND_EMIAL
     );
-    // const authService = new AuthService(emailService, envs.WEBSERVICE_URL);
 
     const service = new UserService(envs.FRONTEND_URL, emailService);
     const controller = new UserController(service);
 
+    //UNAUTHENTICATED ROUTES
+    router.get("/invite/:token", controller.getUserDataFromInvitation);
+
+    //AUTHENTICATED ROUTES
+    router.use(AuthMiddleware.validateJWT);
+
     //ADMIN ONLY
     router.get(
       "/all",
-      AuthMiddleware.validateJWT,
       AuthMiddleware.validateRequiredRoles(["ADMIN"]),
       controller.getAllUsers
     );
 
     router.put(
       "/:id/roles",
-      AuthMiddleware.validateJWT,
       AuthMiddleware.validateRequiredRoles(["ADMIN"]),
       controller.updateUserRolesById
     ); //actualizar el rol de un usuario
 
-    router.delete("/:id", controller.deleteUser);
+    router.delete("/:id", 
+      AuthMiddleware.validateRequiredRoles(["ADMIN"]),
+      controller.deleteUser);
 
     //send invite mail with invitation token
     router.post(
       "/invite",
-      AuthMiddleware.validateJWT,
       AuthMiddleware.validateRequiredRoles(["ADMIN"]),
       controller.inviteUsersWithRole
     );
 
-    router.get("/invite/:token", controller.getUserDataFromInvitation);
-
     // COMMON ROUTES
-    router.get("/", AuthMiddleware.validateJWT, controller.getLoggedUser);
-    router.put("/", AuthMiddleware.validateJWT, controller.updateUserById);
-    router.get("/:id", AuthMiddleware.validateJWT, controller.getUserById);
+    router.get("/", controller.getLoggedUser);
+    router.put("/", controller.updateUserById);
+    router.get("/:id", controller.getUserById);
 
     return router;
   }

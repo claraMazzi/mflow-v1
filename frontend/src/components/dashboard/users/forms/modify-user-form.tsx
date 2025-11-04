@@ -71,21 +71,6 @@ export const ModifyUserForm = ({
     }
   }, [state?.success, onSuccess, form]);
 
-  const parseErrorMessage = (error: string) => {
-    console.log('errormess', error)
-    switch (error) {
-      case "Invalid credentials.":
-        return "Usuario o contraseña no corresponden a un usuario registrado";
-      case "Not authenticated":
-        return "Debes iniciar sesión para modificar un usuario";
-      case "No updated data":
-        return "Debe modificar algún campo para poder actualizarlo";
-      case "Something went wrong.":
-      default:
-        return "Ocurrió un error inesperado";
-    }
-  };
-
   const onSubmit = (data: ModifyUserFormData) => {
     const formData = new FormData();
     formData.append("id", data.id);
@@ -307,7 +292,7 @@ export const ModifyUserForm = ({
 
       {state?.error && (
         <p className="text-sm text-red-600">
-          {parseErrorMessage(state.error)}
+          {state.error}
         </p>
       )}
 

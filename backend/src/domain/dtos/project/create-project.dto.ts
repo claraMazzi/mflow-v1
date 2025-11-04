@@ -19,7 +19,6 @@ export class CreateProjectDto {
     if (!title) return ['Title is requeried'];
     if (!owner) return ['Owner is requeried'];
 
-  
     return [
       undefined,
       new CreateProjectDto(title, description, owner, collaborators, state, versions),

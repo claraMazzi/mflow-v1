@@ -15,15 +15,18 @@ import {
   TableHeader,
   TableRow,
 } from "@components/ui/table";
+import { useUI } from "@src/components/ui/context";
+import { UserRole } from "@src/types/user";
+
+type AssignableUserRole = Extract<UserRole, "VERIFICADOR" | "ADMIN">;
 
 export type InviteUserFormData = {
   email: string;
-  roles: string[];
+  roles: AssignableUserRole[];
 };
 
 interface InviteUserFormProps {
   onSuccess?: () => void;
-  onClose?: () => void;
 }
 
 const initialState: ActionState = {
@@ -31,14 +34,15 @@ const initialState: ActionState = {
   success: false,
 };
 
-export const InviteUserForm = ({ onSuccess, onClose }: InviteUserFormProps) => {
+export const InviteUserForm = ({ onSuccess }: InviteUserFormProps) => {
   const [state, formAction, isPending] = useActionState(
     inviteUsers,
     initialState
   );
   const [pendingInvitations, setPendingInvitations] = useState<
-    Array<{ email: string; roles: string[] }>
+    Array<{ email: string; roles: AssignableUserRole[] }>
   >([]);
+  const { closeModal } = useUI();
 
   const form = useForm<InviteUserFormData>({
     defaultValues: {
@@ -48,9 +52,9 @@ export const InviteUserForm = ({ onSuccess, onClose }: InviteUserFormProps) => {
     mode: "onBlur",
   });
 
-  const handleRoleChange = (role: string, checked: boolean) => {
+  const handleRoleChange = (role: AssignableUserRole, checked: boolean) => {
     const currentRoles = form.getValues("roles") || [];
-    let newRoles: string[];
+    let newRoles: AssignableUserRole[];
 
     if (checked) {
       newRoles = [...currentRoles.filter((r) => r !== role), role];
@@ -71,7 +75,7 @@ export const InviteUserForm = ({ onSuccess, onClose }: InviteUserFormProps) => {
       if (emailExists) {
         form.setError("email", {
           type: "manual",
-          message: "Ya existe una invitación para este email",
+          message: "Ya existe una invitación para este email.",
         });
         return;
       }
@@ -105,25 +109,13 @@ export const InviteUserForm = ({ onSuccess, onClose }: InviteUserFormProps) => {
     }
   }, [state?.success, onSuccess]);
 
-  const parseErrorMessage = (error: string) => {
-    switch (error) {
-      case "Invalid email format":
-        return "Formato de email inválido";
-      case "No invitations to send":
-        return "No hay invitaciones para enviar";
-      case "Something went wrong.":
-      default:
-        return "Ocurrió un error inesperado";
-    }
-  };
-
   if (state?.success) {
     return (
       <div className="flex flex-col gap-4 justify-center p-6 items-center">
         <h2 className="font-medium text-lg">
           ¡Invitaciones enviadas exitosamente!
         </h2>
-        <Button className="uppercase" onClick={onClose}>
+        <Button className="uppercase" onClick={closeModal}>
           Continuar
         </Button>
       </div>
@@ -143,10 +135,10 @@ export const InviteUserForm = ({ onSuccess, onClose }: InviteUserFormProps) => {
               </label>
               <Input
                 {...form.register("email", {
-                  required: "Email es requerido",
+                  required: "Email es requerido.",
                   pattern: {
                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "Email inválido",
+                    message: "Email con formato inválido.",
                   },
                 })}
                 type="email"
@@ -273,7 +265,7 @@ export const InviteUserForm = ({ onSuccess, onClose }: InviteUserFormProps) => {
       </Table>
 
       {state?.error && (
-        <p className="text-sm text-red-600">{parseErrorMessage(state.error)}</p>
+        <p className="text-sm text-red-600">{state.error}</p>
       )}
 
       <div className="flex justify-center pt-4">

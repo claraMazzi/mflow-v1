@@ -47,14 +47,34 @@ export class ProjectController {
 	getProjectById = (req: Request, res: Response) => {
 		const { projectId } = req.params;
 		if (!projectId) {
-			return res.status(401).json({ error: "No project id provided" });
+			return res
+				.status(401)
+				.json({ error: "El id del proyecto es obligatorio." });
 		}
-		const user = req.session?.userId ?? "";
-		if (!user) {
+		const userSession = req.session;
+		if (!userSession) {
 			return res.status(401).json({ error: "Unauthorized" });
 		}
 		this.projectService
-			.getProjectById(projectId)
+			.getProjectByIdWithCollaborators({ projectId, userSession })
+			.then((project) => res.json(project))
+			.catch((error) => this.handleError(error, res));
+	};
+
+	// Get a specific project with its versions
+	getProjectByIdWithVersions = (req: Request, res: Response) => {
+		const { projectId } = req.params;
+		if (!projectId) {
+			return res
+				.status(401)
+				.json({ error: "El id del proyecto es obligatorio." });
+		}
+		const userSession = req.session;
+		if (!userSession) {
+			return res.status(401).json({ error: "Unauthorized" });
+		}
+		this.projectService
+			.getProjectByIdWithVersions({ projectId, userSession })
 			.then((project) => res.json(project))
 			.catch((error) => this.handleError(error, res));
 	};
@@ -66,7 +86,8 @@ export class ProjectController {
 			return res.status(401).json({ error: "No project id provided" });
 		}
 		const projectData = req.body;
-		const user = req.session?.userId ?? "";
+		const user = req.session?.userId;
+
 		if (!user) {
 			return res.status(401).json({ error: "Unauthorized" });
 		}
@@ -74,6 +95,7 @@ export class ProjectController {
 		const [error, updateProjectDto] = UpdateProjectDto.create({
 			id: projectId,
 			...projectData,
+			owner: user,
 		});
 
 		if (error || !updateProjectDto) return res.status(400).json({ error });
@@ -105,15 +127,16 @@ export class ProjectController {
 		const projectData = req.body;
 		const title = projectData.title;
 		const description = projectData.description;
-		const owner = req.session?.userId ?? "";
-		if (!owner) {
+		const user = req.session?.userId;
+
+		if (!user) {
 			return res.status(401).json({ error: "Unauthorized" });
 		}
 
 		const [error, createProjectDto] = CreateProjectDto.create({
 			title,
 			description,
-			owner,
+			owner: user,
 		});
 
 		if (error || !createProjectDto) return res.status(400).json({ error });

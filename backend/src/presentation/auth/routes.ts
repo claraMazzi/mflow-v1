@@ -12,7 +12,7 @@ export class Authroutes {
       envs.MAILER_SECRET_KEY,
       envs.SEND_EMIAL
     );
-    const authService = new AuthService(emailService, envs.WEBSERVICE_URL, envs.FRONTEND_URL);
+    const authService = new AuthService(emailService, envs.FRONTEND_URL);
 
     const controller = new AuthController(authService);
     // Definir las rutas

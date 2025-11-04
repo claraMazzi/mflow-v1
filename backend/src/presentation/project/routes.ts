@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { ProjectController } from "./controller";
-import { ProjectService, EmailService } from "../services";
+import { ProjectService, EmailService, VersionService } from "../services";
 import { AuthMiddleware } from "../middlewares/auth.middleware";
 import { envs } from "../../config";
+import { VersionController } from "../version/controller";
 
 export class ProjectRoutes {
   static get routes(): Router {
@@ -28,11 +29,15 @@ export class ProjectRoutes {
 
     //get projects by user
     router.get("/", controller.getUserProjects);
+
     //get user shared projects
     router.get("/shared", controller.getUserSharedProjects);
 
     //getById
     router.get("/:projectId", controller.getProjectById);
+
+    //getById
+    router.get("/:projectId/versions", controller.getProjectByIdWithVersions);
 
     //Update project data - name and desc
     router.put("/:projectId", controller.updateProject);
