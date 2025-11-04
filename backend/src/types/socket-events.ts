@@ -45,13 +45,18 @@ export const getProperty = (
 ) => {
 	const pathParts = parsePropertyPath(conceptualModel, propertyPath);
 	let current: any = conceptualModel;
+	console.log("Path Parts: ", pathParts);
+	console.log("Current: ", current);
+
 	while (
 		pathParts!.length > 1
 		//parts.length > 1 &&
 		//conceptualModel.hasOwnProperty(parts[0])
 	) {
 		current = current[pathParts!.shift()!];
+		console.log("Current: ", current);
 	}
+	console.log("Current[pathParts![0]]: ", current[pathParts![0]]);
 	return current[pathParts![0]];
 };
 

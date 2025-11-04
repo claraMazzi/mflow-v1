@@ -6,8 +6,9 @@ import { ConceptualModel } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
 import { Button } from "@components/ui/common/button";
 import { X, Plus } from "lucide-react";
+import { Textarea } from "../ui/common/textarea";
 
-interface ObjetivosSuposicionesProps {
+interface DescripcionDelSistemaProps {
   hasEditingRights: boolean;
   assumptionList: ReturnType<
     typeof useFieldArray<ConceptualModel, "assumptions">
@@ -55,7 +56,7 @@ interface ObjetivosSuposicionesProps {
   }) => void;
 }
 
-export default function ObjetivosSuposiciones({
+export default function DescripcionDelSistema({
   hasEditingRights,
   assumptionList,
   simplificationList,
@@ -63,10 +64,11 @@ export default function ObjetivosSuposiciones({
   customRegisterField,
   handleAddItemToList,
   handleRemoveItemFromList,
-}: ObjetivosSuposicionesProps) {
+}: DescripcionDelSistemaProps) {
   const previousAssumptionsLength = useRef(assumptionList.fields.length);
-  const previousSimplificationsLength = useRef(simplificationList.fields.length);
-
+  const previousSimplificationsLength = useRef(
+    simplificationList.fields.length
+  );
 
   // Focus on the last added item when the list changes
   useEffect(() => {
@@ -87,7 +89,9 @@ export default function ObjetivosSuposiciones({
   }, [assumptionList.fields.length]);
 
   useEffect(() => {
-    if (simplificationList.fields.length > previousSimplificationsLength.current) {
+    if (
+      simplificationList.fields.length > previousSimplificationsLength.current
+    ) {
       // A new item was added, focus on the last one
       const lastIndex = simplificationList.fields.length - 1;
       const input = document.querySelector<
@@ -145,7 +149,7 @@ export default function ObjetivosSuposiciones({
           // Get current form values instead of using assumptionList.fields
           const currentSimplifications =
             (watch("simplifications") as { description?: string }[]) || [];
-          console.log('currentSimplifications', currentSimplifications)
+          console.log("currentSimplifications", currentSimplifications);
           const firstEmptyIndex = currentSimplifications.findIndex(
             (simplification: { description?: string }) =>
               !simplification?.description ||
@@ -170,14 +174,34 @@ export default function ObjetivosSuposiciones({
 
   return (
     <div className="flex flex-col gap-6 p-6 bg-white rounded-lg shadow-sm">
-      {/* Objective Section */}
+      <div className="space-y-2">
+        <p className="text-lg font-bold text-center">Descripción inicial del sistema</p>
+        <p className="text-sm text-gray-500">
+          Es necesaria para poder establecer los objetivos, suposiciones y
+          simplificaciones del modelo de simulación
+        </p>
+      </div>
+
+      {/* Nombre del Sistema en Estudio Section */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">
-          Objetivo del Modelo Conceptual
+          Nombre del Sistema en Estudio
         </label>
         <Input
-          {...customRegisterField({ name: "objective" })}
-          placeholder="Describe el objetivo del modelo conceptual..."
+          {...customRegisterField({ name: "name" })}
+          placeholder="Ingresa el nombre del sistema en estudio..."
+          className="border-2 border-gray-200 focus:border-purple-400"
+        />
+      </div>
+
+      {/* Descripcion del Sistema Section */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          Descripcion del Sistema
+        </label>
+        <Textarea
+          {...customRegisterField({ name: "description" })}
+          placeholder="Ingresa la descripción del sistema en estudio..."
           className="border-2 border-gray-200 focus:border-purple-400"
         />
       </div>

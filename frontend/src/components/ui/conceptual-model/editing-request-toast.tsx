@@ -6,6 +6,7 @@ import {
 } from "@hooks/use-request-editing-rights";
 import { Button } from "../common/button";
 import { X } from "lucide-react";
+import { useUI } from "../context";
 
 interface EditingRequestToastProps {
 	request: ActiveEditingRequest;
@@ -28,6 +29,7 @@ export default function EditingRequestToast({
 }: EditingRequestToastProps) {
 	const [remainingTimeoutSeconds, setRemainingTimeoutSeconds] = useState(10);
 	const [progress, setProgress] = useState(100);
+	const { removeAllEditingRequestToasts } = useUI();
 
 	useEffect(() => {
 		const updateCountdown = () => {
@@ -64,7 +66,8 @@ export default function EditingRequestToast({
 			requestId: request.requestId!,
 			action: "accept",
 		})();
-		onClose();
+		// Close all editing request toasts when one is accepted
+		removeAllEditingRequestToasts();
 	};
 
 	const handleDecline = () => {

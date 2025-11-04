@@ -7,6 +7,7 @@ import {
   useRef,
   ChangeEvent,
   useMemo,
+  useCallback,
 } from "react";
 import { socket } from "@lib/socket";
 import { Path, RegisterOptions, useFieldArray, useForm } from "react-hook-form";
@@ -17,14 +18,29 @@ import {
   TabsList,
   TabsTrigger,
 } from "@components/ui/tabs/tabs";
-import { useSession } from "@node_modules/next-auth/react";
+import { useSession } from "next-auth/react";
 import { useEditingRequests } from "@hooks/use-request-editing-rights";
 import { useSocketConnection } from "@hooks/use-socket-connection";
-import ObjetivosSuposiciones from "@components/conceptual-model/ObjetivosSuposiciones";
-import DiagramaEstructuraEntidades from "@components/conceptual-model/DiagramaEstructuraEntidades";
+import DescripcionDelSistema from "@components/conceptual-model/DescripcionDelSistema";
 import React from "react";
 import VersionBar from "@components/versions/VersionBar";
-import { CLIENT_WS_EVENT_TYPES, Collaborator, InitializeConceptualModelPayload, JoinRoomEventPayload, SERVER_WS_EVENT_TYPES, SocketPosition, UsersInRoomChangePayload } from "@src/types/collaboration";
+import {
+  CLIENT_WS_EVENT_TYPES,
+  Collaborator,
+  InitializeConceptualModelPayload,
+  JoinRoomEventPayload,
+  SERVER_WS_EVENT_TYPES,
+  SocketPosition,
+  UsersInRoomChangePayload,
+} from "#types/collaboration";
+import { parsePropertyPath } from "@lib/utils";
+import DiagramaEstructura from "@components/conceptual-model/DiagramaEstructura";
+import DiagramaDinamicaEntidades from "@components/conceptual-model/DiagramaDinamicaEntidades";
+import ObjetivosEntradasSalidas from "@components/conceptual-model/ObjetivosEntradasSalidas";
+import Alcance from "@components/conceptual-model/Alcance";
+import Detalle from "@components/conceptual-model/Detalle";
+import DiagramaFlujo from "@components/conceptual-model/DiagramaDeFlujo";
+import { RemoteCursor } from "@components/versions/RemoteCursor";
 
 function throttle(func: any, delay: number) {
   let timeout: NodeJS.Timeout | null = null;
@@ -36,38 +52,6 @@ function throttle(func: any, delay: number) {
       }, delay);
     }
   };
-}
-//llevar a UTILS
-function parsePropertyPath(conceptualModel: ConceptualModel, path: string) {
-  const pathParts = path.split(".");
-  const parsedPath = [];
-  let current: any = conceptualModel;
-
-  for (const part of pathParts) {
-    const containsListItemKey = part.includes(":");
-    if (containsListItemKey) {
-      const [listProperty, itemId] = part.split(":");
-      if (!(listProperty in current) || !Array.isArray(current[listProperty])) {
-        return undefined;
-      }
-      const itemIndex = current[listProperty].findIndex(
-        (e: any) => e._id === itemId
-      );
-      if (itemIndex === -1) {
-        return undefined;
-      }
-      parsedPath.push(listProperty);
-      parsedPath.push(itemIndex);
-      current = current[listProperty][itemIndex];
-    } else {
-      if (!(part in current)) {
-        return undefined;
-      }
-      parsedPath.push(part);
-      current = current[part];
-    }
-  }
-  return parsedPath.join(".");
 }
 
 const MOUSE_POSITION_UPDATE_DELAY = 33; //30 fps
@@ -85,14 +69,16 @@ export default function Page({
   const { roomId } = React.use(params); // ✅ unwrap the promise
 
   // const [roomId, setRoomId] = useState(versionId); //esta hardcodeado -agregar el id a la ruta roomID y versionId son lo mismo
-  const [currentTab, setCurrentTab] = useState("objetivo-suposiciones");
+  const [currentTab, setCurrentTab] = useState("descripcion-sistema");
   const [isModelInitialized, setIsModelInitialized] = useState(false);
-
+  const [title, setTitle] = useState("");
   const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(
     new Map()
   );
+  const [followingUserId, setFollowingUserId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const hasEditingRights = useMemo(() => {
-    console.log("Has Editing Rights was recalculated.");
+    // console.log("Has Editing Rights was recalculated.");
     if (!session?.user.id) return false;
     return !!collaborators.get(session.user.id)?.hasEditingRights;
   }, [collaborators, session?.user.id]);
@@ -113,23 +99,37 @@ export default function Page({
   const [imageInfos, setImageInfos] = useState<Map<string, ImageInfo>>(
     new Map()
   );
+
   const { register, control, setValue, watch, getValues, reset } =
     useForm<ConceptualModel>();
+
   const simplificationList = useFieldArray({
     name: "simplifications",
     control,
   });
+
   const assumptionList = useFieldArray({
     name: "assumptions",
     control,
   });
+
+  const inputList = useFieldArray({
+    name: "inputs",
+    control,
+  });
+
+  const outputList = useFieldArray({
+    name: "outputs",
+    control,
+  });
+
   const entitiesList = useFieldArray({
     name: "entities",
     control,
   });
 
   const throttledEmitMouseUpdateFunction = useRef(
-    throttle((roomId: any, mousePosition: any, currentTab: string) => {
+    throttle((roomId: string, mousePosition: any, currentTab: string) => {
       socket.volatile.emit("client-volatile-broadcast", {
         roomId,
         mousePosition,
@@ -148,17 +148,38 @@ export default function Page({
       } satisfies JoinRoomEventPayload);
     }
 
-    function onFieldUpdate(payload: { propertyPath: any; value: any }) {
+    function onFieldUpdate(payload: {
+      propertyPath: Path<ConceptualModel>;
+      value: any;
+    }) {
       console.log(
         `Server Sent Update ${payload.propertyPath}: ${payload.value}`
       );
       const parsedPath = parsePropertyPath(getValues(), payload.propertyPath);
-      setValue(parsedPath as any, payload.value);
 
-      //objective - para acceder objetivo
-      // para acceder a la image id del diagrama de estructura -- structureDiagram.imageFileId
-      //suposiciones.0.description
-      //
+      setValue(parsedPath as Path<ConceptualModel>, payload.value, {
+        shouldDirty: true,
+        shouldValidate: true,
+        shouldTouch: true,
+      });
+
+      /**
+       * The issue is that when you update a nested property like entities.0.name,
+       * React Hook Form doesn't automatically update the parent entities array reference,
+       * so components that depend on the entities array don't re-render.
+       */
+
+      if (parsedPath?.trim()) {
+        const path = parsedPath.split(".");
+        if (path.length > 0 && path[0] === "entities") {
+          const currentEntities = getValues("entities");
+          setValue("entities", [...currentEntities], {
+            shouldDirty: true,
+            shouldValidate: true,
+            shouldTouch: true,
+          });
+        }
+      }
     }
 
     function onServerVolatileBroadcast(payload: {
@@ -213,7 +234,7 @@ export default function Page({
     }
 
     function onUsersInRoomChange({ roomState }: UsersInRoomChangePayload) {
-      console.log("users-in-room-chage: ", roomState);
+      // console.log("users-in-room-chage: ", roomState);
       const previousEditorUserId = collaborators
         .values()
         .find((c) => c.hasEditingRights)?.userId;
@@ -265,10 +286,12 @@ export default function Page({
     }
 
     function onInitializeConceptualModel({
-      conceptualModel,
+      version,
       imageInfos,
     }: InitializeConceptualModelPayload) {
-      console.log("Initial State: ", conceptualModel);
+      console.log("Initial State: ", version);
+      const conceptualModel = version.conceptualModel;
+      setTitle(version.title);
       reset(conceptualModel);
       const newImageInfos = new Map<string, ImageInfo>();
       imageInfos
@@ -312,7 +335,45 @@ export default function Page({
       }
     }
 
+    function onPlantTextImageUpdate({
+      propertyPath,
+      imageUrl,
+      plantTextToken,
+    }: {
+      propertyPath: string;
+      imageUrl: string;
+      plantTextToken: string;
+    }) {
+      console.log(`PlantText image updated for ${propertyPath}:`, imageUrl);
+      // Update the plantTextToken in the form data
+      const parsedPath: any = parsePropertyPath(getValues(), propertyPath);
+      setValue(parsedPath, { ...getValues(parsedPath), plantTextToken });
+    }
+
     socket.on("field-update", onFieldUpdate);
+    function onImageAdded(payload: {
+      imageInfo: { id: string; url: string; originalFilename?: string };
+    }) {
+      setImageInfos((prev) => {
+        const next = new Map(prev);
+        next.set(payload.imageInfo.id, {
+          id: payload.imageInfo.id,
+          url: payload.imageInfo.url,
+          filename: payload.imageInfo.originalFilename || "image",
+          uploadedAt: new Date(),
+        } as ImageInfo);
+        return next;
+      });
+    }
+    function onImageRemoved(payload: { imageId: string }) {
+      setImageInfos((prev) => {
+        const next = new Map(prev);
+        next.delete(payload.imageId);
+        return next;
+      });
+    }
+    socket.on("image-added", onImageAdded);
+    socket.on("image-removed", onImageRemoved);
     socket.on("item-added-to-list", onItemAddedToList);
     socket.on("item-removed-from-list", onItemRemovedFromList);
     socket.on("server-volatile-broadcast", onServerVolatileBroadcast);
@@ -321,9 +382,15 @@ export default function Page({
       onInitializeConceptualModel
     );
     socket.on(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, onUsersInRoomChange);
+    socket.on(
+      SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE,
+      onPlantTextImageUpdate
+    );
 
     return () => {
       socket.off("field-update", onFieldUpdate);
+      socket.off("image-added", onImageAdded);
+      socket.off("image-removed", onImageRemoved);
       socket.off("item-added-to-list", onItemAddedToList);
       socket.off("item-removed-from-list", onItemRemovedFromList);
       socket.off("server-volatile-broadcast", onServerVolatileBroadcast);
@@ -335,13 +402,17 @@ export default function Page({
         SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
         onUsersInRoomChange
       );
+      socket.off(
+        SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE,
+        onPlantTextImageUpdate
+      );
     };
   }, [isSocketConnected]);
 
-  const sendPropertyUpdate = (value: any, propertyPath: string) => {
+  const sendPropertyUpdate = useCallback((value: any, propertyPath: string) => {
     if (!hasEditingRights) return;
     socket.emit("field-update", { roomId, propertyPath, value }); // Emit partial form data
-  };
+  }, [hasEditingRights, socket, roomId]);
 
   const handleMouseMove = (e: MouseEvent) => {
     //Had to change the previous implementation because using offsetX and offsetY caused inconsistent values
@@ -375,7 +446,7 @@ export default function Page({
   }: {
     e: MouseEvent;
     listPropertyPath: string;
-    itemType: "assumption" | "simplification" | "entity";
+    itemType: "assumption" | "simplification" | "entity" | "input" | "output" | "property";
   }) => {
     e.preventDefault();
     socket.emit("add-item-to-list", { roomId, listPropertyPath, itemType });
@@ -394,7 +465,37 @@ export default function Page({
     socket.emit("remove-item-from-list", { roomId, listPropertyPath, itemId });
   };
 
-  const customRegisterField = ({
+  const handleFollowUser = useCallback((userId: string) => {
+    if (followingUserId === userId) {
+      // Unfollow if already following
+      setFollowingUserId(null);
+    } else {
+      setFollowingUserId(userId);
+      
+      // Scroll to the user's position
+      const collaborator = collaborators.get(userId);
+      if (collaborator && containerRef.current) {
+        // Find the first socket with a mouse position in the current tab
+        for (const socket of collaborator.sockets.values()) {
+          if (socket.mousePosition && socket.currentTab === currentTab) {
+            const rect = containerRef.current.getBoundingClientRect();
+            const targetX = rect.left + socket.mousePosition.relativeX * rect.width;
+            const targetY = rect.top + socket.mousePosition.relativeY * rect.height;
+            
+            // Scroll to position smoothly
+            window.scrollTo({
+              left: targetX - window.innerWidth / 2,
+              top: targetY - window.innerHeight / 2,
+              behavior: "smooth",
+            });
+            break;
+          }
+        }
+      }
+    }
+  }, [followingUserId, collaborators, currentTab]);
+
+  const customRegisterField = useCallback(({
     name,
     propertyPath = name,
     options = {},
@@ -434,21 +535,231 @@ export default function Page({
     };
 
     return enhancedRegister;
-  };
+  }, [register, getValues, hasEditingRights, sendPropertyUpdate]);
+
+  // Get all active cursors for the current tab
+  const activeCursors = useMemo(() => {
+    const cursors: Array<{
+      collaborator: Collaborator;
+      socketId: string;
+      mousePosition: { relativeX: number; relativeY: number };
+    }> = [];
+
+    for (const collaborator of collaborators.values()) {
+      // Skip current user
+      if (collaborator.userId === session?.user.id) continue;
+
+      for (const socket of collaborator.sockets.values()) {
+        // Only show cursors for users in the same tab
+        if (socket.mousePosition && socket.currentTab === currentTab) {
+          cursors.push({
+            collaborator,
+            socketId: socket.socketId,
+            mousePosition: socket.mousePosition,
+          });
+        }
+      }
+    }
+
+    return cursors;
+  }, [collaborators, currentTab, session?.user.id]);
+
+  // Auto-scroll to followed user
+  React.useEffect(() => {
+    if (!followingUserId || !containerRef.current) return;
+
+    const collaborator = collaborators.get(followingUserId);
+    if (!collaborator) return;
+
+    // Find the first socket with a mouse position in the current tab
+    for (const socket of collaborator.sockets.values()) {
+      if (socket.mousePosition && socket.currentTab === currentTab) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const targetX = rect.left + socket.mousePosition.relativeX * rect.width;
+        const targetY = rect.top + socket.mousePosition.relativeY * rect.height;
+        
+        // Smooth scroll to position
+        const currentScrollX = window.scrollX + window.innerWidth / 2;
+        const currentScrollY = window.scrollY + window.innerHeight / 2;
+        const targetScrollX = targetX;
+        const targetScrollY = targetY;
+        
+        // Only scroll if significantly different (avoid jitter)
+        const distanceX = Math.abs(currentScrollX - targetScrollX);
+        const distanceY = Math.abs(currentScrollY - targetScrollY);
+        
+        if (distanceX > 50 || distanceY > 50) {
+          window.scrollTo({
+            left: targetScrollX - window.innerWidth / 2,
+            top: targetScrollY - window.innerHeight / 2,
+            behavior: "smooth",
+          });
+        }
+        break;
+      }
+    }
+  }, [followingUserId, collaborators, currentTab, activeCursors]);
 
   //todo: enhance error message
   if (!roomId) return <>No version ID</>;
 
   return (
-    <div className="flex-grow bg-grey-0" onMouseMove={handleMouseMove}>
+    <div 
+      ref={containerRef}
+      className="flex-grow bg-grey-0 relative" 
+      onMouseMove={handleMouseMove}
+    >
+      {/* Remote cursors */}
+      {activeCursors.map((cursor) => (
+        <RemoteCursor
+          key={cursor.socketId}
+          collaborator={cursor.collaborator}
+          socketId={cursor.socketId}
+          mousePosition={cursor.mousePosition}
+          containerRef={containerRef}
+        />
+      ))}
+      
       <VersionBar
         canUserSendEditingRequest={canUserSendEditingRequest}
         handleRequestEditingRights={handleRequestEditingRights}
         pendingEditingRequests={pendingEditingRequests}
         collaborators={collaborators}
         handleEditingRequestEvaluation={handleEditingRequestEvaluation}
+        title={title}
+        onFollowUser={handleFollowUser}
+        followingUserId={followingUserId}
+        currentUserId={session?.user.id}
       />
-      <p>Status: {isSocketConnected ? "connected" : "disconnected"}</p>
+
+      {!isModelInitialized ? (
+        <p>Loading Model</p>
+      ) : (
+        <form
+          onSubmit={(e) => {
+            console.log("Form Submitted");
+            e.preventDefault();
+          }}
+          className="flex flex-col overflow-hidden"
+        >
+          <br />
+          <Tabs
+            value={currentTab}
+            onValueChange={handleCurrentTabChange}
+            defaultValue="descripcion-sistema"
+            orientation="vertical"
+          >
+            <TabsList className="h-full  flex ">
+              <TabsTrigger value="descripcion-sistema" className="word-break">
+                Descripción del Sistema
+              </TabsTrigger>
+              <TabsTrigger value="diagrama-estructura">
+                Diagrama de Estructura
+              </TabsTrigger>
+              <TabsTrigger value="diagrama-dinamica-entidades">
+                Entidades y Diagramas Dinámica
+              </TabsTrigger>
+              <TabsTrigger value="objetivos-entradas-salidas">
+                Objetivos, Entradas y Salidas
+              </TabsTrigger>
+              <TabsTrigger value="alcance">
+                Alcance
+              </TabsTrigger>
+              <TabsTrigger value="detalle">
+                Nivel de Detalle
+              </TabsTrigger>
+              <TabsTrigger value="flujo">
+                Diagrama de Flujo              
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="descripcion-sistema" className="">
+              <DescripcionDelSistema
+                hasEditingRights={hasEditingRights}
+                assumptionList={assumptionList}
+                simplificationList={simplificationList}
+                watch={watch}
+                customRegisterField={customRegisterField}
+                handleAddItemToList={handleAddItemToList}
+                handleRemoveItemFromList={handleRemoveItemFromList}
+              />
+            </TabsContent>
+
+            <TabsContent value="diagrama-estructura" className="">
+              <DiagramaEstructura
+                sessionToken={session?.auth}
+                versionId={roomId}
+                hasEditingRights={hasEditingRights}
+                imageInfos={imageInfos}
+                watch={watch}
+                customRegisterField={customRegisterField}
+                socket={socket}
+              />
+            </TabsContent>
+
+            <TabsContent value="diagrama-dinamica-entidades">
+              <DiagramaDinamicaEntidades
+                sessionToken={session?.auth}
+                versionId={roomId}
+                hasEditingRights={hasEditingRights}
+                imageInfos={imageInfos}
+                watch={watch}
+                entitiesList={entitiesList}
+                customRegisterField={customRegisterField}
+                handleAddItemToList={handleAddItemToList}
+                handleRemoveItemFromList={handleRemoveItemFromList}
+                socket={socket}
+              />
+            </TabsContent>
+
+            <TabsContent value="objetivos-entradas-salidas">
+              <ObjetivosEntradasSalidas
+                hasEditingRights={hasEditingRights}
+                inputList={inputList}
+                outputList={outputList}
+                entitiesList={entitiesList}
+                watch={watch}
+                customRegisterField={customRegisterField}
+                handleAddItemToList={handleAddItemToList}
+                handleRemoveItemFromList={handleRemoveItemFromList}
+              />
+            </TabsContent>
+            <TabsContent value="alcance">
+              <Alcance
+                hasEditingRights={hasEditingRights}
+                entitiesList={entitiesList}
+                customRegisterField={customRegisterField}
+              />
+            </TabsContent>
+
+            <TabsContent value="detalle">
+              <Detalle
+                hasEditingRights={hasEditingRights}
+                entitiesList={entitiesList}
+                control={control}
+                customRegisterField={customRegisterField}
+                handleAddItemToList={handleAddItemToList}
+                handleRemoveItemFromList={handleRemoveItemFromList}
+                watch={watch}
+              />
+            </TabsContent>
+
+            <TabsContent value="flujo">
+              <DiagramaFlujo
+                sessionToken={session?.auth}
+                versionId={roomId}
+                hasEditingRights={hasEditingRights}
+                imageInfos={imageInfos}
+                watch={watch}
+                customRegisterField={customRegisterField}
+
+                socket={socket}
+              />
+            </TabsContent>
+          </Tabs>
+        </form>
+      )}
+      {/* DELETE AFTER */}
+      {/* <p>Status: {isSocketConnected ? "connected" : "disconnected"}</p>
       <p>Id: {isSocketConnected ? socket.id : "No disponible"}</p>
       <p>Transport: {transport}</p>
       <p>Current Room: {roomId}</p>
@@ -494,61 +805,7 @@ export default function Page({
             </li>
           );
         })}
-      </ul>
-      {!isModelInitialized ? (
-        <p>Loading Model</p>
-      ) : (
-        <form
-          onSubmit={(e) => {
-            console.log("Form Submitted");
-            e.preventDefault();
-          }}
-          className="flex flex-col"
-        >
-          <br />
-          <Tabs
-            value={currentTab}
-            onValueChange={handleCurrentTabChange}
-            defaultValue="objetivo-suposiciones"
-          >
-            <TabsList className="flex h-auto items-stretch">
-              <TabsTrigger value="objetivo-suposiciones">
-                Objetivo y Suposiciones
-              </TabsTrigger>
-              <TabsTrigger value="diagrama-estructura-entidades">
-                Diagrama de Estructura
-              </TabsTrigger>
-              <TabsTrigger value="diagrama-dinamica-entidades">
-                Entidades y Diagramas Dinámica
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="objetivo-suposiciones">
-              <ObjetivosSuposiciones
-                hasEditingRights={hasEditingRights}
-                assumptionList={assumptionList}
-                simplificationList={simplificationList}
-                watch={watch}
-                customRegisterField={customRegisterField}
-                handleAddItemToList={handleAddItemToList}
-                handleRemoveItemFromList={handleRemoveItemFromList}
-              />
-            </TabsContent>
-            <TabsContent value="diagrama-estructura-entidades">
-              <DiagramaEstructuraEntidades
-                sessionToken={session?.auth}
-                versionId={roomId}
-                hasEditingRights={hasEditingRights}
-                imageInfos={imageInfos}
-                watch={watch}
-                entitiesList={entitiesList}
-                customRegisterField={customRegisterField}
-                handleAddItemToList={handleAddItemToList}
-                handleRemoveItemFromList={handleRemoveItemFromList}
-              />
-            </TabsContent>
-          </Tabs>
-        </form>
-      )}
+      </ul> */}
     </div>
   );
 }

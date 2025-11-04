@@ -7,7 +7,7 @@ import { Skeleton } from "@components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { useUI } from "@components/ui/context";
 import { ModifyProjectForm } from "./forms/modify-project-form";
-import { ProjectEntity } from "@src/types/project";
+import { ProjectEntity } from "#types/project";
 import { DelitionRequestForm } from "./forms/delition-request-form";
 import { projectPendingDelition } from "@src/config/sharedVariables";
 import cn from "clsx";

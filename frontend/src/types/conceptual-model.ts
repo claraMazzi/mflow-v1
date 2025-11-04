@@ -15,7 +15,7 @@ type Diagram = {
 
 type Property = {
 	_id: string;
-	nombre: string;
+	name: string;
 	detailLevelDecision: {
 		include: boolean;
 		justification: string;
@@ -42,7 +42,7 @@ type Entity = {
 type Input = {
 	_id: string;
 	description: string;
-	entity: string;
+	//entity: string;
 	type: "PARAMETRO" | "FACTOR EXPERIMENTAL";
 };
 
@@ -64,6 +64,8 @@ type Assumption = {
 
 export type ConceptualModel = {
 	objective: string;
+	name: string;
+	description: string;
 	simplifications: Simplification[];
 	assumptions: Assumption[];
 	structureDiagram: Diagram;
@@ -71,4 +73,10 @@ export type ConceptualModel = {
 	inputs: Input[];
 	outputs: Output[];
 	entities: Entity[];
+};
+
+export type Version = {
+	conceptualModel: ConceptualModel;
+	imageInfos: ImageInfo[];
+	title: string;
 };

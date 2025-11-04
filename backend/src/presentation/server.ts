@@ -1,15 +1,8 @@
 import express, { Router } from "express";
 import { ProjectModel, UserModel, VersionModel } from "../data";
 import { bcryptAdapter } from "../config";
-import { Server as SocketIO } from "socket.io";
-import { VersionService } from "./services";
-import fs from "fs/promises";
-import { error, timeStamp } from "console";
-import { envs, jwtAdapter } from "../config";
-import path from "path";
 import { CollaborationRoom } from "./collaboration/collaborationRoom";
 import { AppRoutes } from "./routes";
-import { getProperty, setValue } from "../types/socket-events";
 import { SocketServer } from "./socket-server";
 
 interface Options {
@@ -141,6 +134,8 @@ export class Server {
 			title: "Version 1",
 			conceptualModel: {
 				objective: "",
+				name: "",
+				description: "",
 				structureDiagram: {
 					usesPlantText: true,
 					plantTextCode: "",

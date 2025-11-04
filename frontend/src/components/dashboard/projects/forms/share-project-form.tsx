@@ -9,8 +9,8 @@ import {
   sendProjectCollaborationInvitation,
   getProjectSharingLink,
 } from "../actions/share-project";
-import { ProjectEntity } from "@src/types/project";
-import { useUI } from "@src/components/ui/context";
+import { ProjectEntity } from "#types/project";
+import { useUI } from "@components/ui/context";
 import { toast } from "sonner";
 
 export type ShareProjectFormData = {

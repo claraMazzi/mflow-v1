@@ -13,17 +13,34 @@ import { jwtAdapter } from "../config";
 import { UserModel } from "../data";
 import { getProperty, setValue } from "../types/socket-events";
 import { ConceptualModel } from "../data/mongo/models/subdocuments-schemas";
+import { Version } from "../data/mongo/models/version.model";
 import { VersionImage } from "../data/mongo/models/version-image.model";
+const plantumlEncoder = require("plantuml-encoder");
 
 type BaseSocketEventPayload = { type: string; timestamp: Date };
 
 enum CLIENT_WS_EVENT_TYPES {
 	JOIN_ROOM = "join-room",
+	PLANT_TEXT_CODE_CHANGE = "plant-text-code-change",
+	PLANT_TEXT_GET_IMAGE = "plant-text-get-image",
 }
 
 type JoinRoomEventPayload = BaseSocketEventPayload & {
 	type: CLIENT_WS_EVENT_TYPES.JOIN_ROOM;
 	roomId: string;
+};
+
+type PlantTextCodeChangePayload = BaseSocketEventPayload & {
+	type: CLIENT_WS_EVENT_TYPES.PLANT_TEXT_CODE_CHANGE;
+	versionId: string;
+	propertyPath: string;
+	plantTextCode: string;
+};
+
+type PlantTextGetImagePayload = BaseSocketEventPayload & {
+	type: CLIENT_WS_EVENT_TYPES.PLANT_TEXT_GET_IMAGE;
+	versionId: string;
+	propertyPath: string;
 };
 
 type UsersInRoomChangePayload = BaseSocketEventPayload & {
@@ -43,7 +60,7 @@ type UsersInRoomChangePayload = BaseSocketEventPayload & {
 
 type InitializeConceptualModelPayload = BaseSocketEventPayload & {
 	type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL;
-	conceptualModel: ConceptualModel;
+	version: Version;
 	imageInfos: (Pick<
 		VersionImage,
 		"originalFilename" | "url" | "createdAt" | "sizeInBytes"
@@ -52,9 +69,17 @@ type InitializeConceptualModelPayload = BaseSocketEventPayload & {
 	})[];
 };
 
+type PlantTextImageUpdatePayload = BaseSocketEventPayload & {
+	type: SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE;
+	propertyPath: string;
+	imageUrl: string;
+	plantTextToken: string;
+};
+
 enum SERVER_WS_EVENT_TYPES {
 	USERS_IN_ROOM_CHANGE = "users-in-room-change",
 	INITIALIZE_CONCEPTUAL_MODEL = "initialize-conceptual-model",
+	PLANT_TEXT_IMAGE_UPDATE = "plant-text-image-update",
 }
 
 export class SocketServer {
@@ -160,7 +185,7 @@ export class SocketServer {
 			(payload: {
 				roomId: string;
 				listPropertyPath: string;
-				itemType: "assumption" | "simplification" | "entity";
+				itemType: "assumption" | "simplification" | "entity" | "input" | "output" | "property";
 			}) => this.handleAddItemToList(socket, payload)
 		);
 
@@ -168,6 +193,16 @@ export class SocketServer {
 			"remove-item-from-list",
 			(payload: { roomId: string; listPropertyPath: string; itemId: string }) =>
 				this.handleRemoveItemFromList(socket, payload)
+		);
+
+		socket.on(
+			CLIENT_WS_EVENT_TYPES.PLANT_TEXT_CODE_CHANGE,
+			(payload: PlantTextCodeChangePayload) => this.handlePlantTextCodeChange(socket, payload)
+		);
+
+		socket.on(
+			CLIENT_WS_EVENT_TYPES.PLANT_TEXT_GET_IMAGE,
+			(payload: PlantTextGetImagePayload) => this.handlePlantTextGetImage(socket, payload)
 		);
 
 		socket.on("disconnecting", () => this.handleDisconnecting(socket));
@@ -218,7 +253,7 @@ export class SocketServer {
 		const collabRoom = this.activeCollaborationRooms.get(version.id)!;
 
 		this.emitInitializeConceptualModel(socket, {
-			conceptualModel: version.conceptualModel,
+			version: version,
 			imageInfos: version.imageInfos,
 		});
 
@@ -252,7 +287,7 @@ export class SocketServer {
 		});
 	}
 
-	//agregar un handler pare el text field de plantext change. 
+	// TODO agregar un handler pare el text field de plantext change. 
 
 	/*
 	cuando el plantext code cambia el servidor es el encargado de generar la URL de la imagen plant text y enviarsela a todos los clientes para quee la actualice en el front. 
@@ -285,7 +320,7 @@ export class SocketServer {
 		);
 
 		setValue(version.conceptualModel, payload.propertyPath, payload.value);
-		console.log("Version Conceptual Model: ", version.conceptualModel);
+		// console.log("Version Conceptual Model: ", version.conceptualModel);
 		version.save();
 		//agregar try catch para manejar errores 
 
@@ -445,7 +480,7 @@ export class SocketServer {
 		payload: {
 			roomId: string;
 			listPropertyPath: string;
-			itemType: "assumption" | "simplification" | "entity";
+			itemType: "assumption" | "simplification" | "entity" | "input" | "output" | "property";
 		}
 	) {
 		//add try catch 
@@ -475,8 +510,24 @@ export class SocketServer {
 					properties: [],
 				});
 				break;
+			case "input":
+				listField.push({ description: "", type: "PARAMETRO" });
+				break;
+			case "output":
+				listField.push({ description: "", entity: null});
+				break;
 			case "simplification":
 				listField.push({ description: "" });
+				break;
+			case "property":
+				listField.push({
+					name: "",
+					detailLevelDecision: {
+						include: true,
+						justification: "",
+						argumentType: "CALCULO SALIDA",
+					},
+				});
 				break;
 		}
 
@@ -508,7 +559,8 @@ export class SocketServer {
 			version.conceptualModel,
 			payload.listPropertyPath
 		);
-		const itemToDelete = listField.find((s: any) =>
+		console.log("List Field: ", listField);
+		const itemToDelete = listField.find((s: any) => 
 			s._id.equals(payload.itemId)
 		);
 		listField.remove(itemToDelete);
@@ -519,6 +571,98 @@ export class SocketServer {
 			listPropertyPath: payload.listPropertyPath,
 			itemId: payload.itemId,
 		});
+	}
+
+	private async handlePlantTextCodeChange(
+		socket: Socket,
+		payload: PlantTextCodeChangePayload
+	) {
+		try {
+			const { version } = await this.versionService.getVersionById(
+				payload.versionId
+			);
+
+			// Get the diagram object from the property path
+			const diagram = getProperty(version.conceptualModel, payload.propertyPath);
+			
+			if (!diagram) {
+				console.error(`Diagram not found at property path: ${payload.propertyPath}`);
+				return;
+			}
+
+			// Check if the plantTextCode has actually changed
+			if (diagram.plantTextCode === payload.plantTextCode) {
+				console.log("PlantTextCode unchanged, skipping update");
+				return; // No change, skip update
+			}
+
+			// Generate token for the plantTextCode
+			const plantTextToken = plantumlEncoder.encode(payload.plantTextCode);
+			
+			// Update the diagram with new plantTextCode and token
+			diagram.plantTextCode = payload.plantTextCode;
+			diagram.plantTextToken = plantTextToken;
+			
+			// Save the version
+			await version.save();
+
+			// Generate the image URL
+			const imageUrl = `http://www.plantuml.com/plantuml/img/${plantTextToken}`;
+
+			console.log("imageUrl", imageUrl);
+			// Emit the plantText image update to all clients in the room
+			this.emitPlantTextImageUpdate(payload.versionId, {
+				propertyPath: payload.propertyPath,
+				imageUrl,
+				plantTextToken,
+			});
+
+			console.log(`PlantText image updated for property: ${payload.propertyPath}`);
+		} catch (error) {
+			console.error("Error handling plantText code change:", error);
+		}
+	}
+
+	private async handlePlantTextGetImage(
+		socket: Socket,
+		payload: PlantTextGetImagePayload
+	) {
+		try {
+			const { version } = await this.versionService.getVersionById(
+				payload.versionId
+			);
+
+			// Get the diagram object from the property path
+			const diagram = getProperty(version.conceptualModel, payload.propertyPath);
+			
+			if (!diagram) {
+				console.error(`Diagram not found at property path: ${payload.propertyPath}`);
+				return;
+			}
+
+			// Check if we have existing plantTextCode and token
+			if (!diagram.plantTextCode || !diagram.plantTextToken) {
+				console.log("No existing plantTextCode or token found");
+				return;
+			}
+
+			// Generate the image URL from existing token
+			const imageUrl = `http://www.plantuml.com/plantuml/img/${diagram.plantTextToken}`;
+
+			console.log("Sending existing imageUrl", imageUrl);
+			// Emit the plantText image update to the requesting client only
+			socket.emit(SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE, {
+				type: SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE,
+				propertyPath: payload.propertyPath,
+				imageUrl,
+				plantTextToken: diagram.plantTextToken,
+				timestamp: new Date(),
+			});
+
+			console.log(`PlantText existing image sent for property: ${payload.propertyPath}`);
+		} catch (error) {
+			console.error("Error handling plantText get image:", error);
+		}
 	}
 
 	private async handleDisconnecting(socket: Socket) {
@@ -565,10 +709,10 @@ export class SocketServer {
 	public emitInitializeConceptualModel(
 		socket: Socket, 
 		{
-			conceptualModel,
+			version,
 			imageInfos,
 		}: {
-			conceptualModel: ConceptualModel;
+			version: Version;
 			imageInfos: (Pick<
 				VersionImage,
 				"originalFilename" | "url" | "createdAt" | "sizeInBytes"
@@ -581,7 +725,7 @@ export class SocketServer {
 		socket.emit(SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL, {
 			type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
 			timestamp: new Date(),
-			conceptualModel,
+			version,
 			imageInfos,
 		} satisfies InitializeConceptualModelPayload);
 	}
@@ -708,6 +852,19 @@ export class SocketServer {
 			listPropertyPath: payload.listPropertyPath,
 			itemId: payload.itemId,
 		});
+	}
+
+	public emitPlantTextImageUpdate(
+		roomId: string,
+		payload: { propertyPath: string; imageUrl: string; plantTextToken: string }
+	) {
+		this.socketServer.to(roomId).emit(SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE, {
+			type: SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE,
+			propertyPath: payload.propertyPath,
+			imageUrl: payload.imageUrl,
+			plantTextToken: payload.plantTextToken,
+			timestamp: new Date(),
+		} satisfies PlantTextImageUpdatePayload);
 	}
 
 	public getCollaborationRoomState({ roomId }: { roomId: string }) {

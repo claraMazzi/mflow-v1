@@ -1,7 +1,7 @@
 "use client";
 
-import ProjectList from "@src/components/dashboard/projects/project-list";
-import { useSharedProjects } from "@src/hooks/use-projects";
+import ProjectList from "@components/dashboard/projects/project-list";
+import { useSharedProjects } from "@hooks/use-projects";
 import React from "react";
 
 const Page = () => {

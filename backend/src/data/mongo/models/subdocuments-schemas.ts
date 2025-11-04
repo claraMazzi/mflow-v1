@@ -18,9 +18,9 @@ export const diagramSchema = new Schema(
 export type Diagram = InferSchemaType<typeof diagramSchema>;
 
 const propertySchema = new Schema({
-	nombre: {
+	name: {
 		type: String,
-		required: [true, "El campo nombre de la propiedad es obligatorio."],
+		//required: [true, "El campo nombre de la propiedad es obligatorio."],
 	},
 	detailLevelDecision: {
 		include: Boolean,
@@ -54,6 +54,14 @@ export const conceptualModelSchema = new Schema({
 		type: String,
 		default: "",
 	},
+	name : {
+		type: String,
+		default: "",
+	},
+	description: {
+		type: String,
+		default: "",
+	},
 	//The internal id automatically added by mongoose.
 	//https://mongoosejs.com/docs/subdocs.html#altsyntaxarrays
 	simplifications: [{ description: String }],
@@ -62,20 +70,22 @@ export const conceptualModelSchema = new Schema({
 	flowDiagram: diagramSchema,
 	inputs: [
 		{
-			description: {
-				type: String,
-				required: [true, "El campo descripción de la entrada es obligatorio."],
-			},
-			entity: Schema.Types.ObjectId,
+			description: String, //TODO: Add final validation of empty descriptions
+			// description: {
+			// 	type: String,
+			// 	required: [true, "El campo descripción de la entrada es obligatorio."],
+			// },
+			//entity: Schema.Types.ObjectId, //TODO: see if its used in the future
 			type: { type: String, enum: ["PARAMETRO", "FACTOR EXPERIMENTAL"] },
 		},
 	],
 	outputs: [
 		{
-			description: {
-				type: String,
-				required: [true, "El campo descripción de la salida es obligatorio."],
-			},
+			description: String, //TODO: Add final validation of empty descriptions
+			// description: {
+			// 	type: String,
+			// 	required: [true, "El campo descripción de la salida es obligatorio."],
+			// },
 			entity: Schema.Types.ObjectId,
 		},
 	],
