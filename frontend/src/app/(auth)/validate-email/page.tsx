@@ -26,10 +26,10 @@ const EmailValidation = () => {
       if (response.ok) {
         setIsValid(true)
       } else {
-        setErrorMessage(data.message || "Email validation failed")
+        setErrorMessage(data.message || "Ocurrió un error durante la validación del email.")
       }
     } catch (error) {
-      setErrorMessage("An error occurred during email validation")
+      setErrorMessage("Ocurrió un error durante la validación del email.")
     } finally {
       setIsLoading(false)
     }
@@ -48,14 +48,14 @@ const EmailValidation = () => {
               <>
                 <h2 className="text-2xl font-semibold text-purple-600 mb-4">Email Verificado exitosamente</h2>
                 <p className="text-lg text-gray-600 mb-8">
-                  Tu email fue verificado exitosamente ahora puedes iniciar sesión
+                  Tu email fue verificado exitosamente, ahora puedes iniciar sesión.
                 </p>
               </>
             ) : (
               <>
                 <h2 className="text-2xl font-semibold text-gray-600 mb-4">La verificación de tu email falló</h2>
                 <p className="text-lg  text-red-600 mb-8">
-                  La verificación de tu email falló, vas a poder solicitar un nuevo codigo desde tu panel de cuenta
+                  La verificación de tu email falló, vas a poder solicitar un nuevo codigo desde tu panel de cuenta.
                 </p>
               </>
             )}

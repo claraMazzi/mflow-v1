@@ -36,11 +36,11 @@ export class AuthController {
 
   validateEmail = (req: Request, res: Response) => {
     const { token } = req.params;
-    if (!token) return res.status(401).json({ error: "Unauthorized" });
+    if (!token) return res.status(400).json({ error: "Se debe proporcionar un token de validación." });
 
     this.authService
       .validateEmail(token)
-      .then(() => res.json("Email validated"))
+      .then(() => res.json("Email validado."))
       .catch((error) => this.handleError(error, res));
   };
 

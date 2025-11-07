@@ -16,14 +16,14 @@ export async function GET(request: Request, { params }: { params: { token: strin
     })
 
     if (!response.ok) {
-      throw new Error("Email validation failed")
+      throw new Error("La validación del email falló.")
     }
 
     const data = await response.json()
     return NextResponse.json(data)
   } catch (error) {
     console.error("Email validation error:", error)
-    return NextResponse.json({ message: "Email validation failed" }, { status: 500 })
+    return NextResponse.json({ message: "La validación del email falló." }, { status: 500 })
   }
 }
 

@@ -25,9 +25,12 @@ export class AuthService {
 	}) => {
 		const token = await jwtAdapter.generateToken({ email, userId });
 
-		if (!token) throw CustomError.internalServer("Ocurrió un error al generar el token de verificación.");
+		if (!token) {
+			throw CustomError.internalServer(
+				"Ocurrió un error al enviar el email de verificación."
+			);
+		}
 		//link de retorno
-		// const link = `${this.webServiceUrl}/auth/validate-email/${token}`;
 		const link = `${this.frontEndUrl}/auth/validate-email/?token=${token}`;
 
 		const html = `<h1>Valida tu correo electrónico</h1>
@@ -41,7 +44,9 @@ export class AuthService {
 
 		const isSent = await this.emailService.sendEmail(options);
 		if (!isSent)
-			throw CustomError.internalServer("Ocurrió un error al enviar el email de verificación.");
+			throw CustomError.internalServer(
+				"Ocurrió un error al enviar el email de verificación."
+			);
 	};
 
 	async registerUser(registerUserDto: RegisterUserDto) {
@@ -50,30 +55,43 @@ export class AuthService {
 			email: registerUserDto.email,
 			deletedAt: null,
 		});
-		if (existUser)
+
+		if (existUser) {
 			throw CustomError.badRequest(
 				"Ya existe un usuario con el correo electrónico ingresado."
 			);
+		}
 
+		let user;
 		try {
-			const user = new UserModel(registerUserDto);
+			user = new UserModel(registerUserDto);
 
 			//Encriptar la contraseña
 			user.password = bcryptAdapter.hash(registerUserDto.password);
 			await user.save();
-
-			//mandar email de confirmacion
-			await this.sendEmailValidationLink({userId: user.id, email: user.email});
-
-			const { password, ...userEntity } = UserEntity.fromObject(user);
-
-			return { user: userEntity };
 		} catch (error) {
 			console.error(`Error ocurred while registering a user: `, error);
 			throw CustomError.internalServer(
 				`Ha ocurrido un error interno en el servidor.`
 			);
 		}
+
+		try {
+			//mandar email de confirmacion
+			await this.sendEmailValidationLink({
+				userId: user.id,
+				email: user.email,
+			});
+		} catch (error) {
+			console.error(
+				`Failed to send the verification email for: ${user.email} - `,
+				error
+			);
+		}
+
+		const { password, ...userEntity } = UserEntity.fromObject(user);
+
+		return { user: userEntity };
 	}
 
 	async loginUser(loginUserDto: LoginUserDto) {
@@ -106,15 +124,33 @@ export class AuthService {
 
 	public validateEmail = async (token: string) => {
 		const payload = await jwtAdapter.validateToken(token);
-		if (!payload) throw CustomError.unauthorized("Invalid token");
+		if (!payload)
+			throw CustomError.unauthorized(
+				"El token de verificación es inválido o ha expirado."
+			);
 
-		const { email, userId  } = payload as { email: string, userId: string };
+		const { email, userId } = payload as { email: string; userId: string };
 
-		if (!email) throw CustomError.internalServer("Email not in token");
+		if (!email)
+			throw CustomError.internalServer(
+				"No se pudo encontrar el email del usuario."
+			);
 
-		const user = await UserModel.findOne({ _id: userId, email: email, deletedAt: null });
+		if (!userId)
+			throw CustomError.internalServer(
+				"No se puedo encontrar el identificador del usuario."
+			);
 
-		if (!user) throw CustomError.internalServer("User does not exist.");
+		const user = await UserModel.findOne({
+			_id: userId,
+			email: email,
+			deletedAt: null,
+		});
+
+		if (!user)
+			throw CustomError.internalServer(
+				"El usuario no existe o fue dado de baja."
+			);
 
 		try {
 			user.emailValidated = true;
@@ -123,7 +159,9 @@ export class AuthService {
 
 			return true;
 		} catch (error) {
-			throw CustomError.internalServer("Validating email failed");
+			throw CustomError.internalServer(
+				"La validación del correo electrónico falló."
+			);
 		}
 	};
 
