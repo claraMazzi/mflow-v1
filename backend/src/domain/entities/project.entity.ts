@@ -39,11 +39,11 @@ export class ProjectEntity {
 			versions,
 		} = object;
 
-		if (!_id && !id) throw CustomError.badRequest("Missing id");
-		if (!title) throw CustomError.badRequest("Missing title");
-		if (!owner) throw CustomError.badRequest("Missing owner");
-		if (!collaborators) throw CustomError.badRequest("Missing collaborators");
-		if (!versions) throw CustomError.badRequest("Missing versions");
+		if (!_id && !id) throw CustomError.badRequest("El identificador del proyecto es obligatorio.");
+		if (!title) throw CustomError.badRequest("El título del proyecto es requerido.");
+		if (!owner) throw CustomError.badRequest("El dueño del proyecto es requerido.");
+		if (!collaborators) throw CustomError.badRequest("Los colaboradores del proyecto son requeridos.");
+		if (!versions) throw CustomError.badRequest("Las versiones de modelos del proyecto son requeridas.");
 
 		return new ProjectEntity(
 			_id || id,

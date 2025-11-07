@@ -10,7 +10,7 @@ import { useUI } from "@components/ui/context"
 
 export type CreateProyectFormData = {
   title: string
-  description?: string
+  description: string
 }
 
 interface CreateProjectFormProps {
@@ -41,24 +41,10 @@ export const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
     }
   }, [state?.success, onSuccess])
 
-  const parseErrorMessage = (error: string) => {
-    console.log('Create project error:', error)
-    switch (error) {
-      case "Invalid credentials.":
-        return "Usuario o contraseña no corresponden a un usuario registrado"
-      case "Not authenticated":
-        return "Debes iniciar sesión para crear un proyecto"
-      case "Project title is required":
-        return "El nombre del proyecto es requerido"
-      case "Something went wrong.":
-      default:
-        return "Ocurrió un error inesperado"
-    }
-  }
   const onSubmit = (data: CreateProyectFormData) => {
     const formData = new FormData();
     formData.append("title", data.title);
-    formData.append("description", data.description || "");
+    formData.append("description", data.description);
     startTransition(() => {
       formAction(formData);
     })
@@ -89,10 +75,10 @@ export const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
           type="text" 
           placeholder="Mi Proyecto" 
           {...form.register("title", {
-            required: "El título del proyecto es requerido",
+            required: "El título del proyecto es obligatorio.",
             maxLength: {
               value: 100,
-              message: "Máximo 100 caracteres"
+              message: "Máximo 100 caracteres."
             }
           })}
           maxLength={100} 
@@ -115,7 +101,7 @@ export const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
           {...form.register("description", {
             maxLength: {
               value: 200,
-              message: "Máximo 200 caracteres"
+              message: "Máximo 200 caracteres."
             }
           })}
           maxLength={200}
@@ -126,7 +112,7 @@ export const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
         )}
       </div>
 
-      {state?.error && <p className="text-sm text-red-600">{parseErrorMessage(state.error)}</p>}
+      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
 
       <Button type="submit" className="uppercase w-full" isLoading={isPending}>
         Crear proyecto

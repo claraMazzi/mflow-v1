@@ -169,9 +169,9 @@ export class ProjectService {
 		//1. verificar que no exista un proyecto con el mismo nombre
 		const existName = await ProjectModel.findOne({
 			title: createDto.title,
-			owner: new mongoose.Types.ObjectId(createDto.owner),
+			owner: createDto.owner,
 		});
-		if (existName) throw CustomError.badRequest("Project title already exists");
+		if (existName) throw CustomError.badRequest("Ya existe un proyecto con el título especificado.");
 
 		try {
 			const project = new ProjectModel(createDto);

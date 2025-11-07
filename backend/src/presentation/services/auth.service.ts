@@ -133,12 +133,12 @@ export class AuthService {
 
 		if (!email)
 			throw CustomError.internalServer(
-				"No se pudo encontrar el email del usuario."
+				"No se pudo obtener el email del usuario."
 			);
 
 		if (!userId)
 			throw CustomError.internalServer(
-				"No se puedo encontrar el identificador del usuario."
+				"No se puedo obtener el identificador del usuario."
 			);
 
 		const user = await UserModel.findOne({

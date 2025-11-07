@@ -4,7 +4,7 @@ const projectSchema = new Schema(
 	{
 		title: {
 			type: String,
-			required: [true, "El campo nombre del proyecto es obligatorio."],
+			required: [true, "El campo título del proyecto es obligatorio."],
 		},
 		description: {
 			type: String,

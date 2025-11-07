@@ -127,11 +127,7 @@ export class ProjectController {
 		const projectData = req.body;
 		const title = projectData.title;
 		const description = projectData.description;
-		const user = req.session?.userId;
-
-		if (!user) {
-			return res.status(401).json({ error: "Unauthorized" });
-		}
+		const user = req.session!.userId;
 
 		const [error, createProjectDto] = CreateProjectDto.create({
 			title,
