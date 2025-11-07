@@ -40,9 +40,9 @@ export class ProjectEntity {
 		} = object;
 
 		if (!_id && !id) throw CustomError.badRequest("El identificador del proyecto es obligatorio.");
-		if (!title) throw CustomError.badRequest("El título del proyecto es requerido.");
-		if (!owner) throw CustomError.badRequest("El dueño del proyecto es requerido.");
-		if (!collaborators) throw CustomError.badRequest("Los colaboradores del proyecto son requeridos.");
+		if (!title) throw CustomError.badRequest("El título del proyecto es obligatorio.");
+		if (!owner) throw CustomError.badRequest("El dueño del proyecto es obligatorio.");
+		if (!collaborators) throw CustomError.badRequest("Los colaboradores del proyecto son obligatorios.");
 		if (!versions) throw CustomError.badRequest("Las versiones de modelos del proyecto son requeridas.");
 
 		return new ProjectEntity(

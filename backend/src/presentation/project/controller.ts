@@ -83,19 +83,15 @@ export class ProjectController {
 	updateProject = (req: Request, res: Response) => {
 		const { projectId } = req.params;
 		if (!projectId) {
-			return res.status(401).json({ error: "No project id provided" });
+			return res.status(401).json({ error: "Debe especificar el identificador del proyecto a modificar." });
 		}
 		const projectData = req.body;
-		const user = req.session?.userId;
-
-		if (!user) {
-			return res.status(401).json({ error: "Unauthorized" });
-		}
+		const userId = req.session!.userId;
 
 		const [error, updateProjectDto] = UpdateProjectDto.create({
 			id: projectId,
 			...projectData,
-			owner: user,
+			requestingUserId: userId,
 		});
 
 		if (error || !updateProjectDto) return res.status(400).json({ error });
