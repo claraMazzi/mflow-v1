@@ -14,14 +14,14 @@ export class UserEntity {
   static fromObject(object: { [key: string]: any }) {
     const { id, _id, name, lastName, email, emailValidated, password, roles } = object;
     
-    if (!_id && !id)throw CustomError.badRequest("Missing id");
-    if (!name) throw CustomError.badRequest("Missing name");
-    if (!lastName) throw CustomError.badRequest("Missing lastName");
-    if (!email) throw CustomError.badRequest("Missing email");
-    if (!password) throw CustomError.badRequest("Missing password");
-    if (!roles) throw CustomError.badRequest("Missing roles");
+    if (!_id && !id) throw CustomError.badRequest("Falta el identificador del usuario.");
+    if (!name) throw CustomError.badRequest("Falta el nombre del usuario.");
+    if (!lastName) throw CustomError.badRequest("Falta el apellido del usuario.");
+    if (!email) throw CustomError.badRequest("Falta el correo electrónico del usuario.");
+    if (!password) throw CustomError.badRequest("Falta la contraseña del usuario.");
+    if (!roles) throw CustomError.badRequest("Faltan los roles del usuario.");
     if (emailValidated === undefined)
-      throw CustomError.badRequest("Missing email validated");
+      throw CustomError.badRequest("Falta el estado de validación del correo electrónico.");
 
     return new UserEntity(
       _id || id,
