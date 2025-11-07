@@ -65,7 +65,10 @@ export class ProjectService {
 			owner: owner,
 			state: { $ne: ProjectStateEnum.deleted },
 		})
-			.populate("collaborators")
+			.populate({
+				path: "collaborators",
+				match: { deletedAt: null },
+			})
 			.exec();
 
 		if (!projects) throw CustomError.badRequest("User has no Projects");
@@ -89,7 +92,10 @@ export class ProjectService {
 			collaborators: userId,
 			state: { $ne: ProjectStateEnum.deleted },
 		})
-			.populate("collaborators")
+			.populate({
+				path: "collaborators",
+				match: { deletedAt: null },
+			})
 			.exec();
 
 		if (!projects) throw CustomError.badRequest("User has no shared Projects");
@@ -149,7 +155,10 @@ export class ProjectService {
 		userSession: { userId: string; roles: string[] };
 	}) {
 		const project = await ProjectModel.findOne({ _id: projectId })
-			.populate("collaborators")
+			.populate({
+				path: "collaborators",
+				match: { deletedAt: null },
+			})
 			.exec();
 
 		if (!project)
