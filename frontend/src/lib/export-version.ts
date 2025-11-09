@@ -21,15 +21,82 @@ async function fetchImageAsBuffer(imageUrl: string): Promise<Buffer> {
 }
 
 /**
+ * Converts SVG to high-resolution PNG using Canvas API
+ * This provides crisp, readable images from vector-based SVG sources like PlantUML
+ */
+async function convertSvgToHighResPng(
+  svgBuffer: Buffer,
+  targetWidth: number,
+  targetHeight: number
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    // Convert SVG buffer to string
+    const svgString = new TextDecoder().decode(svgBuffer);
+    
+    // Create an Image element
+    const img = new Image();
+    
+    // Create a blob URL from the SVG string
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const url = window.URL.createObjectURL(svgBlob);
+    
+    img.onload = () => {
+      // Create a canvas with target dimensions
+      const canvas = document.createElement('canvas');
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      
+      // Get 2D context
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        window.URL.revokeObjectURL(url);
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+      
+      // SVG renders at native resolution, so we can draw it directly
+      // The SVG will scale to fit the canvas dimensions
+      ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+      
+      // Convert canvas to blob, then to buffer
+      canvas.toBlob((blob) => {
+        window.URL.revokeObjectURL(url);
+        if (!blob) {
+          reject(new Error('Failed to convert canvas to blob'));
+          return;
+        }
+        
+        blob.arrayBuffer().then((arrayBuffer) => {
+          resolve(Buffer.from(arrayBuffer));
+        }).catch(reject);
+      }, 'image/png');
+    };
+    
+    img.onerror = () => {
+      window.URL.revokeObjectURL(url);
+      reject(new Error('Failed to load SVG image'));
+    };
+    
+    img.src = url;
+  });
+}
+
+/**
  * Gets the image URL from a diagram (handles both PlantText and uploaded files)
+ * For PlantUML images, returns SVG URL for better quality
  */
 function getDiagramImageUrl(
   diagram: { usesPlantText: boolean; plantTextToken?: string; imageFileId?: string | { url: string } },
-  imageInfos: Map<string, ImageInfo>
+  imageInfos: Map<string, ImageInfo>,
+  useSvg: boolean = false
 ): string | null {
   if (diagram.usesPlantText) {
     // Generate PlantUML image URL
     if (diagram.plantTextToken) {
+      // Use SVG format for high-quality rendering, PNG for regular display
+      if (useSvg) {
+        return `http://www.plantuml.com/plantuml/svg/${diagram.plantTextToken}`;
+      }
       return `http://www.plantuml.com/plantuml/img/${diagram.plantTextToken}`;
     }
   } else {
@@ -108,11 +175,18 @@ export async function exportVersionToExcel({
   
   // Try to add the structure diagram image
   try {
-    const imageUrl = getDiagramImageUrl(conceptualModel.structureDiagram, imageInfos);
+    const isPlantUMLDiagram = conceptualModel.structureDiagram?.usesPlantText;
+    // For PlantUML, use SVG for high quality; for uploaded images, use regular URL
+    const imageUrl = getDiagramImageUrl(conceptualModel.structureDiagram, imageInfos, isPlantUMLDiagram);
     
     if (imageUrl) {
       // Fetch the image as a buffer
-      const imageBuffer = await fetchImageAsBuffer(imageUrl);
+      let imageBuffer = await fetchImageAsBuffer(imageUrl);
+      
+      // Convert PlantUML SVG to high-resolution PNG (1600x1400)
+      if (isPlantUMLDiagram) {
+        imageBuffer = await convertSvgToHighResPng(imageBuffer, 1600, 1400);
+      }
       
       // Determine image extension from URL or default to png
       const extension = imageUrl.includes('.jpg') || imageUrl.includes('.jpeg') ? 'jpeg' : 'png';
@@ -121,7 +195,7 @@ export async function exportVersionToExcel({
       // Type assertion needed: Buffer polyfill type doesn't exactly match ExcelJS's expected Buffer type
       // but works correctly at runtime. ExcelJS accepts the buffer polyfill's Buffer implementation.
       // Using separate variable with type assertion to work around TypeScript strict checking
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const bufferForExcel: any = imageBuffer;
       const imageId = workbook.addImage({
         buffer: bufferForExcel,
@@ -132,7 +206,7 @@ export async function exportVersionToExcel({
       // Image will span from B2 to H20 (7 columns, 19 rows)
       sheet2.addImage(imageId, {
         tl: { col: 1, row: 1 }, // Top-left: Column B (index 1), Row 2 (index 1)
-        ext: { width: 600, height: 400 }, // Set explicit dimensions in pixels
+        ext: { width: 1600, height: 1400 }, // Set explicit dimensions in pixels
       });
       
       // Adjust column widths to accommodate the image
@@ -173,17 +247,24 @@ export async function exportVersionToExcel({
       
       // Try to add the dynamic diagram image
       try {
-        const imageUrl = getDiagramImageUrl(entity.dynamicDiagram, imageInfos);
+        const isPlantUMLDiagram = entity.dynamicDiagram?.usesPlantText;
+        // For PlantUML, use SVG for high quality; for uploaded images, use regular URL
+        const imageUrl = getDiagramImageUrl(entity.dynamicDiagram, imageInfos, isPlantUMLDiagram);
         
         if (imageUrl) {
           // Fetch the image as a buffer
-          const imageBuffer = await fetchImageAsBuffer(imageUrl);
+          let imageBuffer = await fetchImageAsBuffer(imageUrl);
+          
+          // Convert PlantUML SVG to high-resolution PNG (600x400)
+          if (isPlantUMLDiagram) {
+            imageBuffer = await convertSvgToHighResPng(imageBuffer, 600, 400);
+          }
           
           // Determine image extension from URL or default to png
           const extension = imageUrl.includes('.jpg') || imageUrl.includes('.jpeg') ? 'jpeg' : 'png';
           
           // Add image to workbook
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const bufferForExcel: any = imageBuffer;
           const imageId = workbook.addImage({
             buffer: bufferForExcel,
