@@ -323,6 +323,231 @@ export async function exportVersionToExcel({
     sheet3.addRow(["No hay entidades disponibles"]);
   }
 
+  // Sheet 4: Descripción de Objetivos, Salidas y Entradas
+  const sheet4 = workbook.addWorksheet("4 - Descripción de Objetivos, Salidas y Entradas");
+
+  // Create a map of entity IDs to entity names for quick lookup
+  const entityMap = new Map<string, string>();
+  if (conceptualModel.entities) {
+    conceptualModel.entities.forEach((entity) => {
+      entityMap.set(entity._id, entity.name || `Entidad ${entity._id.slice(-4)}`);
+    });
+  }
+
+  // Row 1: Title merged across 4 columns
+  sheet4.addRow(["Descripción de Objetivos, Salidas y Entradas", "", "", ""]);
+  sheet4.mergeCells(1, 1, 1, 4);
+  const titleCell = sheet4.getCell(1, 1);
+  titleCell.font = { bold: true };
+  titleCell.alignment = { horizontal: "center", vertical: "middle" };
+  // Style the title row background (dark blue with white text)
+  titleCell.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF1F4E78' }
+  };
+  titleCell.font = { ...titleCell.font, color: { argb: 'FFFFFFFF' } };
+
+  // Row 2: Objetivo
+  sheet4.addRow(["Objetivo", conceptualModel.objective || ""]);
+  const objetivoRow = sheet4.getRow(2);
+  objetivoRow.getCell(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFFCE4D6' } // Light orange/peach
+  };
+
+  let currentRow = 3;
+
+  // Outputs Section
+  const outputsStartRow = currentRow;
+  if (conceptualModel.outputs && conceptualModel.outputs.length > 0) {
+    // Create list of all entity names for dropdown
+    const entityNames = Array.from(entityMap.values()).filter(name => name);
+    const entityNamesList = entityNames.length > 0 ? entityNames.join(',') : '';
+    
+    // Add each output - first one has "Salidas" label, others have empty column A
+    conceptualModel.outputs.forEach((output, index) => {
+      const entityName = output.entity ? entityMap.get(output.entity) || "" : "";
+      const salidasLabel = index === 0 ? "Salidas" : "";
+      
+      sheet4.addRow([salidasLabel, output.description || "", "Componente", entityName]);
+      currentRow = sheet4.rowCount;
+      const outputRow = sheet4.getRow(currentRow);
+      
+      // Style "Salidas" cell with light blue background (only for first row)
+      if (index === 0) {
+        outputRow.getCell(1).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFD9E1F2' } // Light blue
+        };
+        outputRow.getCell(1).font = { bold: true };
+      }
+      
+      // Style "Componente" column with light green background
+      outputRow.getCell(3).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE2EFDA' } // Light green
+      };
+      // Style column D with light green background
+      outputRow.getCell(4).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE2EFDA' } // Light green
+      };
+      
+      // Add data validation dropdown for component selection (column 4)
+      if (entityNamesList) {
+        const componentCell = outputRow.getCell(4);
+        componentCell.dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`"${entityNamesList}"`]
+        };
+      }
+    });
+    
+    // Merge cells for "Salidas" label in column 1 (from first row to last row)
+    const outputsEndRow = currentRow;
+    if (outputsStartRow < outputsEndRow) {
+      sheet4.mergeCells(outputsStartRow, 1, outputsEndRow, 1);
+      const mergedCell = sheet4.getCell(outputsStartRow, 1);
+      mergedCell.alignment = { vertical: "middle", horizontal: "center" };
+    }
+  } else {
+    // If no outputs, add one row with "Salidas" label
+    sheet4.addRow(["Salidas", "", "Componente", ""]);
+    currentRow = sheet4.rowCount;
+    const outputRow = sheet4.getRow(currentRow);
+    outputRow.getCell(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD9E1F2' } // Light blue
+    };
+    outputRow.getCell(1).font = { bold: true };
+  }
+
+  // Add spacing row
+  currentRow++;
+  sheet4.addRow([]);
+  currentRow = sheet4.rowCount;
+
+  // Inputs Section
+  const inputsStartRow = currentRow;
+  if (conceptualModel.inputs && conceptualModel.inputs.length > 0) {
+    // Add each input - first one has "Entradas" label, others have empty column A
+    conceptualModel.inputs.forEach((input, index) => {
+      const inputType = input.type || "PARAMETRO";
+      const inputTypeDisplay = inputType === "PARAMETRO" ? "Parámetro" : "Factor Experimental";
+      const entradasLabel = index === 0 ? "Entradas" : "";
+      
+      sheet4.addRow([entradasLabel, input.description || "", "Tipo", inputTypeDisplay]);
+      currentRow = sheet4.rowCount;
+      const inputRow = sheet4.getRow(currentRow);
+      
+      // Style "Entradas" cell with light orange/peach background (only for first row)
+      if (index === 0) {
+        inputRow.getCell(1).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFCE4D6' } // Light orange/peach
+        };
+        inputRow.getCell(1).font = { bold: true };
+      }
+      
+      // Style "Tipo" column with light green background
+      inputRow.getCell(3).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE2EFDA' } // Light green
+      };
+      // Style column D with light green background
+      inputRow.getCell(4).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE2EFDA' } // Light green
+      };
+      
+      // Add data validation dropdown for input type (column 4)
+      const tipoEntradaCell = inputRow.getCell(4);
+      tipoEntradaCell.dataValidation = {
+        type: 'list',
+        allowBlank: false,
+        formulae: ['"Parámetro,Factor Experimental"']
+      };
+    });
+    
+    // Merge cells for "Entradas" label in column 1 (from first row to last row)
+    const inputsEndRow = currentRow;
+    if (inputsStartRow < inputsEndRow) {
+      sheet4.mergeCells(inputsStartRow, 1, inputsEndRow, 1);
+      const mergedCell = sheet4.getCell(inputsStartRow, 1);
+      mergedCell.alignment = { vertical: "middle", horizontal: "center" };
+      // Apply styling to merged cell
+      mergedCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFFCE4D6' } // Light orange/peach
+      };
+      mergedCell.font = { bold: true };
+      mergedCell.value = "Entradas";
+    }
+  } else {
+    // If no inputs, add one row with "Entradas" label
+    sheet4.addRow(["Entradas", "", "Tipo", ""]);
+    currentRow = sheet4.rowCount;
+    const inputRow = sheet4.getRow(currentRow);
+    inputRow.getCell(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFCE4D6' } // Light orange/peach
+    };
+    inputRow.getCell(1).font = { bold: true };
+  }
+
+  // Add spacing row
+  currentRow++;
+  sheet4.addRow([]);
+  currentRow = sheet4.rowCount;
+
+  // Simplifications Section
+  const simplificationsStartRow = currentRow;
+  if (conceptualModel.simplifications && conceptualModel.simplifications.length > 0) {
+    conceptualModel.simplifications.forEach((simplification, index) => {
+      const label = index === 0 ? "Simplificaciones" : "";
+      sheet4.addRow([label, simplification.description || ""]);
+      currentRow = sheet4.rowCount;
+    });
+  } else {
+    // If no simplifications, add one row with "Simplificaciones" label
+    sheet4.addRow(["Simplificaciones", ""]);
+    currentRow = sheet4.rowCount;
+  }
+
+  // Merge cells for "Simplificaciones" label in column 1
+  const simplificationsEndRow = currentRow;
+  if (simplificationsStartRow <= simplificationsEndRow) {
+    sheet4.mergeCells(simplificationsStartRow, 1, simplificationsEndRow, 1);
+    const mergedCell = sheet4.getCell(simplificationsStartRow, 1);
+    mergedCell.alignment = { vertical: "middle", horizontal: "center" };
+    // Apply styling to merged cell
+    mergedCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD9D9D9' } // Light gray
+    };
+    mergedCell.font = { bold: true };
+    mergedCell.value = "Simplificaciones";
+  }
+
+  // Set column widths for sheet 4
+  sheet4.getColumn(1).width = 20;
+  sheet4.getColumn(2).width = 50;
+  sheet4.getColumn(3).width = 25;
+  sheet4.getColumn(4).width = 25;
+
   // Generate Excel file and download
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {
