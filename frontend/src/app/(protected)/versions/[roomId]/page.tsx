@@ -41,6 +41,8 @@ import Alcance from "@components/conceptual-model/Alcance";
 import Detalle from "@components/conceptual-model/Detalle";
 import DiagramaFlujo from "@components/conceptual-model/DiagramaDeFlujo";
 import { RemoteCursor } from "@components/versions/RemoteCursor";
+import { useUI } from "@components/ui/context";
+import { FinalizeVersionModal } from "@components/versions/FinalizeVersionModal";
 
 function throttle(func: any, delay: number) {
   let timeout: NodeJS.Timeout | null = null;
@@ -62,6 +64,7 @@ export default function Page({
   params: Promise<{ roomId: string }>;
 }) {
   const { data: session } = useSession();
+  const { openModal, closeModal } = useUI();
   const { isConnected: isSocketConnected, transport } = useSocketConnection({
     socket,
     sessionToken: session?.auth,
@@ -77,6 +80,18 @@ export default function Page({
   );
   const [followingUserId, setFollowingUserId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const collaboratorsRef = useRef(collaborators);
+  const sessionRef = useRef(session);
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    collaboratorsRef.current = collaborators;
+  }, [collaborators]);
+  
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
+  
   const hasEditingRights = useMemo(() => {
     // console.log("Has Editing Rights was recalculated.");
     if (!session?.user.id) return false;
@@ -387,6 +402,36 @@ export default function Page({
       onPlantTextImageUpdate
     );
 
+    function onFinalizeVersionModal(_payload: { initiatedBy: string }) {
+      // Calculate hasEditingRights at the time the modal opens using refs to get latest values
+      const currentSession = sessionRef.current;
+      const currentCollaborators = collaboratorsRef.current;
+      const currentUserHasEditingRights = currentSession?.user.id
+        ? !!currentCollaborators.get(currentSession.user.id)?.hasEditingRights
+        : false;
+      
+      openModal({
+        name: "finalize-version-modal",
+        title: "Finalizar Revisión",
+        size: "md",
+        showCloseButton: false,
+        content: (
+          <FinalizeVersionModal
+            roomId={roomId}
+            socket={socket}
+            hasEditingRights={currentUserHasEditingRights}
+            onClose={closeModal}
+          />
+        ),
+      });
+    }
+    socket.on("finalize-version-modal", onFinalizeVersionModal);
+
+    function onFinalizeVersionModalClose() {
+      closeModal();
+    }
+    socket.on("finalize-version-modal-close", onFinalizeVersionModalClose);
+
     return () => {
       socket.off("field-update", onFieldUpdate);
       socket.off("image-added", onImageAdded);
@@ -406,6 +451,8 @@ export default function Page({
         SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE,
         onPlantTextImageUpdate
       );
+      socket.off("finalize-version-modal", onFinalizeVersionModal);
+      socket.off("finalize-version-modal-close", onFinalizeVersionModalClose);
     };
   }, [isSocketConnected]);
 
@@ -630,6 +677,8 @@ export default function Page({
         onFollowUser={handleFollowUser}
         followingUserId={followingUserId}
         currentUserId={session?.user.id}
+        roomId={roomId}
+        socket={socket}
       />
 
       {!isModelInitialized ? (

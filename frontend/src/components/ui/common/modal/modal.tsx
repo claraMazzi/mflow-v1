@@ -68,7 +68,7 @@ export const Modal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && closeModal()}>
-      <DialogContent className={getContentClasses()} id={id}>
+      <DialogContent className={getContentClasses()} id={id} showCloseButton={showCloseButton}>
         {/* Custom close button if specified */}
         {closeButtonClass && (
           <button

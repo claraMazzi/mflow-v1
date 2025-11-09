@@ -35,7 +35,7 @@ function parsePropertyPath(conceptualModel: ConceptualModel, path: string) {
 			current = current[part];
 		}
 	}
-	console.log("Parsed Path: ", parsedPath);
+	//console.log("Parsed Path: ", parsedPath);
 	return parsedPath;
 }
 
@@ -45,8 +45,8 @@ export const getProperty = (
 ) => {
 	const pathParts = parsePropertyPath(conceptualModel, propertyPath);
 	let current: any = conceptualModel;
-	console.log("Path Parts: ", pathParts);
-	console.log("Current: ", current);
+	// console.log("Path Parts: ", pathParts);
+	// console.log("Current: ", current);
 
 	while (
 		pathParts!.length > 1
@@ -54,9 +54,9 @@ export const getProperty = (
 		//conceptualModel.hasOwnProperty(parts[0])
 	) {
 		current = current[pathParts!.shift()!];
-		console.log("Current: ", current);
+		// console.log("Current: ", current);
 	}
-	console.log("Current[pathParts![0]]: ", current[pathParts![0]]);
+	// console.log("Current[pathParts![0]]: ", current[pathParts![0]]);
 	return current[pathParts![0]];
 };
 

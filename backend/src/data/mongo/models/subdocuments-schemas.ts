@@ -70,22 +70,14 @@ export const conceptualModelSchema = new Schema({
 	flowDiagram: diagramSchema,
 	inputs: [
 		{
-			description: String, //TODO: Add final validation of empty descriptions
-			// description: {
-			// 	type: String,
-			// 	required: [true, "El campo descripción de la entrada es obligatorio."],
-			// },
+			description: String,
 			//entity: Schema.Types.ObjectId, //TODO: see if its used in the future
 			type: { type: String, enum: ["PARAMETRO", "FACTOR EXPERIMENTAL"] },
 		},
 	],
 	outputs: [
 		{
-			description: String, //TODO: Add final validation of empty descriptions
-			// description: {
-			// 	type: String,
-			// 	required: [true, "El campo descripción de la salida es obligatorio."],
-			// },
+			description: String, 
 			entity: Schema.Types.ObjectId,
 		},
 	],
@@ -93,6 +85,27 @@ export const conceptualModelSchema = new Schema({
 });
 
 export type ConceptualModel = InferSchemaType<typeof conceptualModelSchema>;
+
+export type Simplification = {
+	_id: string;
+	description: string;
+};
+
+export type Input = {
+	_id: string;
+	description: string;
+	type: "PARAMETRO" | "FACTOR EXPERIMENTAL";
+};
+
+export type Output = {
+	_id: string;
+	description: string;
+	entity: string;
+};
+
+export type Assumption = Simplification;
+
+export type Entity = InferSchemaType<typeof entitySchema>;
 
 export const correctionSchema = new Schema({
 	description: String,

@@ -205,6 +205,21 @@ export class SocketServer {
 			(payload: PlantTextGetImagePayload) => this.handlePlantTextGetImage(socket, payload)
 		);
 
+		socket.on(
+			"finalize-version",
+			(payload: { roomId: string }) => this.handleFinalizeVersion(socket, payload)
+		);
+
+		socket.on(
+			"finalize-version-confirm",
+			(payload: { roomId: string }) => this.handleFinalizeVersionConfirm(socket, payload)
+		);
+
+		socket.on(
+			"finalize-version-modal-close",
+			(payload: { roomId: string }) => this.handleFinalizeVersionModalClose(socket, payload)
+		);
+
 		socket.on("disconnecting", () => this.handleDisconnecting(socket));
 	}
 
@@ -578,6 +593,7 @@ export class SocketServer {
 		payload: PlantTextCodeChangePayload
 	) {
 		try {
+			console.log("--------------handlePlantTextCodeChange", payload);
 			const { version } = await this.versionService.getVersionById(
 				payload.versionId
 			);
@@ -598,7 +614,7 @@ export class SocketServer {
 
 			// Generate token for the plantTextCode
 			const plantTextToken = plantumlEncoder.encode(payload.plantTextCode);
-			
+			console.log("plantTextToken", plantTextToken);
 			// Update the diagram with new plantTextCode and token
 			diagram.plantTextCode = payload.plantTextCode;
 			diagram.plantTextToken = plantTextToken;
@@ -662,6 +678,77 @@ export class SocketServer {
 			console.log(`PlantText existing image sent for property: ${payload.propertyPath}`);
 		} catch (error) {
 			console.error("Error handling plantText get image:", error);
+		}
+	}
+
+	private handleFinalizeVersion(
+		socket: Socket,
+		payload: { roomId: string }
+	) {
+		const collabRoom = this.activeCollaborationRooms.get(payload.roomId);
+
+		if (!collabRoom) {
+			console.info(
+				`Finalize version request was ignored for Room: ${payload.roomId} - UserId: ${socket.data.userId}`
+			);
+			return;
+		}
+
+		// Check if user has editing rights
+		if (collabRoom.getCurrentEditingUser() !== socket.data.userId) {
+			console.info(
+				`Finalize version request was refused - User ${socket.data.userId} does not have editing rights`
+			);
+			return;
+		}
+
+		// Broadcast the finalize modal to all users in the room
+		this.emitFinalizeVersionModal(payload.roomId, {
+			initiatedBy: socket.data.userId,
+		});
+	}
+
+	private async handleFinalizeVersionConfirm(
+		socket: Socket,
+		payload: { roomId: string }
+	) {
+		const collabRoom = this.activeCollaborationRooms.get(payload.roomId);
+
+		if (!collabRoom) {
+			console.info(
+				`Finalize version confirm was ignored for Room: ${payload.roomId} - UserId: ${socket.data.userId}`
+			);
+			return;
+		}
+
+		// Check if user has editing rights
+		if (collabRoom.getCurrentEditingUser() !== socket.data.userId) {
+			console.info(
+				`Finalize version confirm was refused - User ${socket.data.userId} does not have editing rights`
+			);
+			return;
+		}
+
+		try {
+			// Validate and finalize the version
+			const validationResult = await this.versionService.validateAndFinalizeVersion(
+				payload.roomId
+			);
+
+			// Emit the validation results to all users in the room
+			this.emitFinalizeVersionResult(payload.roomId, {
+				isValid: validationResult.isValid,
+				errors: validationResult.errors,
+				warnings: validationResult.warnings,
+			});
+		} catch (error) {
+			console.error("Error finalizing version:", error);
+			// Emit error to the user who initiated
+			socket.emit("finalize-version-error", {
+				type: "finalize-version-error",
+				message: "Ocurrió un error al finalizar la versión.",
+				timestamp: new Date(),
+			});
 		}
 	}
 
@@ -865,6 +952,49 @@ export class SocketServer {
 			plantTextToken: payload.plantTextToken,
 			timestamp: new Date(),
 		} satisfies PlantTextImageUpdatePayload);
+	}
+
+	public emitFinalizeVersionModal(
+		roomId: string,
+		payload: { initiatedBy: string }
+	) {
+		this.socketServer.to(roomId).emit("finalize-version-modal", {
+			type: "finalize-version-modal",
+			initiatedBy: payload.initiatedBy,
+			timestamp: new Date(),
+		});
+	}
+
+	public emitFinalizeVersionModalClose(roomId: string) {
+		this.socketServer.to(roomId).emit("finalize-version-modal-close", {
+			type: "finalize-version-modal-close",
+			timestamp: new Date(),
+		});
+	}
+
+	public emitFinalizeVersionResult(
+		roomId: string,
+		payload: {
+			isValid: boolean;
+			errors: string[];
+			warnings: string[];
+		}
+	) {
+		this.socketServer.to(roomId).emit("finalize-version-result", {
+			type: "finalize-version-result",
+			isValid: payload.isValid,
+			errors: payload.errors,
+			warnings: payload.warnings,
+			timestamp: new Date(),
+		});
+	}
+
+	private handleFinalizeVersionModalClose(
+		socket: Socket,
+		payload: { roomId: string }
+	) {
+		// Broadcast the close event to all users in the room
+		this.emitFinalizeVersionModalClose(payload.roomId);
 	}
 
 	public getCollaborationRoomState({ roomId }: { roomId: string }) {
