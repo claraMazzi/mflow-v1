@@ -135,12 +135,36 @@ export async function exportVersionToExcel({
 
   // Add Sistema row
   sheet1.addRow(["Sistema", conceptualModel.name || ""]);
-
+  // Add color to the Sistema cell (row 1, column 1)
+  const sistemaCell = sheet1.getCell(1, 1);
+  sistemaCell.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF1F4E78' }
+  };
+  sistemaCell.font = { ...sistemaCell.font, color: { argb: 'FFFFFFFF' } };
+  
   // Add Estructura row
   sheet1.addRow(["Estructura", "ver hoja 2 - Diagrama de estructura"]);
-
+  // Add color to the Estructura cell (row 2, column 1)
+  const estructuraCell = sheet1.getCell(2, 1);
+  estructuraCell.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF1F4E78' }
+  };
+  estructuraCell.font = { ...estructuraCell.font, color: { argb: 'FFFFFFFF' } };
+  
   // Add Dinamica row
   sheet1.addRow(["Dinamica", "ver hoja 3 - Diagrama Dinamica"]);
+  // Add color to the Dinamica cell (row 3, column 1)
+  const dinamicaCell = sheet1.getCell(3, 1);
+  dinamicaCell.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF1F4E78' }
+  };
+  dinamicaCell.font = { ...dinamicaCell.font, color: { argb: 'FFFFFFFF' } };
 
   // Add Suposiciones section
   const assumptionsStartRow = sheet1.rowCount + 1;
@@ -156,14 +180,20 @@ export async function exportVersionToExcel({
     // If no assumptions, add one row with "Suposiciones" label
     sheet1.addRow(["Suposiciones", ""]);
   }
-
   // Merge cells for "Suposiciones" label in column 1
   const assumptionsEndRow = sheet1.rowCount;
   if (assumptionsStartRow <= assumptionsEndRow) {
     sheet1.mergeCells(assumptionsStartRow, 1, assumptionsEndRow, 1);
-    // Center align the merged cell
+    // Center align the merged cell and add color
     const mergedCell = sheet1.getCell(assumptionsStartRow, 1);
     mergedCell.alignment = { vertical: "middle", horizontal: "center" };
+    // Add color to the Suposiciones cell (merged cell at assumptionsStartRow, column 1)
+    mergedCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF1F4E78' }
+    };
+    mergedCell.font = { ...mergedCell.font, color: { argb: 'FFFFFFFF' } };
   }
 
   // Set column widths
@@ -429,15 +459,10 @@ export async function exportVersionToExcel({
     outputRow.getCell(1).font = { bold: true };
   }
 
-  // Add spacing row
-  currentRow++;
-  sheet4.addRow([]);
-  currentRow = sheet4.rowCount;
-
   // Inputs Section
-  const inputsStartRow = currentRow;
   if (conceptualModel.inputs && conceptualModel.inputs.length > 0) {
     // Add each input - first one has "Entradas" label, others have empty column A
+    let inputsStartRow: number | null = null;
     conceptualModel.inputs.forEach((input, index) => {
       const inputType = input.type || "PARAMETRO";
       const inputTypeDisplay = inputType === "PARAMETRO" ? "Parámetro" : "Factor Experimental";
@@ -445,6 +470,9 @@ export async function exportVersionToExcel({
       
       sheet4.addRow([entradasLabel, input.description || "", "Tipo", inputTypeDisplay]);
       currentRow = sheet4.rowCount;
+      if (inputsStartRow === null) {
+        inputsStartRow = currentRow;
+      }
       const inputRow = sheet4.getRow(currentRow);
       
       // Style "Entradas" cell with light orange/peach background (only for first row)
@@ -481,8 +509,9 @@ export async function exportVersionToExcel({
     
     // Merge cells for "Entradas" label in column 1 (from first row to last row)
     const inputsEndRow = currentRow;
-    if (inputsStartRow < inputsEndRow) {
-      sheet4.mergeCells(inputsStartRow, 1, inputsEndRow, 1);
+    if (inputsStartRow !== null && inputsStartRow < inputsEndRow) {
+      try {
+        sheet4.mergeCells(inputsStartRow, 1, inputsEndRow, 1);
       const mergedCell = sheet4.getCell(inputsStartRow, 1);
       mergedCell.alignment = { vertical: "middle", horizontal: "center" };
       // Apply styling to merged cell
@@ -493,6 +522,17 @@ export async function exportVersionToExcel({
       };
       mergedCell.font = { bold: true };
       mergedCell.value = "Entradas";
+      } catch {
+        // If merge fails (e.g., cells already merged), just style the first cell
+        const firstCell = sheet4.getCell(inputsStartRow, 1);
+        firstCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFCE4D6' }
+        };
+        firstCell.font = { bold: true };
+        firstCell.value = "Entradas";
+      }
     }
   } else {
     // If no inputs, add one row with "Entradas" label
@@ -507,18 +547,16 @@ export async function exportVersionToExcel({
     inputRow.getCell(1).font = { bold: true };
   }
 
-  // Add spacing row
-  currentRow++;
-  sheet4.addRow([]);
-  currentRow = sheet4.rowCount;
-
   // Simplifications Section
-  const simplificationsStartRow = currentRow;
+  let simplificationsStartRow: number | null = null;
   if (conceptualModel.simplifications && conceptualModel.simplifications.length > 0) {
     conceptualModel.simplifications.forEach((simplification, index) => {
       const label = index === 0 ? "Simplificaciones" : "";
       sheet4.addRow([label, simplification.description || ""]);
       currentRow = sheet4.rowCount;
+      if (simplificationsStartRow === null) {
+        simplificationsStartRow = currentRow;
+      }
     });
   } else {
     // If no simplifications, add one row with "Simplificaciones" label
@@ -528,8 +566,9 @@ export async function exportVersionToExcel({
 
   // Merge cells for "Simplificaciones" label in column 1
   const simplificationsEndRow = currentRow;
-  if (simplificationsStartRow <= simplificationsEndRow) {
-    sheet4.mergeCells(simplificationsStartRow, 1, simplificationsEndRow, 1);
+  if (simplificationsStartRow !== null && simplificationsStartRow < simplificationsEndRow) {
+    try {
+      sheet4.mergeCells(simplificationsStartRow, 1, simplificationsEndRow, 1);
     const mergedCell = sheet4.getCell(simplificationsStartRow, 1);
     mergedCell.alignment = { vertical: "middle", horizontal: "center" };
     // Apply styling to merged cell
@@ -540,6 +579,27 @@ export async function exportVersionToExcel({
     };
     mergedCell.font = { bold: true };
     mergedCell.value = "Simplificaciones";
+    } catch {
+      // If merge fails (e.g., cells already merged), just style the first cell
+      const firstCell = sheet4.getCell(simplificationsStartRow, 1);
+      firstCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFD9D9D9' }
+      };
+      firstCell.font = { bold: true };
+      firstCell.value = "Simplificaciones";
+    }
+  } else if (simplificationsStartRow === simplificationsEndRow) {
+    // Single row case - just style it
+    const cell = sheet4.getCell(simplificationsStartRow, 1);
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD9D9D9' }
+    };
+    cell.font = { bold: true };
+    cell.value = "Simplificaciones";
   }
 
   // Set column widths for sheet 4
