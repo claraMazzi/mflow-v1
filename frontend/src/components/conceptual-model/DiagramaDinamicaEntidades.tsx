@@ -3,7 +3,7 @@
 import { MouseEvent, ChangeEvent, useState, useCallback, useMemo, memo } from "react";
 import { DiagramImageUpload } from "@components/ui/conceptual-model/diagram";
 import { ImageInfo } from "#types/conceptual-model";
-import { useFieldArray, RegisterOptions, Path } from "react-hook-form";
+import { useFieldArray, RegisterOptions, Path, Control } from "react-hook-form";
 import { ConceptualModel } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
 import { Button } from "@components/ui/common/button";
@@ -15,6 +15,7 @@ interface DiagramaEstructuraEntidadesProps {
   hasEditingRights: boolean;
   imageInfos: Map<string, ImageInfo>;
   watch: (name?: string) => unknown;
+  control: Control<ConceptualModel>;
   entitiesList: ReturnType<typeof useFieldArray<ConceptualModel, "entities">>;
   customRegisterField: ({
     name,
@@ -71,6 +72,7 @@ const DiagramaDinamicaEntidadesComponent = ({
   hasEditingRights,
   imageInfos,
   watch,
+  control,
   entitiesList,
   customRegisterField,
   handleAddItemToList,
@@ -142,9 +144,10 @@ const DiagramaDinamicaEntidadesComponent = ({
     imageInfos,
     title: "Diagrama de Dinamica de la entidad",
     watch,
+    control,
     socket,
     register: customRegisterField,
-  }), [sessionToken, versionId, hasEditingRights, imageInfos, watch, socket, customRegisterField]);
+  }), [sessionToken, versionId, hasEditingRights, imageInfos, watch, control, socket, customRegisterField]);
 
   return (
     <div className="flex flex-col gap-6 p-6 bg-white rounded-lg shadow-sm">

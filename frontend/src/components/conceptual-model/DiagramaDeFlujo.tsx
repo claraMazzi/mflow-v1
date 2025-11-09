@@ -4,7 +4,7 @@ import { ChangeEvent } from "react";
 import { DiagramImageUpload } from "@components/ui/conceptual-model/diagram";
 import { ImageInfo } from "#types/conceptual-model";
 import { ConceptualModel } from "#types/conceptual-model";
-import { Path, RegisterOptions } from "react-hook-form";
+import { Path, RegisterOptions, Control } from "react-hook-form";
 
 interface DiagramaFlujoProps {
   sessionToken?: string;
@@ -12,6 +12,7 @@ interface DiagramaFlujoProps {
   hasEditingRights: boolean;
   imageInfos: Map<string, ImageInfo>;
   watch: (name?: string) => unknown;
+  control: Control<ConceptualModel>;
   customRegisterField: ({
     name,
     propertyPath,
@@ -47,6 +48,7 @@ export default function DiagramaFlujo({
   hasEditingRights,
   imageInfos,
   watch,
+  control,
   socket,
   customRegisterField
   }: DiagramaFlujoProps) {
@@ -61,6 +63,7 @@ export default function DiagramaFlujo({
           imageInfos={imageInfos}
           title="Diagrama de Flujo"
           watch={watch}
+          control={control}
           namePathPrefix="flowDiagram"
           diagramPropertyPath="flowDiagram"
           socket={socket}

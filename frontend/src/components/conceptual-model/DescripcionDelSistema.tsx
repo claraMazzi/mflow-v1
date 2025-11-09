@@ -175,7 +175,9 @@ export default function DescripcionDelSistema({
   return (
     <div className="flex flex-col gap-6 p-6 bg-white rounded-lg shadow-sm">
       <div className="space-y-2">
-        <p className="text-lg font-bold text-center">Descripción inicial del sistema</p>
+        <p className="text-lg font-bold text-center">
+          Descripción inicial del sistema
+        </p>
         <p className="text-sm text-gray-500">
           Es necesaria para poder establecer los objetivos, suposiciones y
           simplificaciones del modelo de simulación

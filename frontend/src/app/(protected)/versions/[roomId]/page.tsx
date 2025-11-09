@@ -565,16 +565,24 @@ export default function Page({
         registerResult.onChange(e);
 
         if (propagateUpdateOnChange) {
-          const value = getValues(e.currentTarget.name as any);
-          sendPropertyUpdate(value, propertyPath);
+          // For checkboxes, get the value from e.target.checked, otherwise use getValues
+          // We need to use setTimeout to ensure React Hook Form has updated the value
+          setTimeout(() => {
+            const value = e.target.type === 'checkbox' 
+              ? (e.target as HTMLInputElement).checked 
+              : getValues(e.currentTarget.name as any);
+            sendPropertyUpdate(value, propertyPath);
+          }, 0);
         }
       },
       onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         // Call the original onBlur handler
         registerResult.onBlur(e);
-
         if (!propagateUpdateOnChange) {
-          const value = getValues(e.currentTarget.name as any);
+          // For checkboxes, get the value from e.target.checked, otherwise use getValues
+          const value = e.target.type === 'checkbox' 
+            ? (e.target as HTMLInputElement).checked 
+            : getValues(e.currentTarget.name as any);
           sendPropertyUpdate(value, propertyPath);
         }
       },
@@ -651,9 +659,9 @@ export default function Page({
   if (!roomId) return <>No version ID</>;
 
   return (
-    <div 
+    <div
       ref={containerRef}
-      className="flex-grow bg-grey-0 relative" 
+      className="flex-grow bg-grey-0 relative"
       onMouseMove={handleMouseMove}
     >
       {/* Remote cursors */}
@@ -666,7 +674,7 @@ export default function Page({
           containerRef={containerRef}
         />
       ))}
-      
+
       <VersionBar
         canUserSendEditingRequest={canUserSendEditingRequest}
         handleRequestEditingRights={handleRequestEditingRights}
@@ -713,15 +721,9 @@ export default function Page({
               <TabsTrigger value="objetivos-entradas-salidas">
                 Objetivos, Entradas y Salidas
               </TabsTrigger>
-              <TabsTrigger value="alcance">
-                Alcance
-              </TabsTrigger>
-              <TabsTrigger value="detalle">
-                Nivel de Detalle
-              </TabsTrigger>
-              <TabsTrigger value="flujo">
-                Diagrama de Flujo              
-              </TabsTrigger>
+              <TabsTrigger value="alcance">Alcance</TabsTrigger>
+              <TabsTrigger value="detalle">Nivel de Detalle</TabsTrigger>
+              <TabsTrigger value="flujo">Diagrama de Flujo</TabsTrigger>
             </TabsList>
             <TabsContent value="descripcion-sistema" className="">
               <DescripcionDelSistema
@@ -742,6 +744,7 @@ export default function Page({
                 hasEditingRights={hasEditingRights}
                 imageInfos={imageInfos}
                 watch={watch}
+                control={control}
                 customRegisterField={customRegisterField}
                 socket={socket}
               />
@@ -754,6 +757,7 @@ export default function Page({
                 hasEditingRights={hasEditingRights}
                 imageInfos={imageInfos}
                 watch={watch}
+                control={control}
                 entitiesList={entitiesList}
                 customRegisterField={customRegisterField}
                 handleAddItemToList={handleAddItemToList}
@@ -801,8 +805,8 @@ export default function Page({
                 hasEditingRights={hasEditingRights}
                 imageInfos={imageInfos}
                 watch={watch}
+                control={control}
                 customRegisterField={customRegisterField}
-
                 socket={socket}
               />
             </TabsContent>
