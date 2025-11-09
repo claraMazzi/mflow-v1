@@ -679,6 +679,8 @@ export default function Page({
         currentUserId={session?.user.id}
         roomId={roomId}
         socket={socket}
+        conceptualModel={watch()}
+        imageInfos={imageInfos}
       />
 
       {!isModelInitialized ? (

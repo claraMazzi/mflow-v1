@@ -66,7 +66,7 @@ export const conceptualModelSchema = new Schema({
 	//https://mongoosejs.com/docs/subdocs.html#altsyntaxarrays
 	simplifications: [{ description: String }],
 	assumptions: [{ description: String }],
-	structureDiagram: diagramSchema,
+	structureDiagram: diagramSchema, 
 	flowDiagram: diagramSchema,
 	inputs: [
 		{
