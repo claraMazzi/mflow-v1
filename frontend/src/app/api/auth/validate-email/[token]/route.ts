@@ -22,7 +22,8 @@ export async function GET(
 		);
 
 		if (!response.ok) {
-			throw new Error("La validación del email falló.");
+			const errorData = await response.json().catch(() => ({}));
+			throw new Error(errorData.error || "La validación del email falló.");
 		}
 
 		const data = await response.json();
