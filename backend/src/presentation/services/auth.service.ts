@@ -31,10 +31,10 @@ export class AuthService {
 			);
 		}
 		//link de retorno
-		const link = `${this.frontEndUrl}/auth/validate-email/?token=${token}`;
+		const link = `${this.frontEndUrl}/validate-email/?token=${token}`;
 
-		const html = `<h1>Valida tu correo electrónico</h1>
-    <p> Hace Click en el siguiente <a href=${link}>link</a> para validar tu correo electrónico </p>`;
+		const html = `<h1>Validá tu correo electrónico</h1>
+    <p> Hacé click en el siguiente <a href=${link}>link</a> para validar tu correo electrónico. </p>`;
 
 		const options = {
 			to: email,
