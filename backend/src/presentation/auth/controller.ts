@@ -1,74 +1,87 @@
 import { Request, Response } from "express";
-import { CustomError, LoginUserDto, RegisterUserDto, RecoverPasswordDto} from "../../domain";
+import {
+	CustomError,
+	LoginUserDto,
+	RegisterUserDto,
+	RecoverPasswordDto,
+} from "../../domain";
 import { AuthService } from "../services/auth.service";
 
 export class AuthController {
-  constructor(readonly authService: AuthService) {}
+	constructor(readonly authService: AuthService) {}
 
-  private handleError = (error: unknown, res: Response) => {
-    if (error instanceof CustomError) {
-      return res.status(error.statusCode).json({ error: error.message });
-    }
+	private handleError = (error: unknown, res: Response) => {
+		if (error instanceof CustomError) {
+			return res.status(error.statusCode).json({ error: error.message });
+		}
 
-    console.log(`Unexpected Unhandled Error: ${error}`);
-    return res.status(500).json({ error: "Ha ocurrido un error interno en el servidor." });
-  };
+		console.log(`Unexpected Unhandled Error: ${error}`);
+		return res
+			.status(500)
+			.json({ error: "Ha ocurrido un error interno en el servidor." });
+	};
 
-  registerUser = (req: Request, res: Response) => {
-    const [error, registerDto] = RegisterUserDto.create(req.body);
-    if (error) return res.status(400).json({ error });
+	registerUser = (req: Request, res: Response) => {
+		const [error, registerDto] = RegisterUserDto.create(req.body);
+		if (error) return res.status(400).json({ error });
 
-    this.authService
-      .registerUser(registerDto!)
-      .then((user) => res.json(user))
-      .catch((error) => this.handleError(error, res));
-  };
+		this.authService
+			.registerUser(registerDto!)
+			.then((user) => res.json(user))
+			.catch((error) => this.handleError(error, res));
+	};
 
-  loginUser = (req: Request, res: Response) => {
-    const [error, loginDto] = LoginUserDto.create(req.body);
-    if (error) return res.status(400).json({ error });
+	loginUser = (req: Request, res: Response) => {
+		const [error, loginDto] = LoginUserDto.create(req.body);
+		if (error) return res.status(400).json({ error });
 
-    this.authService
-      .loginUser(loginDto!)
-      .then((user) => res.json(user))
-      .catch((error) => this.handleError(error, res));
-  };
+		this.authService
+			.loginUser(loginDto!)
+			.then((user) => res.json(user))
+			.catch((error) => this.handleError(error, res));
+	};
 
-  validateEmail = (req: Request, res: Response) => {
-    const { token } = req.params;
-    if (!token) return res.status(400).json({ error: "Se debe proporcionar un token de validación." });
+	validateEmail = (req: Request, res: Response) => {
+		const { token } = req.params;
+		if (!token)
+			return res
+				.status(400)
+				.json({ error: "Se debe proporcionar un token de validación." });
 
-    this.authService
-      .validateEmail(token)
-      .then(() => res.json("Email validado."))
-      .catch((error) => this.handleError(error, res));
-  };
+		this.authService
+			.validateEmail(token)
+			.then(() => res.json("Email validado."))
+			.catch((error) => this.handleError(error, res));
+	};
 
-  passwordRecoverRequest = (req: Request, res: Response) => {
-    const { email} = req.body;
-    this.authService
-      .passwordRecover(email)
-      .then(() => res.json("Recovery email sent succesfully"))
-      .catch((error) => this.handleError(error, res));
-  };
+	passwordRecoverRequest = (req: Request, res: Response) => {
+		const { email } = req.body;
+		this.authService
+			.passwordRecover(email)
+			.then(() =>
+				res.json(
+					"Si posee una cuenta en la plataforma, recibirá un correo electrónico para restablecer su contraseña."
+				)
+			)
+			.catch((error) => this.handleError(error, res));
+	};
 
-  validateRecoverRequest = (req: Request, res: Response) => {
-    const { token } = req.params;
+	validateRecoverRequest = (req: Request, res: Response) => {
+		const { token } = req.params;
 
-    this.authService
-      .validatePasswordRecoverRequest(token)
-      .then(() => res.json("Password Recover Request Accepted"))
-      .catch((error) => this.handleError(error, res));
-  };
+		this.authService
+			.validatePasswordRecoverRequest(token)
+			.then(() => res.json("El token para restablecer la contraseña es es válido."))
+			.catch((error) => this.handleError(error, res));
+	};
 
-  passwordRecoverUpdate = (req: Request, res: Response) => {
-    const [error, recoverDto] = RecoverPasswordDto.create(req.body);
-    if (error) return res.status(400).json({ error });
+	passwordRecoverUpdate = (req: Request, res: Response) => {
+		const [error, recoverDto] = RecoverPasswordDto.create(req.body);
+		if (error) return res.status(400).json({ error });
 
-    this.authService
-      .passwordRecoverUpdate(recoverDto!)
-      .then((user) => res.json(user))
-      .catch((error) => this.handleError(error, res));
-  };
+		this.authService
+			.passwordRecoverUpdate(recoverDto!)
+			.then((user) => res.json(user))
+			.catch((error) => this.handleError(error, res));
+	};
 }
-

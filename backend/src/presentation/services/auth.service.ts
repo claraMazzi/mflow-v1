@@ -167,34 +167,48 @@ export class AuthService {
 
 	public validatePasswordRecoverRequest = async (token: string) => {
 		const payload = await jwtAdapter.validateToken(token);
-		if (!payload) throw CustomError.unauthorized("Invalid token");
+		if (!payload) throw CustomError.badRequest("El token es inválido.");
 
-		const { email, exp } = payload as { email?: string; exp?: number };
+		const { email, userId } = payload as { email: string; userId: string };
 
-		if (!email) throw CustomError.internalServer("Email not in token");
-
-		if (exp && Date.now() >= exp * 1000) {
-			throw CustomError.unauthorized("Token has expired");
+		if (!email) {
+			console.error("Email missing in recorver password token: ", token);
+			throw CustomError.badRequest("El token es inválido.");
+		}
+		if (!userId) {
+			console.error("User Id missing in recorver password token: ", token);
+			throw CustomError.badRequest("El token es inválido.");
 		}
 
-		const user = await UserModel.findOne({ email, deletedAt: null });
+		const user = await UserModel.findOne({
+			_id: userId,
+			email,
+			deletedAt: null,
+		});
 
-		if (!user)
-			throw CustomError.internalServer("Email does not exist in the system");
-
-		return true;
+		if (!user) {
+			throw CustomError.notFound("El usuario no existe o fue dado de baja.");
+		}
 	};
 
-	private sendPasswordRecoveryLink = async (email: string) => {
-		const token = await jwtAdapter.generateToken({ email });
+	private sendPasswordRecoveryLink = async ({
+		email,
+		userId,
+	}: {
+		email: string;
+		userId: string;
+	}) => {
+		const token = await jwtAdapter.generateToken({ email, userId });
 
-		if (!token) throw CustomError.internalServer("Error getting token");
+		if (!token)
+			throw CustomError.internalServer(
+				"Ocurrió un error al generar el token para restablecer la contraseña."
+			);
 		//link de retorno
-		// const link = `${this.webServiceUrl}/auth/password-recover/${token}`;
-		const link = `${this.frontEndUrl}/auth/forgot-password/${token}`;
+		const link = `${this.frontEndUrl}/forgot-password/${token}`;
 
-		const html = `<h1>Actualiza tu contraseña</h1>
-    <p> Hace click en el siguiente <a href=${link}>link</a> para actualizar tu contraseña</p>`;
+		const html = `<h1>Actualizá tu contraseña</h1>
+    <p> Hacé click en el siguiente <a href=${link}>link</a> para actualizar tu contraseña. </p>`;
 
 		const options = {
 			to: email,
@@ -204,26 +218,28 @@ export class AuthService {
 
 		const isSent = await this.emailService.sendEmail(options);
 		if (!isSent)
-			throw CustomError.internalServer("Error sending password reset email");
+			throw CustomError.internalServer(
+				"Ocurrió un error al enviar el correo para restablecer la contraseña."
+			);
 	};
 
 	public passwordRecover = async (email: string) => {
-		const existUser = await UserModel.findOne({
+		const registeredUser = await UserModel.findOne({
 			email: email,
 			deletedAt: null,
 		});
-		if (!existUser) throw CustomError.badRequest("Email doesn't exists");
-		await this.sendPasswordRecoveryLink(email);
+		if (!registeredUser) return;
+		await this.sendPasswordRecoveryLink({ email, userId: registeredUser.id });
 	};
 
 	public passwordRecoverUpdate = async (recoverDto: RecoverPasswordDto) => {
-		const payload = await jwtAdapter.validateToken(recoverDto.email);
-		if (!payload) throw CustomError.unauthorized("Invalid token");
+		const payload = await jwtAdapter.validateToken(recoverDto.token);
+		if (!payload) throw CustomError.badRequest("El token es inválido.");
 
-		const { email } = payload as { email: string };
-		const user = await UserModel.findOne({ email: email, deletedAt: null });
+		const { email, userId } = payload as { email: string, userId: string };
+		const user = await UserModel.findOne({ _id: userId, email: email, deletedAt: null });
 
-		if (!user) throw CustomError.badRequest("User doesn't exists");
+		if (!user) throw CustomError.badRequest("El usuario no existe o fue dado de baja.");
 
 		try {
 			//Encriptar la contraseña
@@ -234,7 +250,8 @@ export class AuthService {
 
 			return { user: userEntity };
 		} catch (error) {
-			throw CustomError.internalServer(`${error}`);
+			console.error("Update password: ", error)
+			throw CustomError.internalServer("Se ha producido un error, por favor inténtelo de nuevo más tarde.");
 		}
 	};
 }

@@ -1,99 +1,126 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useForm } from "react-hook-form"
-import Link from "next/link"
-import { Button } from "@components/ui/common/button"
-import { Input } from "@components/ui/common/input"
-import { Label } from "@components/ui/common/label"
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import Link from "next/link";
+import { Button } from "@components/ui/common/button";
+import { Input } from "@components/ui/common/input";
+import { Label } from "@components/ui/common/label";
 
 interface FormData {
-  email: string
+	email: string;
 }
 
 export default function ForgotPassword() {
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+	const [successMessage, setSuccessMessage] = useState<string | null>(null);
+	const [isLoading, setIsLoading] = useState(false);
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const form = useForm<FormData>({
-    defaultValues: {
-      email: "",
-    },
-  })
+	const form = useForm<FormData>({
+		defaultValues: {
+			email: "",
+		},
+	});
 
-  const onSubmit = async (data: FormData) => {
-    setIsLoading(true)
-    setSuccessMessage(null)
+	const onSubmit = async (data: FormData) => {
+		setIsLoading(true);
+		setSuccessMessage(null);
 
-    try {
-      const response = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      })
+		try {
+			const response = await fetch("/api/auth/forgot-password", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(data),
+			});
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Forgot Password call failed")
-      }
-      setSuccessMessage("Las instrucciones han sido enviadas a tu correo electrónico.")
-      form.reset()
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Ocurrió un error durante el proceso"
-      )
-      console.error("Ocurrió un error al enviar las instrucciones:", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(
+					errorData.message ||
+						"Ocurrió un error al enviar el correo para restablecer la contraseña."
+				);
+			}
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-purple-200 p-5">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <h2 className="text-2xl font-medium text-center text-gray-900">¿Olvidaste tu contraseña?</h2>
-          <p className="text-sm text-center text-gray-600">
-            Por favor ingresá tu e-mail. Las instrucciones para reiniciar tu contraseña serán enviadas a tu correo
-            electrónico.
-          </p>
+			const body = await response.json();
+			setSuccessMessage(body.data);
+			form.reset();
+		} catch (error) {
+			setErrorMessage(
+				"Se ha producido un error, por favor inténtelo de nuevo más tarde."
+			);
+		} finally {
+			setIsLoading(false);
+		}
+	};
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Correo electrónico</Label>
-            <Input 
-              type="email" 
-              id="email" 
-              placeholder="tu@email.com" 
-              {...form.register("email", {
-                required: "Email is required",
-                pattern: {
-                  value: /^\S+@\S+$/i,
-                  message: "Invalid email address",
-                },
-              })}
-            />
-            {form.formState.errors.email && (
-              <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
-            )}
-          </div>
+	return (
+		<div className="min-h-screen flex items-center justify-center bg-purple-200 p-5">
+			<div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
+				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+					<h2 className="text-2xl font-medium text-center text-gray-900">
+						¿Olvidaste tu contraseña?
+					</h2>
+					<p className="text-sm text-center text-gray-600">
+						Por favor ingresá tu e-mail. Las instrucciones para restablecer tu
+						contraseña serán enviadas a tu correo electrónico.
+					</p>
 
-          {successMessage && <p className="text-sm text-green-600 text-center">{successMessage}</p>}
-          {errorMessage && <p className="text-sm text-red-600 text-center">{errorMessage}</p>}
+					<div className="space-y-2">
+						<Label htmlFor="email">Correo electrónico</Label>
+						<Input
+							type="email"
+							id="email"
+							placeholder="tu@email.com"
+							{...form.register("email", {
+								maxLength: {
+									value: 100,
+									message:
+										"La longitud del correo electrónico no puede exceder los 100 caracteres.",
+								},
+								required: "Correo electrónico es requerido.",
+								pattern: {
+									value: /^\S+@\S+$/i,
+									message: "Correo electrónico inválido.",
+								},
+							})}
+						/>
+						{form.formState.errors.email && (
+							<p className="text-sm text-red-600">
+								{form.formState.errors.email.message}
+							</p>
+						)}
+					</div>
 
-          <Button type="submit" variant="primary" fullWidth isLoading={isLoading}>
-            ENVIAR EMAIL
-          </Button>
+					{successMessage && (
+						<p className="text-sm text-green-600 text-center">
+							{successMessage}
+						</p>
+					)}
+					{errorMessage && (
+						<p className="text-sm text-red-600 text-center">{errorMessage}</p>
+					)}
 
-          <div className="text-center">
-            <Link href="/login" className="text-sm text-purple-600 hover:text-purple-500">
-              Volver al inicio de sesión
-            </Link>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
+					<Button
+						type="submit"
+						variant="primary"
+						fullWidth
+						isLoading={isLoading}
+					>
+						Restablecer contraseña
+					</Button>
+
+					<div className="text-center">
+						<Link
+							href="/login"
+							className="text-sm text-purple-600 hover:text-purple-500"
+						>
+							Volver al inicio de sesión
+						</Link>
+					</div>
+				</form>
+			</div>
+		</div>
+	);
 }

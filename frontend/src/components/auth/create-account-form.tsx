@@ -92,7 +92,7 @@ export default function CreateAccountForm({
 							<h1 className="text-3xl font-medium text-center text-purple-600">
 								{title}
 							</h1>
-							<p>Crea tu cuenta</p>
+							<p>Creá tu cuenta</p>
 						</div>
 						<div className="flex flex-col gap-4">
 							<div className="space-y-2">
