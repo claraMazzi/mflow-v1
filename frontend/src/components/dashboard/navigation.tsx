@@ -35,7 +35,7 @@ export const navigation: SidebarMenu = {
       activeColor: "bg-purple-400",
     },
     {
-      title: "Compartido conmigo",
+      title: "Compartidos conmigo",
       icon: <Share2 />,
       slug: "/dashboard/shared",
       activeColor: "",
