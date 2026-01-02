@@ -1,4 +1,4 @@
-import { DeletionRequestModel, ProjectModel } from "../../data";
+import { DeletionRequestModel, ProjectModel, ProjectState } from "../../data";
 import { CustomError } from "../../domain";
 import { DelitionRequestEntity } from "../../domain/entities/delition-request.entity";
 import { ApproveDeletionRequestDto } from "../../domain/dtos/deletion-request/approve-deletion-request.dto";
@@ -11,11 +11,6 @@ const deletionRequestStates = {
   rejected: "RECHAZADA",
 } as const;
 
-const projectStates = {
-  created: "CREADO",
-  pending: "PENDIENTE DE ELIMINACION",
-  deleted: "ELIMINADO",
-} as const;
 
 export class DeletionRequestService {
   constructor() {
@@ -141,7 +136,7 @@ export class DeletionRequestService {
       // Update the project state to pending deletion
       const project = await ProjectModel.findById(deletionRequest.project);
       if (project) {
-        project.state = projectStates.pending;
+        project.state = ProjectState.Pending;
         await project.save();
       }
 
@@ -183,7 +178,7 @@ export class DeletionRequestService {
       // Update the project state back to created
       const project = await ProjectModel.findById(deletionRequest.project);
       if (project) {
-        project.state = projectStates.created;
+        project.state = ProjectState.Created;
         await project.save();
       }
 
