@@ -8,10 +8,10 @@ export const authConfig: NextAuthConfig = {
   session: {
     strategy: "jwt",
     //how long in seconds the session is valid
-    maxAge: 2 * 60 * 60, // 2h
+    maxAge: 6 * 60 * 60, // 6h
   },
   jwt: {
-    maxAge: 2 * 60 * 60,
+    maxAge: 6 * 60 * 60, //6h
   },
   pages: {
     signIn: "/login",

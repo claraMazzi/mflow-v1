@@ -41,6 +41,8 @@ import Alcance from "@components/conceptual-model/Alcance";
 import Detalle from "@components/conceptual-model/Detalle";
 import DiagramaFlujo from "@components/conceptual-model/DiagramaDeFlujo";
 import { RemoteCursor } from "@components/versions/RemoteCursor";
+import { useUI } from "@components/ui/context";
+import { FinalizeVersionModal } from "@components/versions/FinalizeVersionModal";
 
 function throttle(func: any, delay: number) {
   let timeout: NodeJS.Timeout | null = null;
@@ -62,6 +64,7 @@ export default function Page({
   params: Promise<{ roomId: string }>;
 }) {
   const { data: session } = useSession();
+  const { openModal, closeModal } = useUI();
   const { isConnected: isSocketConnected, transport } = useSocketConnection({
     socket,
     sessionToken: session?.auth,
@@ -77,6 +80,18 @@ export default function Page({
   );
   const [followingUserId, setFollowingUserId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const collaboratorsRef = useRef(collaborators);
+  const sessionRef = useRef(session);
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    collaboratorsRef.current = collaborators;
+  }, [collaborators]);
+  
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
+  
   const hasEditingRights = useMemo(() => {
     // console.log("Has Editing Rights was recalculated.");
     if (!session?.user.id) return false;
@@ -387,6 +402,36 @@ export default function Page({
       onPlantTextImageUpdate
     );
 
+    function onFinalizeVersionModal(_payload: { initiatedBy: string }) {
+      // Calculate hasEditingRights at the time the modal opens using refs to get latest values
+      const currentSession = sessionRef.current;
+      const currentCollaborators = collaboratorsRef.current;
+      const currentUserHasEditingRights = currentSession?.user.id
+        ? !!currentCollaborators.get(currentSession.user.id)?.hasEditingRights
+        : false;
+      
+      openModal({
+        name: "finalize-version-modal",
+        title: "Finalizar Revisión",
+        size: "md",
+        showCloseButton: false,
+        content: (
+          <FinalizeVersionModal
+            roomId={roomId}
+            socket={socket}
+            hasEditingRights={currentUserHasEditingRights}
+            onClose={closeModal}
+          />
+        ),
+      });
+    }
+    socket.on("finalize-version-modal", onFinalizeVersionModal);
+
+    function onFinalizeVersionModalClose() {
+      closeModal();
+    }
+    socket.on("finalize-version-modal-close", onFinalizeVersionModalClose);
+
     return () => {
       socket.off("field-update", onFieldUpdate);
       socket.off("image-added", onImageAdded);
@@ -406,6 +451,8 @@ export default function Page({
         SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE,
         onPlantTextImageUpdate
       );
+      socket.off("finalize-version-modal", onFinalizeVersionModal);
+      socket.off("finalize-version-modal-close", onFinalizeVersionModalClose);
     };
   }, [isSocketConnected]);
 
@@ -518,16 +565,24 @@ export default function Page({
         registerResult.onChange(e);
 
         if (propagateUpdateOnChange) {
-          const value = getValues(e.currentTarget.name as any);
-          sendPropertyUpdate(value, propertyPath);
+          // For checkboxes, get the value from e.target.checked, otherwise use getValues
+          // We need to use setTimeout to ensure React Hook Form has updated the value
+          setTimeout(() => {
+            const value = e.target.type === 'checkbox' 
+              ? (e.target as HTMLInputElement).checked 
+              : getValues(e.currentTarget.name as any);
+            sendPropertyUpdate(value, propertyPath);
+          }, 0);
         }
       },
       onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         // Call the original onBlur handler
         registerResult.onBlur(e);
-
         if (!propagateUpdateOnChange) {
-          const value = getValues(e.currentTarget.name as any);
+          // For checkboxes, get the value from e.target.checked, otherwise use getValues
+          const value = e.target.type === 'checkbox' 
+            ? (e.target as HTMLInputElement).checked 
+            : getValues(e.currentTarget.name as any);
           sendPropertyUpdate(value, propertyPath);
         }
       },
@@ -604,9 +659,9 @@ export default function Page({
   if (!roomId) return <>No version ID</>;
 
   return (
-    <div 
+    <div
       ref={containerRef}
-      className="flex-grow bg-grey-0 relative" 
+      className="flex-grow bg-grey-0 relative"
       onMouseMove={handleMouseMove}
     >
       {/* Remote cursors */}
@@ -619,7 +674,7 @@ export default function Page({
           containerRef={containerRef}
         />
       ))}
-      
+
       <VersionBar
         canUserSendEditingRequest={canUserSendEditingRequest}
         handleRequestEditingRights={handleRequestEditingRights}
@@ -630,6 +685,10 @@ export default function Page({
         onFollowUser={handleFollowUser}
         followingUserId={followingUserId}
         currentUserId={session?.user.id}
+        roomId={roomId}
+        socket={socket}
+        conceptualModel={watch()}
+        imageInfos={imageInfos}
       />
 
       {!isModelInitialized ? (
@@ -662,15 +721,9 @@ export default function Page({
               <TabsTrigger value="objetivos-entradas-salidas">
                 Objetivos, Entradas y Salidas
               </TabsTrigger>
-              <TabsTrigger value="alcance">
-                Alcance
-              </TabsTrigger>
-              <TabsTrigger value="detalle">
-                Nivel de Detalle
-              </TabsTrigger>
-              <TabsTrigger value="flujo">
-                Diagrama de Flujo              
-              </TabsTrigger>
+              <TabsTrigger value="alcance">Alcance</TabsTrigger>
+              <TabsTrigger value="detalle">Nivel de Detalle</TabsTrigger>
+              <TabsTrigger value="flujo">Diagrama de Flujo</TabsTrigger>
             </TabsList>
             <TabsContent value="descripcion-sistema" className="">
               <DescripcionDelSistema
@@ -691,6 +744,7 @@ export default function Page({
                 hasEditingRights={hasEditingRights}
                 imageInfos={imageInfos}
                 watch={watch}
+                control={control}
                 customRegisterField={customRegisterField}
                 socket={socket}
               />
@@ -703,6 +757,7 @@ export default function Page({
                 hasEditingRights={hasEditingRights}
                 imageInfos={imageInfos}
                 watch={watch}
+                control={control}
                 entitiesList={entitiesList}
                 customRegisterField={customRegisterField}
                 handleAddItemToList={handleAddItemToList}
@@ -750,8 +805,8 @@ export default function Page({
                 hasEditingRights={hasEditingRights}
                 imageInfos={imageInfos}
                 watch={watch}
+                control={control}
                 customRegisterField={customRegisterField}
-
                 socket={socket}
               />
             </TabsContent>

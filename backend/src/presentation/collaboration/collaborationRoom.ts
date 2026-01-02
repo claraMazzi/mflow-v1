@@ -311,4 +311,8 @@ export class CollaborationRoom {
 	isEmpty() {
 		return this.userIdToUserInfoMap.size === 0;
 	}
+
+	getCurrentEditingUser() {
+		return this.currentEditingUser;
+	}
 }

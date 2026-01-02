@@ -21,7 +21,6 @@ type BaseSocketEventPayload = { type: string; timestamp: Date };
 
 enum CLIENT_WS_EVENT_TYPES {
 	JOIN_ROOM = "join-room",
-	PLANT_TEXT_CODE_CHANGE = "plant-text-code-change",
 	PLANT_TEXT_GET_IMAGE = "plant-text-get-image",
 }
 
@@ -30,12 +29,12 @@ type JoinRoomEventPayload = BaseSocketEventPayload & {
 	roomId: string;
 };
 
-type PlantTextCodeChangePayload = BaseSocketEventPayload & {
-	type: CLIENT_WS_EVENT_TYPES.PLANT_TEXT_CODE_CHANGE;
-	versionId: string;
-	propertyPath: string;
-	plantTextCode: string;
-};
+// type PlantTextCodeChangePayload = BaseSocketEventPayload & {
+// 	type: CLIENT_WS_EVENT_TYPES.PLANT_TEXT_CODE_CHANGE;
+// 	versionId: string;
+// 	propertyPath: string;
+// 	plantTextCode: string;
+// };
 
 type PlantTextGetImagePayload = BaseSocketEventPayload & {
 	type: CLIENT_WS_EVENT_TYPES.PLANT_TEXT_GET_IMAGE;
@@ -196,13 +195,23 @@ export class SocketServer {
 		);
 
 		socket.on(
-			CLIENT_WS_EVENT_TYPES.PLANT_TEXT_CODE_CHANGE,
-			(payload: PlantTextCodeChangePayload) => this.handlePlantTextCodeChange(socket, payload)
+			CLIENT_WS_EVENT_TYPES.PLANT_TEXT_GET_IMAGE,
+			(payload: PlantTextGetImagePayload) => this.handlePlantTextGetImage(socket, payload)
 		);
 
 		socket.on(
-			CLIENT_WS_EVENT_TYPES.PLANT_TEXT_GET_IMAGE,
-			(payload: PlantTextGetImagePayload) => this.handlePlantTextGetImage(socket, payload)
+			"finalize-version",
+			(payload: { roomId: string }) => this.handleFinalizeVersion(socket, payload)
+		);
+
+		socket.on(
+			"finalize-version-confirm",
+			(payload: { roomId: string }) => this.handleFinalizeVersionConfirm(socket, payload)
+		);
+
+		socket.on(
+			"finalize-version-modal-close",
+			(payload: { roomId: string }) => this.handleFinalizeVersionModalClose(socket, payload)
 		);
 
 		socket.on("disconnecting", () => this.handleDisconnecting(socket));
@@ -315,19 +324,87 @@ export class SocketServer {
 			roomId: string;
 		}
 	) {
+		console.log("----------handleFieldUpdate");
 		const { version } = await this.versionService.getVersionById(
 			payload.roomId
 		);
 
-		setValue(version.conceptualModel, payload.propertyPath, payload.value);
-		// console.log("Version Conceptual Model: ", version.conceptualModel);
-		version.save();
-		//agregar try catch para manejar errores 
+		// Check if this is a plantTextCode field update
+		const isPlantTextCodeUpdate = payload.propertyPath.endsWith(".plantTextCode");
+		
+		if (isPlantTextCodeUpdate) {
+			// Get the diagram object from the property path (remove .plantTextCode to get diagram path)
+			const diagramPath = payload.propertyPath.replace(/\.plantTextCode$/, "");
+			const diagram = getProperty(version.conceptualModel, diagramPath);
+			
+			if (!diagram) {
+				console.error(`Diagram not found at property path: ${diagramPath}`);
+				return;
+			}
 
-		this.emitFieldUpdate(payload.roomId, {
-			propertyPath: payload.propertyPath,
-			value: payload.value,
-		});
+			// Normalize strings for comparison (normalize line endings and remove trailing newlines)
+			const normalizeString = (str: string | undefined): string => {
+				if (!str) return "";
+				// Normalize line endings to LF
+				let normalized = str.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+				// Remove trailing newlines only (preserve leading/trailing spaces on lines)
+				normalized = normalized.replace(/\n+$/, "");
+				return normalized;
+			};
+
+			const currentPlantTextCode = normalizeString(diagram.plantTextCode);
+			const newPlantTextCode = normalizeString(payload.value);
+
+			// Check if the plantTextCode has actually changed
+			if (currentPlantTextCode === newPlantTextCode) {
+				console.log("PlantTextCode unchanged, skipping update");
+				return; // No change, skip update
+			}
+
+			// Generate token for the plantTextCode
+			const plantTextToken = plantumlEncoder.encode(payload.value);
+			console.log("plantTextToken", plantTextToken);
+			
+			// Update the diagram with new plantTextCode and token
+			diagram.plantTextCode = payload.value;
+			diagram.plantTextToken = plantTextToken;
+			
+			// Update the field value in the conceptual model (setValue updates the nested path)
+			setValue(version.conceptualModel, payload.propertyPath, payload.value);
+			
+			// Save the version
+			await version.save();
+
+			// Generate the image URL
+			const imageUrl = `http://www.plantuml.com/plantuml/img/${plantTextToken}`;
+
+			console.log("imageUrl", imageUrl);
+			// Emit the plantText image update to all clients in the room
+			this.emitPlantTextImageUpdate(payload.roomId, {
+				propertyPath: diagramPath,
+				imageUrl,
+				plantTextToken,
+			});
+
+			// Also emit the field update for other clients
+			this.emitFieldUpdate(payload.roomId, {
+				propertyPath: payload.propertyPath,
+				value: payload.value,
+			});
+
+			console.log(`PlantText image updated for property: ${diagramPath}`);
+		} else {
+			// Regular field update (non-plantTextCode)
+			setValue(version.conceptualModel, payload.propertyPath, payload.value);
+			// console.log("Version Conceptual Model: ", version.conceptualModel);
+			version.save();
+			//agregar try catch para manejar errores 
+			console.log("handleFieldUpdate payload", payload.propertyPath, payload.value);
+			this.emitFieldUpdate(payload.roomId, {
+				propertyPath: payload.propertyPath,
+				value: payload.value,
+			});
+		}
 	}
 
 	private handleRequestEditingPrivilege(
@@ -573,55 +650,7 @@ export class SocketServer {
 		});
 	}
 
-	private async handlePlantTextCodeChange(
-		socket: Socket,
-		payload: PlantTextCodeChangePayload
-	) {
-		try {
-			const { version } = await this.versionService.getVersionById(
-				payload.versionId
-			);
-
-			// Get the diagram object from the property path
-			const diagram = getProperty(version.conceptualModel, payload.propertyPath);
-			
-			if (!diagram) {
-				console.error(`Diagram not found at property path: ${payload.propertyPath}`);
-				return;
-			}
-
-			// Check if the plantTextCode has actually changed
-			if (diagram.plantTextCode === payload.plantTextCode) {
-				console.log("PlantTextCode unchanged, skipping update");
-				return; // No change, skip update
-			}
-
-			// Generate token for the plantTextCode
-			const plantTextToken = plantumlEncoder.encode(payload.plantTextCode);
-			
-			// Update the diagram with new plantTextCode and token
-			diagram.plantTextCode = payload.plantTextCode;
-			diagram.plantTextToken = plantTextToken;
-			
-			// Save the version
-			await version.save();
-
-			// Generate the image URL
-			const imageUrl = `http://www.plantuml.com/plantuml/img/${plantTextToken}`;
-
-			console.log("imageUrl", imageUrl);
-			// Emit the plantText image update to all clients in the room
-			this.emitPlantTextImageUpdate(payload.versionId, {
-				propertyPath: payload.propertyPath,
-				imageUrl,
-				plantTextToken,
-			});
-
-			console.log(`PlantText image updated for property: ${payload.propertyPath}`);
-		} catch (error) {
-			console.error("Error handling plantText code change:", error);
-		}
-	}
+	
 
 	private async handlePlantTextGetImage(
 		socket: Socket,
@@ -662,6 +691,77 @@ export class SocketServer {
 			console.log(`PlantText existing image sent for property: ${payload.propertyPath}`);
 		} catch (error) {
 			console.error("Error handling plantText get image:", error);
+		}
+	}
+
+	private handleFinalizeVersion(
+		socket: Socket,
+		payload: { roomId: string }
+	) {
+		const collabRoom = this.activeCollaborationRooms.get(payload.roomId);
+
+		if (!collabRoom) {
+			console.info(
+				`Finalize version request was ignored for Room: ${payload.roomId} - UserId: ${socket.data.userId}`
+			);
+			return;
+		}
+
+		// Check if user has editing rights
+		if (collabRoom.getCurrentEditingUser() !== socket.data.userId) {
+			console.info(
+				`Finalize version request was refused - User ${socket.data.userId} does not have editing rights`
+			);
+			return;
+		}
+
+		// Broadcast the finalize modal to all users in the room
+		this.emitFinalizeVersionModal(payload.roomId, {
+			initiatedBy: socket.data.userId,
+		});
+	}
+
+	private async handleFinalizeVersionConfirm(
+		socket: Socket,
+		payload: { roomId: string }
+	) {
+		const collabRoom = this.activeCollaborationRooms.get(payload.roomId);
+
+		if (!collabRoom) {
+			console.info(
+				`Finalize version confirm was ignored for Room: ${payload.roomId} - UserId: ${socket.data.userId}`
+			);
+			return;
+		}
+
+		// Check if user has editing rights
+		if (collabRoom.getCurrentEditingUser() !== socket.data.userId) {
+			console.info(
+				`Finalize version confirm was refused - User ${socket.data.userId} does not have editing rights`
+			);
+			return;
+		}
+
+		try {
+			// Validate and finalize the version
+			const validationResult = await this.versionService.validateAndFinalizeVersion(
+				payload.roomId
+			);
+
+			// Emit the validation results to all users in the room
+			this.emitFinalizeVersionResult(payload.roomId, {
+				isValid: validationResult.isValid,
+				errors: validationResult.errors,
+				warnings: validationResult.warnings,
+			});
+		} catch (error) {
+			console.error("Error finalizing version:", error);
+			// Emit error to the user who initiated
+			socket.emit("finalize-version-error", {
+				type: "finalize-version-error",
+				message: "Ocurrió un error al finalizar la versión.",
+				timestamp: new Date(),
+			});
 		}
 	}
 
@@ -865,6 +965,49 @@ export class SocketServer {
 			plantTextToken: payload.plantTextToken,
 			timestamp: new Date(),
 		} satisfies PlantTextImageUpdatePayload);
+	}
+
+	public emitFinalizeVersionModal(
+		roomId: string,
+		payload: { initiatedBy: string }
+	) {
+		this.socketServer.to(roomId).emit("finalize-version-modal", {
+			type: "finalize-version-modal",
+			initiatedBy: payload.initiatedBy,
+			timestamp: new Date(),
+		});
+	}
+
+	public emitFinalizeVersionModalClose(roomId: string) {
+		this.socketServer.to(roomId).emit("finalize-version-modal-close", {
+			type: "finalize-version-modal-close",
+			timestamp: new Date(),
+		});
+	}
+
+	public emitFinalizeVersionResult(
+		roomId: string,
+		payload: {
+			isValid: boolean;
+			errors: string[];
+			warnings: string[];
+		}
+	) {
+		this.socketServer.to(roomId).emit("finalize-version-result", {
+			type: "finalize-version-result",
+			isValid: payload.isValid,
+			errors: payload.errors,
+			warnings: payload.warnings,
+			timestamp: new Date(),
+		});
+	}
+
+	private handleFinalizeVersionModalClose(
+		socket: Socket,
+		payload: { roomId: string }
+	) {
+		// Broadcast the close event to all users in the room
+		this.emitFinalizeVersionModalClose(payload.roomId);
 	}
 
 	public getCollaborationRoomState({ roomId }: { roomId: string }) {

@@ -5,9 +5,9 @@ import { useParams } from "@node_modules/next/navigation";
 import { CreateVersionForm } from "@src/components/dashboard/versions/forms/create-version-form";
 import { Button } from "@src/components/ui/common/button";
 import { useUI } from "@src/components/ui/context";
-import { useSharedProjects } from "@src/hooks/use-projects";
 import { useVersionsOfProject } from "@src/hooks/use-versions";
-import React, { useMemo } from "react";
+import React from "react";
+import VersionList from "@src/components/dashboard/versions/version-list";
 
 const Page = () => {
 	const params = useParams<{ projectId: string }>();
@@ -47,9 +47,12 @@ const Page = () => {
 				</Button>
 			</div>
 
-			{versions.map((v) => {
-				return <div key={v.id}>{`${v.id} - ${v.title}`}</div>;
-			})}
+			<VersionList
+				versions={versions}
+				refreshVersions={refreshVersions}
+				isLoading={isLoading}
+				projectId={projectId}
+			/>
 		</div>
 	);
 };

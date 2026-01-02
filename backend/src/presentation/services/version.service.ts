@@ -1,16 +1,11 @@
 import mongoose from "mongoose";
-import { bcryptAdapter } from "../../config";
-import { ProjectModel, UserModel, Version, VersionModel } from "../../data";
+import { ProjectModel, Version, VersionModel } from "../../data";
 import {
 	CreateVersionDto,
 	CustomError,
-	PasswordUpdateDto,
-	UpdateUserDto,
-	UserEntity,
 } from "../../domain";
-import { version } from "os";
 import { VersionImage } from "../../data/mongo/models/version-image.model";
-import { ProjectService } from "./project.service";
+import { Assumption, Input, Simplification, Output, Entity } from "../../data/mongo/models/subdocuments-schemas";
 
 export class VersionService {
 	// private projectService: ProjectService;
@@ -322,5 +317,199 @@ export class VersionService {
 		}
 
 		return false;
+	}
+
+	async validateAndFinalizeVersion(versionId: string): Promise<{
+		isValid: boolean;
+		errors: string[];
+		warnings: string[];
+	}> {
+		const { version } = await this.getVersionById(versionId);
+		const errors: string[] = [];
+		const warnings: string[] = [];
+
+		// Convert to plain object to allow modifications
+		const model = JSON.parse(JSON.stringify(version.conceptualModel));
+
+		// Validate objective, name, and description
+		if (!model.objective || model.objective.trim() === "") {
+			errors.push("El objetivo no puede estar vacío.");
+		}
+		if (!model.name || model.name.trim() === "") {
+			errors.push("El nombre no puede estar vacío.");
+		}
+		if (!model.description || model.description.trim() === "") {
+			errors.push("La descripción no puede estar vacía.");
+		}
+
+		// Validate simplifications
+		if (model.simplifications) {
+			model.simplifications.forEach((simplification: Simplification, index: number) => {
+				if (!simplification.description || simplification.description.trim() === "") {
+					errors.push(`La simplificación ${index + 1} debe tener una descripción.`);
+				}
+			});
+		}
+
+		// Validate assumptions
+		if (model.assumptions) {
+			model.assumptions.forEach((assumption: Assumption, index: number) => {
+				if (!assumption.description || assumption.description.trim() === "") {
+					errors.push(`La suposición ${index + 1} debe tener una descripción.`);
+				}
+			});
+		}
+
+		// Validate diagramSchema fields (structureDiagram and flowDiagram)
+		const validateDiagram = (
+			diagram: any,
+			diagramName: string
+		) => {
+			if (!diagram) {
+				errors.push(`El diagrama ${diagramName} no puede estar vacío.`);
+				return;
+			}
+
+			// Check if usesPlantText is explicitly set
+			if (diagram.usesPlantText === true) {
+				if (!diagram.plantTextCode || diagram.plantTextCode.trim() === "") {
+					errors.push(`El código PlantText del diagrama ${diagramName} no puede estar vacío cuando usesPlantText está activado.`);
+				}
+				// Check if there's an image and add warning
+				if (diagram.imageFileId && diagram.imageFileId !== null) {
+					warnings.push(`Se eliminará la imagen del diagrama ${diagramName} ya que se está usando PlantText.`);
+					// Remove the image
+					diagram.imageFileId = null;
+				}
+			} else if (diagram.usesPlantText === false) {
+				if (!diagram.imageFileId || diagram.imageFileId === null) {
+					errors.push(`El diagrama ${diagramName} debe tener una imagen cuando usesPlantText está desactivado.`);
+				}
+			}
+		};
+
+		// Validate structureDiagram if it exists
+		if (model.structureDiagram && (
+			model.structureDiagram.usesPlantText !== undefined ||
+			model.structureDiagram.imageFileId ||
+			model.structureDiagram.plantTextCode
+		)) {
+			validateDiagram(model.structureDiagram, "de estructura");
+		}
+
+		// Validate flowDiagram if it exists
+		if (model.flowDiagram && (
+			model.flowDiagram.usesPlantText !== undefined ||
+			model.flowDiagram.imageFileId ||
+			model.flowDiagram.plantTextCode
+		)) {
+			validateDiagram(model.flowDiagram, "de flujo");
+		}
+
+		// Validate inputs
+		if (model.inputs) {
+			model.inputs.forEach((input: Input, index: number) => {
+				if (!input.description || input.description.trim() === "") {
+					errors.push(`La entrada ${index + 1} debe tener una descripción.`);
+				}
+			});
+		}
+
+		// Validate outputs
+		if (model.outputs) {
+			model.outputs.forEach((output: Output, index: number) => {
+				if (!output.description || output.description.trim() === "") {
+					errors.push(`La salida ${index + 1} debe tener una descripción.`);
+				}
+			});
+		}
+
+		// Validate entities
+		if (model.entities) {
+			model.entities.forEach((entity: Entity, entityIndex: number) => {
+				const entityName = entity.name || `Entidad ${entityIndex + 1}`;
+
+				// Check if entity has empty dynamicDiagram
+				// An entity can't have an empty dynamicDiagram
+				if (
+					!entity.dynamicDiagram ||
+					(entity.dynamicDiagram.usesPlantText === undefined &&
+						!entity.dynamicDiagram.imageFileId &&
+						(!entity.dynamicDiagram.plantTextCode || entity.dynamicDiagram.plantTextCode.trim() === ""))
+				) {
+					errors.push(`La entidad "${entityName}" no puede tener un diagrama dinámico vacío.`);
+				}
+
+				// Validate dynamicDiagram if it exists and has content
+				if (entity.dynamicDiagram && (
+					entity.dynamicDiagram.usesPlantText !== undefined ||
+					entity.dynamicDiagram.imageFileId ||
+					(entity.dynamicDiagram.plantTextCode && entity.dynamicDiagram.plantTextCode.trim() !== "")
+				)) {
+					validateDiagram(entity.dynamicDiagram, `dinámico de "${entityName}"`);
+				}
+
+				if (entity.scopeDecision?.include === false) {
+					// If include is false, shouldn't have properties
+					if (entity.properties && entity.properties.length > 0) {
+						warnings.push(`La entidad "${entityName}" tiene scopeDecision.include en false pero tiene propiedades asignadas.`);
+					}
+				} else if (entity.scopeDecision?.include === true) {
+					// If include is true, validate argumentType
+					if (
+						entity.scopeDecision.argumentType === "NO VINCULADO A OBJETIVOS" ||
+						entity.scopeDecision.argumentType === "SIMPLIFICACION"
+					) {
+						errors.push(
+							`La entidad "${entityName}" no puede tener argumentType "NO VINCULADO A OBJETIVOS" ni "SIMPLIFICACION" cuando scopeDecision.include es true.`
+						);
+					}
+
+					// Must have at least one property
+					if (!entity.properties || entity.properties.length === 0) {
+						errors.push(`La entidad "${entityName}" debe tener al menos una propiedad cuando scopeDecision.include es true.`);
+					} else {
+						// Validate each property
+						entity.properties.forEach((property, propIndex) => {
+							if (!property.name || property.name.trim() === "") {
+								errors.push(`La propiedad ${propIndex + 1} de la entidad "${entityName}" debe tener un nombre.`);
+							}
+							if (
+								!property.detailLevelDecision?.justification ||
+								property.detailLevelDecision.justification.trim() === ""
+							) {
+								errors.push(
+									`La propiedad ${propIndex + 1} de la entidad "${entityName}" debe tener una justificación.`
+								);
+							}
+							if (property.detailLevelDecision?.include === true) {
+								if (property.detailLevelDecision.argumentType === "SIMPLIFICACION") {
+									errors.push(
+										`La propiedad ${propIndex + 1} de la entidad "${entityName}" no puede tener argumentType "SIMPLIFICACION" cuando include es true.`
+									);
+								}
+							}
+						});
+					}
+				}
+			});
+		}
+
+		// If there are no errors, update the version state to "FINALIZADA"
+		if (errors.length === 0) {
+			// Save the model with any image removals
+			await VersionModel.findByIdAndUpdate(versionId, {
+				$set: {
+					conceptualModel: model,
+					state: "FINALIZADA",
+				},
+			}).exec();
+		}
+
+		return {
+			isValid: errors.length === 0,
+			errors,
+			warnings,
+		};
 	}
 }

@@ -10,144 +10,18 @@ import {
   useState,
   memo,
 } from "react";
-import { Path } from "react-hook-form";
+import { Path, Control, useWatch } from "react-hook-form";
 import { AlertCircle, ImageIcon, Loader2, Upload } from "lucide-react";
 import Image from "next/image";
 
-function debounce<TArgs extends unknown[]>(
-  func: (...args: TArgs) => void,
-  delay: number
-) {
-  let timeout: NodeJS.Timeout | null = null;
-  return (...args: TArgs) => {
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-    timeout = setTimeout(() => {
-      func(...args);
-    }, delay);
-  };
-}
-
-const DEBOUNCE_DIAGRAM_RENDER_DELAY = 3000;
-
-// export default function Diagram({ //tiene que soportar ambas funciones archivo o plant text
-// 	register,
-// 	watch,
-// 	namePrefix,
-// 	propertyPathPrefix = namePrefix,
-// 	socket,
-// 	roomId,
-// 	hasEditingRights,
-// }: {
-// 	register: any;
-// 	watch: any;
-// 	namePrefix: Path<ConceptualModel>;
-// 	propertyPathPrefix?: string;
-// 	socket?: {
-// 	emit: (event: string, payload: Record<string, unknown>) => void;
-// 	on: (event: string, handler: (...args: unknown[]) => void) => void;
-// 	off: (event: string, handler: (...args: unknown[]) => void) => void;
-// };
-// 	roomId?: string;
-// 	hasEditingRights?: boolean;
-// }) {
-// 	const [imgSource, setImageSource] = useState<undefined | string>();
-// 	const debouncedEmitPlantTextChange = useRef(
-// 		debounce((value: any, propertyPath: string) => {
-// 			if (socket && roomId && hasEditingRights) {
-// 				socket.emit("plant-text-code-change", {
-// 					type: "plant-text-code-change",
-// 					roomId,
-// 					propertyPath,
-// 					plantTextCode: value,
-// 					timestamp: new Date(),
-// 				});
-// 			}
-// 		}, DEBOUNCE_DIAGRAM_RENDER_DELAY)
-// 	);
-// 	const plantTextCodeValue = watch(`${namePrefix}.plantTextCode`);
-// 	const usesPlantTextValue = watch(`${namePrefix}.usesPlantText`);
-// 	const imageFileId = watch(`${namePrefix}.imageFileId`);
-
-// 	useEffect(() => {
-// 		if (usesPlantTextValue) {
-// 			// Emit plantTextCode change to server instead of generating image locally
-// 			debouncedEmitPlantTextChange.current(plantTextCodeValue, `${propertyPathPrefix}`);
-// 		} else {
-// 			setImageSource(imageFileId);
-// 		}
-// 		return () => {};
-// 	}, [plantTextCodeValue, usesPlantTextValue, imageFileId, propertyPathPrefix]);
-
-// 	// Listen for plantText image updates from server
-// 	useEffect(() => {
-// 		if (!socket) return;
-
-// 		const handlePlantTextImageUpdate = (payload: {
-// 			propertyPath: string;
-// 			imageUrl: string;
-// 			plantTextToken: string;
-// 		}) => {
-// 			// Check if this update is for our diagram
-// 			if (payload.propertyPath === propertyPathPrefix) {
-// 				setImageSource(payload.imageUrl);
-// 			}
-// 		};
-
-// 		socket.on("plant-text-image-update", handlePlantTextImageUpdate);
-
-// 		return () => {
-// 			socket.off("plant-text-image-update", handlePlantTextImageUpdate);
-// 		};
-// 	}, [socket, propertyPathPrefix]);
-
-// 	const checkboxRegister = register({
-// 		name: `${namePrefix}.usesPlantText`,
-// 		propertyPath: `${propertyPathPrefix}.usesPlantText`,
-// 		propagateUpdateOnChange: true,
-// 	});
-
-// 	return (
-// 		<>
-// 			<label>Utiliza PlanText: </label>
-// 			<input
-// 				type="checkbox"
-// 				{...checkboxRegister}
-// 				className={`${checkboxRegister.readOnly && "pointer-events-none"}`}
-// 			/>
-// 			<div className="flex flex-row gap-2">
-// 				{usesPlantTextValue ? (
-// 					<textarea
-// 						className="flex-grow max-w-[50%]"
-// 						{...register({
-// 							name: `${namePrefix}.plantTextCode`,
-// 							propertyPath: `${propertyPathPrefix}.plantTextCode`,
-// 						})}
-// 					/>
-// 				) : (
-// 					//TODO: FIX UPLOAD TO USE THE NEW ENDPOINT
-// 					<input
-// 						type="file"
-// 						accept=".png, .jpg, .jpeg"
-// 						onChange={(e) => {
-// 							const files = e.currentTarget.files;
-// 							if (!files || files.length == 0) return;
-// 						}}
-// 					/>
-// 				)}
-// 				<img alt="Diagram" src={imgSource} />
-// 				<Dialog></Dialog>
-// 			</div>
-// 		</>
-// 	);
-// }
 
 const DiagramImageUploadComponent = ({
   title,
   versionId,
   diagramPropertyPath, //path absoluto del servidor a la propiedad del diagrama
-  watch, //react hook forms para ver si un valor cambia
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  watch: _watch, //react hook forms para ver si un valor cambia (kept for backward compatibility, but using useWatch instead)
+  control, //react hook forms control object for useWatch
   namePathPrefix, //path de react hookforms -- aca adentro voy a subscribir nuevas variables y necesito tener el prefijo hasta este momento. -- No pueod tener todo el path completo cuando tengo un elemento dentro de una lista porque necesito saber en que elemento me encuentro
   hasEditingRights,
   imageInfos,
@@ -162,6 +36,7 @@ const DiagramImageUploadComponent = ({
   title: string;
   diagramPropertyPath: string;
   watch: (name?: string) => unknown;
+  control: Control<ConceptualModel>;
   namePathPrefix: Path<ConceptualModel>;
   socket?: {
     emit: (event: string, payload: Record<string, unknown>) => void;
@@ -195,33 +70,19 @@ const DiagramImageUploadComponent = ({
   }, [uploadState, error]);
 
   // PlantText functionality
-  const usesPlantTextValue = watch(`${namePathPrefix}.usesPlantText`);
+  // Use useWatch to ensure re-renders when values change
+  const usesPlantTextValue = useWatch({
+    control,
+    name: `${namePathPrefix}.usesPlantText` as Path<ConceptualModel>,
+  });
   const usesPlantText = Boolean(usesPlantTextValue);
-  const plantTextCodeValue = watch(`${namePathPrefix}.plantTextCode`);
+  const plantTextCodeValue = useWatch({
+    control,
+    name: `${namePathPrefix}.plantTextCode` as Path<ConceptualModel>,
+  });
 
-  const debouncedEmitPlantTextChange = useRef(
-    debounce<[string, string]>((value: string, propertyPath: string) => {
-      if (socket && versionId && hasEditingRights) {
-        socket.emit("plant-text-code-change", {
-          type: "plant-text-code-change",
-          versionId,
-          propertyPath,
-          plantTextCode: value,
-          timestamp: new Date(),
-        });
-      }
-    }, DEBOUNCE_DIAGRAM_RENDER_DELAY)
-  );
-
-  useEffect(() => {
-    if (usesPlantText && plantTextCodeValue) {
-      // Emit plantTextCode change to server instead of generating image locally
-      debouncedEmitPlantTextChange.current(
-        String(plantTextCodeValue),
-        diagramPropertyPath
-      );
-    }
-  }, [plantTextCodeValue, usesPlantText, diagramPropertyPath]);
+  // Note: plantTextCode changes are now handled through the field-update event
+  // emitted by the register function, which triggers image generation on the server
 
   // Get existing plantText image on component mount if there's existing code
   const hasRequestedInitialImage = useRef(false);
@@ -273,7 +134,10 @@ const DiagramImageUploadComponent = ({
     };
   }, [socket, diagramPropertyPath]);
 
-  const imageFileField = watch(`${namePathPrefix}.imageFileId`) as unknown;
+  const imageFileField = useWatch({
+    control,
+    name: `${namePathPrefix}.imageFileId` as Path<ConceptualModel>,
+  }) as unknown;
 
   type PopulatedImageInfo = {
     id?: string;
@@ -455,10 +319,6 @@ const DiagramImageUploadComponent = ({
     }
   };
 
-  // const deleteFileFromServer = async () => {
-  // 	if (!file) return;
-  // };
-
   const validateAndUploadFile = (selectedFile: File) => {
     // Validate file type
     if (!selectedFile.type.startsWith("image/")) {
@@ -550,19 +410,6 @@ const DiagramImageUploadComponent = ({
   const hasFile = !!file;
   const canUpload = !hasFile && !isUploadPending && hasEditingRights;
 
-  console.log("file", file);
-
-  // Precompute register props to avoid inline conditional spreads confusing TSX
-  const checkboxRegisterProps = register
-    ? register({
-        name: `${namePathPrefix}.usesPlantText` as Path<ConceptualModel>,
-        propertyPath: `${diagramPropertyPath}.usesPlantText`,
-        propagateUpdateOnChange: true,
-      })
-    : undefined;
-  const checkboxProps: React.InputHTMLAttributes<HTMLInputElement> | undefined =
-    checkboxRegisterProps as unknown as React.InputHTMLAttributes<HTMLInputElement>;
-
   const plantTextRegisterProps = register
     ? register({
         name: `${namePathPrefix}.plantTextCode` as Path<ConceptualModel>,
@@ -602,76 +449,89 @@ const DiagramImageUploadComponent = ({
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
-              {...((checkboxProps as React.InputHTMLAttributes<HTMLInputElement>) ||
-                {})}
+              {...register?.({
+                name: `${namePathPrefix}.usesPlantText` as Path<ConceptualModel>,
+                propertyPath: `${diagramPropertyPath}.usesPlantText`,
+                propagateUpdateOnChange: true,
+              })}
               className="rounded border-gray-300"
             />
             <span className="text-sm font-medium">Usar PlantText</span>
           </label>
         </div>
 
-        {/* PlantText Code Input */}
-        {usesPlantText ? (
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Código PlantText:</label>
-            {(() => {
-              const props = (textareaProps as React.TextareaHTMLAttributes<HTMLTextAreaElement>) || {};
-              const { onChange: originalOnChange, onBlur: originalOnBlur, ...restProps } = props;
-              return (
-                <textarea
-                  {...restProps}
-                  onChange={(e) => {
-                    // Call the original onChange from textareaProps to update React Hook Form state
-                    if (originalOnChange) {
-                      originalOnChange(e);
-                    }
-                  }}
-                  onBlur={(e) => {
-                    // Call the original onBlur from textareaProps to update React Hook Form state
-                    if (originalOnBlur) {
-                      originalOnBlur(e);
-                    }
+        <div className="grid grid-cols-2 w-full h-full gap-4">
+          {/* PlantText Code Input */}
+          {usesPlantText && (
+            <div className="space-y-2 h-full">
+              <label className="text-sm font-medium">Código PlantText:</label>
+              {(() => {
+                const props =
+                  (textareaProps as React.TextareaHTMLAttributes<HTMLTextAreaElement>) ||
+                  {};
+                const {
+                  onChange: originalOnChange,
+                  onBlur: originalOnBlur,
+                  ...restProps
+                } = props;
+                return (
+                  <textarea
+                    {...restProps}
+                    onChange={(e) => {
+                      // Call the original onChange from textareaProps to update React Hook Form state
+                      if (originalOnChange) {
+                        originalOnChange(e);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // Call the original onBlur from textareaProps to update React Hook Form state
+                      if (originalOnBlur) {
+                        originalOnBlur(e);
+                      }
 
-                    // Request existing image on blur to ensure the image is shown
-                    if (e.target.value && socket && versionId) {
-                      socket.emit("plant-text-get-image", {
-                        type: "plant-text-get-image",
-                        versionId,
-                        propertyPath: diagramPropertyPath,
-                        timestamp: new Date(),
-                      });
-                    }
-                  }}
-                  placeholder="Ingresa tu código PlantText aquí..."
-                  className="w-full h-32 p-3 border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              );
-            })()}
-          </div>
-        ) : null}
-
-        {/* PlantText Image Display */}
-        {usesPlantText && plantTextImageUrl ? (
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Vista previa del diagrama:
-            </label>
-            <div className="relative overflow-hidden rounded-lg border h-screen">
-              <Image
-                src={plantTextImageUrl}
-                fill
-                alt="PlantText Diagram"
-                className="w-full h-full object-contain bg-white"
-                unoptimized
-                onError={() => {
-                  console.error("Failed to load PlantText image:", plantTextImageUrl);
-                  // Image will show broken image icon, but won't crash
-                }}
-              />
+                      // Request existing image on blur to ensure the image is shown
+                      if (e.target.value && socket && versionId) {
+                        socket.emit("plant-text-get-image", {
+                          type: "plant-text-get-image",
+                          versionId,
+                          propertyPath: diagramPropertyPath,
+                          timestamp: new Date(),
+                        });
+                      }
+                    }}
+                    placeholder="Ingresa tu código PlantText aquí..."
+                    className="w-full h-screen p-3 border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                );
+              })()}
             </div>
-          </div>
-        ) : null}
+          )}
 
+          {/* PlantText Image Display */}
+          {usesPlantText && plantTextImageUrl && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Vista previa del diagrama:
+              </label>
+              <div className="relative overflow-hidden rounded-lg border h-screen">
+                <Image
+                  src={plantTextImageUrl}
+                  fill
+                  alt="PlantText Diagram"
+                  className="w-full h-full object-contain bg-white"
+                  unoptimized
+                  onError={() => {
+                    console.error(
+                      "Failed to load PlantText image:",
+                      plantTextImageUrl
+                    );
+                    // Image will show broken image icon, but won't crash
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
         {/* Error Alert */}
         {error && (
           <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
@@ -689,7 +549,7 @@ const DiagramImageUploadComponent = ({
         )}
 
         {/* Upload Area or File Display */}
-        {!usesPlantText ? (
+        {!usesPlantText && (
           <>
             {!hasFile ? (
               <div
@@ -775,12 +635,12 @@ const DiagramImageUploadComponent = ({
               )}
             </div>
           </>
-        ) : null}
+        )}
       </div>
     </div>
   );
 };
 
-DiagramImageUploadComponent.displayName = 'DiagramImageUpload';
+DiagramImageUploadComponent.displayName = "DiagramImageUpload";
 
 export const DiagramImageUpload = memo(DiagramImageUploadComponent);

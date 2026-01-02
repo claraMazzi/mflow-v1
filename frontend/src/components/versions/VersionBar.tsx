@@ -5,9 +5,12 @@ import {
   EditingRequest,
 } from "@hooks/use-request-editing-rights";
 import { Collaborator } from "#types/collaboration";
-import { Edit } from "lucide-react";
+import { Check, Edit } from "lucide-react";
 import { useUI } from "../ui/context";
 import { CollaboratorAvatar } from "./CollaboratorAvatar";
+import { Socket } from "socket.io-client";
+import { ConceptualModel, ImageInfo } from "#types/conceptual-model";
+import { exportVersionToExcel } from "@lib/export-version";
 
 interface VersionBarProps {
   canUserSendEditingRequest: boolean;
@@ -25,6 +28,10 @@ interface VersionBarProps {
   onFollowUser?: (userId: string) => void;
   followingUserId?: string | null;
   currentUserId?: string | null;
+  roomId: string;
+  socket: Socket;
+  conceptualModel: ConceptualModel;
+  imageInfos?: Map<string, ImageInfo>;
 }
 
 const VersionBar = ({
@@ -37,9 +44,21 @@ const VersionBar = ({
   onFollowUser,
   followingUserId,
   currentUserId,
+  roomId,
+  socket,
+  conceptualModel,
+  imageInfos,
 }: VersionBarProps) => {
   const { addEditingRequestToast, removeEditingRequestToast } = useUI();
   const shownRequestsRef = useRef<Set<string>>(new Set());
+
+  const handleExport = async () => {
+    await exportVersionToExcel({
+      conceptualModel,
+      title: title || "version",
+      imageInfos: imageInfos || new Map(),
+    });
+  };
 
   // Show toast for each pending request
   useEffect(() => {
@@ -112,6 +131,21 @@ const VersionBar = ({
           >
             <Edit className="h-4 w-4" />
             SOLICITAR EDICIÓN
+          </Button>
+
+          <Button onClick={handleExport}>
+            Exportar
+          </Button>
+
+          <Button
+            variant="secondary"
+            disabled={canUserSendEditingRequest} //if can't send editing request it because it has editing rights
+            onClick={() => {
+              socket.emit("finalize-version", { roomId });
+            }}
+          >
+            <Check className="h-4 w-4" />
+            FINALIZAR
           </Button>
         </div>
       </div>
