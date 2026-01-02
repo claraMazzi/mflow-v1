@@ -380,7 +380,7 @@ export class ProjectService {
 			throw CustomError.unauthorized("El usuario debe encontrarse registrado en la plataforma.");
 
 		if (project.owner.equals(user._id))
-			throw CustomError.badRequest("El dueño del proyecto no puede ser agregado como colaborador.");
+			throw CustomError.badRequest("El dueño del proyecto no puede ser asignado como colaborador.");
 
 		if (project.collaborators.includes(user._id))
 			throw CustomError.badRequest("El usuario ya se encuentra asignado como colaborador en el proyecto.");
