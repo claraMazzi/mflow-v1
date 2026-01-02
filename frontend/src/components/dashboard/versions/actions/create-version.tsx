@@ -1,12 +1,18 @@
 "use server";
-import { auth } from "@lib/auth"; // or wherever your auth config is
-import type { CreateVersionFormData } from "../forms/create-version-form";
+import { auth } from "@lib/auth";
 
 // Define the state type
 export type ActionState = {
 	error?: string;
 	success?: boolean;
-	data?: FormData;
+	data?: {
+		version?: {
+			id: string;
+			title: string;
+			state: string;
+			parentVersion: { id: string } | null;
+		};
+	};
 };
 
 export const createVersion = async (
@@ -14,7 +20,6 @@ export const createVersion = async (
 	formData: FormData
 ): Promise<ActionState> => {
 	try {
-		// NextAuth v5 uses auth() instead of getServerSession
 		const session = await auth();
 
 		if (!session?.user) {
@@ -28,24 +33,30 @@ export const createVersion = async (
 		}
 
 		// Extract data from FormData
-		const versionData: CreateVersionFormData & { projectId: string } = {
-			projectId: formData.get("projectId") as string,
-			title: formData.get("title") as string,
-			parentVersionId: (formData.get("parentVersionId") as string) || undefined,
-		};
+		const projectId = formData.get("projectId") as string;
+		const title = formData.get("title") as string;
+		const parentVersionId = formData.get("parentVersionId") as string;
+		const migrateTodoItemsRaw = formData.get("migrateTodoItems") as string;
 
 		// Validate required fields
-		if (!versionData?.projectId?.trim()) {
+		if (!projectId?.trim()) {
 			return {
 				error: "Debe especificarse el proyecto al que pertenece esta versión.",
 			};
 		}
 
-		if (!versionData.title?.trim()) {
+		if (!title?.trim()) {
 			return { error: "El título de la versión es obligatorio." };
 		}
 
-		const response = await fetch(`${process.env.API_URL}/api/projects`, {
+		const versionData = {
+			projectId,
+			title,
+			parentVersionId: parentVersionId || null,
+			migrateTodoItems: migrateTodoItemsRaw === "true",
+		};
+
+		const response = await fetch(`${process.env.API_URL}/api/versions`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",

@@ -57,7 +57,7 @@ const VersionList = ({
 	const { openModal, closeModal } = useUI();
 	const { data: session } = useSession();
 
-	const handleCreateNewVersion = (version: VersionEntity) => {
+	const handleCreateNewVersion = () => {
 		openModal({
 			name: "fullscreen-modal",
 			title: "Crear nueva versión",
@@ -70,6 +70,7 @@ const VersionList = ({
 					onSuccess={() => {
 						refreshVersions();
 					}}
+					onClose={closeModal}
 				/>
 			),
 		});
@@ -194,7 +195,7 @@ const VersionList = ({
 						<Button variant="outline" size="sm" onClick={closeModal}>
 							Cancelar
 						</Button>
-						<Button variant="destructive" size="sm" onClick={closeModal}>
+						<Button size="sm" onClick={closeModal}>
 							Eliminar
 						</Button>
 					</div>
@@ -210,12 +211,18 @@ const VersionList = ({
 			{versions && versions.length > 0 ? (
 				<div className="w-full grid md:grid-cols-2 lg:grid-cols-3 gap-2">
 					{versions.map((version) => {
+						const canCreateFromVersion = 
+							version.state === "FINALIZADA" || 
+							version.state === "PENDIENTE DE REVISION" || 
+							version.state === "REVISADA";
+
 						const popoverOptions = [
 							{
 								content: (
 									<Button
 										variant={"optionList"}
-										onClick={() => handleCreateNewVersion(version)}
+										onClick={() => handleCreateNewVersion()}
+										className={cn({ hidden: !canCreateFromVersion })}
 									>
 										Crear Nueva Versión
 									</Button>

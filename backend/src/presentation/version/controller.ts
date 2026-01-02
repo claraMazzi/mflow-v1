@@ -1,11 +1,6 @@
 import { Request, Response } from "express";
-import { CustomError } from "../../domain";
-import { ProjectService, VersionService } from "../services"; // Assume a service layer is used for business logic
-import { CreateProjectDto } from "../../domain/dtos/project/create-project.dto";
-import { UpdateProjectDto } from "../../domain/dtos/project/update-project.dto";
-import { CreateDeletionRequestDto } from "../../domain/dtos/project/create-deletion-request.dto";
-import { ShareProjectDto } from "../../domain/dtos/project/share-project.dto";
-import { ShareProjectLinkDto } from "../../domain/dtos/project/share-project-link.dto";
+import { CustomError, CreateVersionDto } from "../../domain";
+import { VersionService } from "../services";
 
 export class VersionController {
 	constructor(readonly versionService: VersionService) {}
@@ -19,7 +14,30 @@ export class VersionController {
 		return res.status(500).json({ error: "Ocurrió un error interno en el servidor." });
 	};
 
+	createVersion = async (req: Request, res: Response) => {
+		try {
+			const userId = req.session?.userId;
+			if (!userId) {
+				return res.status(401).json({ error: "Debe iniciar sesión para crear una versión." });
+			}
 
+			const { title, projectId, parentVersionId, migrateTodoItems } = req.body;
 
-	
+			const [error, createVersionDto] = CreateVersionDto.create({
+				title,
+				projectId,
+				parentVersionId,
+				migrateTodoItems,
+			});
+
+			if (error || !createVersionDto) {
+				return res.status(400).json({ error });
+			}
+
+			const result = await this.versionService.createVersion(createVersionDto);
+			return res.status(201).json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
 }

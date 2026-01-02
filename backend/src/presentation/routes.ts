@@ -6,6 +6,7 @@ import { ProjectRoutes } from "./project/routes";
 import { SocketServer } from "./socket-server";
 import { DeletionRequestRoutes } from "./deletion-request/routes";
 import { AuthMiddleware } from "./middlewares/auth.middleware";
+import { VersionRoutes } from "./version/routes";
 
 export class AppRoutes {
 	private socketServer: SocketServer;
@@ -35,7 +36,7 @@ export class AppRoutes {
 		//projects routes
 		router.use("/api/projects", ProjectRoutes.routes);
 
-		//router.use("/api/versions", VersionRoutes.routes)
+		router.use("/api/versions", VersionRoutes.routes)
 
 		//-----------user needs to be admin routes
 		router.use(AuthMiddleware.validateRequiredRoles(["ADMIN"]));

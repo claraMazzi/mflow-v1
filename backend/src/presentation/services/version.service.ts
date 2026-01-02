@@ -5,7 +5,10 @@ import {
 	CustomError,
 } from "../../domain";
 import { VersionImage } from "../../data/mongo/models/version-image.model";
-import { Assumption, Input, Simplification, Output, Entity } from "../../data/mongo/models/subdocuments-schemas";
+import { Assumption, Input, Simplification, Output, Entity, ConceptualModel } from "../../data/mongo/models/subdocuments-schemas";
+
+// Valid states for parent versions
+const VALID_PARENT_VERSION_STATES = ["FINALIZADA", "PENDIENTE DE REVISION", "REVISADA"];
 
 export class VersionService {
 	// private projectService: ProjectService;
@@ -15,35 +18,177 @@ export class VersionService {
 	} */
 
 	async createVersion(createDto: CreateVersionDto) {
-		const project = await ProjectModel.findById(createDto.projectId)
-			.populate({
-				path: "versions",
-				match: { state: { $ne: "ELIMINADA" } },
-				select: ["title", "state"],
-			})
-			.exec();
-
-		if (true) {
+		// Verify project exists
+		const project = await ProjectModel.findById(createDto.projectId).exec();
+		if (!project) {
+			throw CustomError.notFound("El proyecto especificado no existe.");
 		}
 
-		const nameAlreadyExists = await VersionModel.findOne({
+		// Check if version title already exists within the same project
+		const existingVersions = await VersionModel.find({
+			_id: { $in: project.versions },
 			title: createDto.title,
-		});
-		if (nameAlreadyExists)
+			state: { $ne: "ELIMINADA" }
+		}).exec();
+
+		if (existingVersions.length > 0) {
 			throw CustomError.badRequest(
-				"Ya existe un proyecto con el nombre especificado."
+				"Ya existe una versión con el mismo nombre en este proyecto."
 			);
+		}
 
 		try {
-			const project = new VersionModel(createDto);
+			let newVersionData: {
+				title: string;
+				state: string;
+				parentVersion: mongoose.Types.ObjectId | null;
+				sharedWithReaders: mongoose.Types.ObjectId[];
+				todoItems: any[];
+				revisions: mongoose.Types.ObjectId[];
+				conceptualModel: any;
+			};
 
-			await project.save();
+			// Path 1: Create blank version (no parent)
+			if (!createDto.parentVersionId) {
+				newVersionData = {
+					title: createDto.title,
+					state: "EN EDICION",
+					parentVersion: null,
+					sharedWithReaders: [],
+					todoItems: [],
+					revisions: [],
+					conceptualModel: this.createBlankConceptualModel(),
+				};
+			} 
+			// Path 2: Create version from parent
+			else {
+				const parentVersion = await VersionModel.findById(createDto.parentVersionId).exec();
+				
+				if (!parentVersion) {
+					throw CustomError.notFound("La versión padre especificada no existe.");
+				}
 
-			// const projectEntity = Cre.fromObject(project);
+				// Validate parent version state
+				if (!VALID_PARENT_VERSION_STATES.includes(parentVersion.state)) {
+					throw CustomError.badRequest(
+						`La versión padre debe estar en estado ${VALID_PARENT_VERSION_STATES.join(", ")}. Estado actual: ${parentVersion.state}`
+					);
+				}
 
-			return { user: null };
+				// Deep copy of conceptual model (without _id to let mongoose generate new ones)
+				const copiedConceptualModel = this.deepCopyConceptualModel(parentVersion.conceptualModel);
+
+				// Copy todo items if checkbox was checked
+				const todoItems = createDto.migrateTodoItems 
+					? this.deepCopyTodoItems(parentVersion.todoItems)
+					: [];
+
+				newVersionData = {
+					title: createDto.title,
+					state: "EN EDICION",
+					parentVersion: new mongoose.Types.ObjectId(createDto.parentVersionId),
+					sharedWithReaders: [],
+					todoItems,
+					revisions: [],
+					conceptualModel: copiedConceptualModel,
+				};
+			}
+
+			// Create and save the new version
+			const newVersion = new VersionModel(newVersionData);
+			await newVersion.save();
+
+			// Add version to project's versions array
+			await ProjectModel.findByIdAndUpdate(
+				createDto.projectId,
+				{ $push: { versions: newVersion._id } }
+			).exec();
+
+			return {
+				version: {
+					id: newVersion._id.toString(),
+					title: newVersion.title,
+					state: newVersion.state,
+					parentVersion: newVersion.parentVersion ? {
+						id: newVersion.parentVersion.toString(),
+					} : null,
+				}
+			};
 		} catch (error) {
-			throw CustomError.internalServer(`${error}`);
+			if (error instanceof CustomError) {
+				throw error;
+			}
+			throw CustomError.internalServer(`Error al crear la versión: ${error}`);
+		}
+	}
+
+	private createBlankConceptualModel() {
+		return {
+			objective: "",
+			name: "",
+			description: "",
+			simplifications: [],
+			assumptions: [],
+			structureDiagram: {
+				usesPlantText: undefined,
+				plantTextCode: "",
+				plantTextToken: "",
+				imageFileId: null,
+			},
+			flowDiagram: {
+				usesPlantText: undefined,
+				plantTextCode: "",
+				plantTextToken: "",
+				imageFileId: null,
+			},
+			inputs: [],
+			outputs: [],
+			entities: [],
+		};
+	}
+
+	private deepCopyConceptualModel(original: any): any {
+		if (!original) {
+			return this.createBlankConceptualModel();
+		}
+
+		// Convert to plain object and back to remove mongoose internals and generate new _ids
+		const plainObject = JSON.parse(JSON.stringify(original));
+		
+		// Remove all _id fields to let mongoose generate new ones
+		this.removeIds(plainObject);
+		
+		// Note: imageFileId references are preserved as they point to existing images
+		// The images themselves are not duplicated
+		
+		return plainObject;
+	}
+
+	private deepCopyTodoItems(todoItems: any[]): any[] {
+		if (!todoItems || todoItems.length === 0) {
+			return [];
+		}
+
+		// Deep copy and remove _ids to generate new ones
+		const copiedItems = JSON.parse(JSON.stringify(todoItems));
+		copiedItems.forEach((item: any) => this.removeIds(item));
+		
+		return copiedItems;
+	}
+
+	private removeIds(obj: any): void {
+		if (!obj || typeof obj !== 'object') return;
+		
+		if (Array.isArray(obj)) {
+			obj.forEach(item => this.removeIds(item));
+		} else {
+			delete obj._id;
+			delete obj.id;
+			Object.values(obj).forEach(value => {
+				if (typeof value === 'object' && value !== null) {
+					this.removeIds(value);
+				}
+			});
 		}
 	}
 

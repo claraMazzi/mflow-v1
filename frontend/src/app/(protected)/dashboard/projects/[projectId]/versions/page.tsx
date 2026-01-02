@@ -17,7 +17,7 @@ const Page = () => {
 		projectId,
 	});
 
-	const { openModal } = useUI();
+	const { openModal, closeModal } = useUI();
 
 	const handleCreateProject = () => {
 		openModal({
@@ -32,6 +32,7 @@ const Page = () => {
 					onSuccess={() => {
 						refreshVersions();
 					}}
+					onClose={closeModal}
 				/>
 			),
 		});

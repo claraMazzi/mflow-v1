@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useEffect, useMemo } from "react";
+import { startTransition, useActionState, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { ActionState, createVersion } from "../actions/create-version";
 import { Button } from "@src/components/ui/common/button";
@@ -12,11 +12,16 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@src/components/ui/common/select";
+import { Checkbox } from "@src/components/ui/common/checkbox";
 import { VersionEntity } from "@src/types/version";
+
+// Valid states for parent versions
+const VALID_PARENT_VERSION_STATES = ["FINALIZADA", "PENDIENTE DE REVISION", "REVISADA"];
 
 export type CreateVersionFormData = {
 	title: string;
 	parentVersionId?: string;
+	migrateTodoItems: boolean;
 };
 
 interface CreateVersionFormProps {
@@ -42,14 +47,22 @@ export const CreateVersionForm = ({
 		initialState
 	);
 
-	const readOnlyVersions = useMemo(() => {
-		return existingVersions.filter((v) => v.state !== "EN EDICION");
+	// Track whether a parent version is selected (not "none")
+	const [hasParentSelected, setHasParentSelected] = useState(false);
+	const [migrateTodoItems, setMigrateTodoItems] = useState(true);
+
+	// Filter versions that are valid to be parent versions
+	const validParentVersions = useMemo(() => {
+		return existingVersions.filter((v) => 
+			VALID_PARENT_VERSION_STATES.includes(v.state)
+		);
 	}, [existingVersions]);
 
 	const form = useForm<CreateVersionFormData>({
 		defaultValues: {
 			title: "",
 			parentVersionId: undefined,
+			migrateTodoItems: true,
 		},
 		mode: "onBlur",
 	});
@@ -61,18 +74,14 @@ export const CreateVersionForm = ({
 		}
 	}, [state?.success, onSuccess]);
 
-	const parseErrorMessage = (error: string) => {
-		console.log("Create version error:", error);
-		switch (error) {
-			case "Not authenticated":
-				return "Debes iniciar sesión para crear una versión";
-			case "Version title is required":
-				return "El título de la versión es requerido";
-			case "Project not found":
-				return "Proyecto no encontrado";
-			case "Something went wrong.":
-			default:
-				return "Ocurrió un error inesperado";
+	const handleParentVersionChange = (value: string) => {
+		const isParentSelected = value !== "none" && value !== "";
+		setHasParentSelected(isParentSelected);
+		form.setValue("parentVersionId", isParentSelected ? value : undefined);
+		
+		// Reset checkbox to checked when selecting a parent
+		if (isParentSelected) {
+			setMigrateTodoItems(true);
 		}
 	};
 
@@ -80,9 +89,12 @@ export const CreateVersionForm = ({
 		const formData = new FormData();
 		formData.append("projectId", projectId);
 		formData.append("title", data.title);
-		if (data.parentVersionId) {
+		
+		if (data.parentVersionId && hasParentSelected) {
 			formData.append("parentVersionId", data.parentVersionId);
+			formData.append("migrateTodoItems", migrateTodoItems.toString());
 		}
+		
 		startTransition(() => {
 			formAction(formData);
 		});
@@ -136,35 +148,49 @@ export const CreateVersionForm = ({
 					Versión padre (opcional)
 				</label>
 				<Select
-					onValueChange={(value) =>
-						form.setValue(
-							"parentVersionId",
-							value === "none" ? undefined : value
-						)
-					}
-					disabled={isPending || readOnlyVersions.length === 0}
+					onValueChange={handleParentVersionChange}
+					disabled={isPending}
+					defaultValue="none"
 				>
 					<SelectTrigger>
 						<SelectValue placeholder="Seleccionar versión padre" />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="none">Ninguna</SelectItem>
-						{readOnlyVersions.map((version) => (
+						<SelectItem value="none">No aplica</SelectItem>
+						{validParentVersions.map((version) => (
 							<SelectItem key={version.id} value={version.id}>
-								{version.title}
+								{version.title} ({version.state})
 							</SelectItem>
 						))}
 					</SelectContent>
 				</Select>
-				{readOnlyVersions.length === 0 && (
+				{validParentVersions.length === 0 && (
 					<p className="text-sm text-gray-500">
-						No hay versiones no editables disponibles para seleccionar
+						No hay versiones disponibles para seleccionar como padre. Las versiones deben estar en estado FINALIZADA, PENDIENTE DE REVISION o REVISADA.
 					</p>
 				)}
 			</div>
 
+			{/* Checkbox - only visible when a parent version is selected */}
+			{hasParentSelected && (
+				<div className="flex items-center space-x-2">
+					<Checkbox
+						id="migrateTodoItems"
+						checked={migrateTodoItems}
+						onCheckedChange={(checked) => setMigrateTodoItems(checked === true)}
+						disabled={isPending}
+					/>
+					<label
+						htmlFor="migrateTodoItems"
+						className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+					>
+						Migrar To Do items a la nueva versión
+					</label>
+				</div>
+			)}
+
 			{state?.error && (
-				<p className="text-sm text-red-600">{parseErrorMessage(state.error)}</p>
+				<p className="text-sm text-red-600">{state.error}</p>
 			)}
 
 			<Button type="submit" className="uppercase w-full" isLoading={isPending}>

@@ -1,28 +1,23 @@
 import { Router } from "express";
-import { ProjectService, EmailService, VersionService } from "../services";
-import { AuthMiddleware } from "../middlewares/auth.middleware";
-import { envs } from "../../config";
+import { VersionService } from "../services";
+import { VersionController } from "./controller";
 
 export class VersionRoutes {
 	static get routes(): Router {
 		const router = Router();
 
 		const service = new VersionService();
-		//const controller = new VersionController(service);
+		const controller = new VersionController(service);
 
-		//--------------------- Projects CRUD routes
+		//--------------------- Version CRUD routes
 
-		//create
-		//router.post("/", controller.createVersion);
+		// Create version
+		router.post("/", controller.createVersion);
 
-		//getById
-		//router.get("/:versionId", controller.getProjectById);
-
-		//Update version 
-		//router.put("/:versionId", controller.updateProject);
-
-		//Request Project Deletion project
-		//router.post("/:projectId/deletion", controller.deleteVersion);
+		// TODO: Implement these routes
+		// router.get("/:versionId", controller.getVersionById);
+		// router.put("/:versionId", controller.updateVersion);
+		// router.delete("/:versionId", controller.deleteVersion);
 
 		return router;
 	}
