@@ -1,43 +1,134 @@
 "use client";
 
-import { MouseEvent, ChangeEvent, useEffect, useRef } from "react";
-import { useFieldArray, RegisterOptions, Path } from "react-hook-form";
+import { MouseEvent, ChangeEvent, useEffect, useRef, useMemo } from "react";
+import { useFieldArray, RegisterOptions, Path, FieldArrayWithId } from "react-hook-form";
 import { ConceptualModel } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
 import { Button } from "@components/ui/common/button";
 import { X, Plus } from "lucide-react";
 
+// Type for the customRegisterField function
+type CustomRegisterFieldFn = ({
+  name,
+  propertyPath,
+  options,
+  propagateUpdateOnChange,
+}: {
+  name: Path<ConceptualModel>;
+  propertyPath?: string;
+  options?: RegisterOptions<ConceptualModel, Path<ConceptualModel>>;
+  propagateUpdateOnChange?: boolean;
+}) => {
+  onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  readOnly: boolean;
+  name: Path<ConceptualModel>;
+  ref: (instance: HTMLInputElement | HTMLTextAreaElement | null) => void;
+};
+
+// Extracted OutputItem component to properly handle select registration
+interface OutputItemProps {
+  field: FieldArrayWithId<ConceptualModel, "outputs", "id">;
+  index: number;
+  hasEditingRights: boolean;
+  customRegisterField: CustomRegisterFieldFn;
+  entitiesList: ReturnType<typeof useFieldArray<ConceptualModel, "entities">>;
+  handleRemoveItemFromList: ({
+    e,
+    listPropertyPath,
+    itemId,
+  }: {
+    e: MouseEvent;
+    listPropertyPath: string;
+    itemId: string;
+  }) => void;
+}
+
+function OutputItem({
+  field,
+  index,
+  hasEditingRights,
+  customRegisterField,
+  entitiesList,
+  handleRemoveItemFromList,
+}: OutputItemProps) {
+  // Register the entity select field once at component level
+  const entityFieldRegistration = useMemo(
+    () => customRegisterField({
+      name: `outputs.${index}.entity` as Path<ConceptualModel>,
+      propertyPath: `outputs:${field._id}.entity`,
+    }),
+    [customRegisterField, index, field._id]
+  );
+
+  return (
+    <div className="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg border">
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Descripción de la salida
+          </label>
+          <Input
+            {...customRegisterField({
+              name: `outputs.${index}.description`,
+              propertyPath: `outputs:${field._id}.description`,
+            })}
+            placeholder="Describe la salida..."
+            className="border-2 border-gray-200 focus:border-purple-400"
+          />
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={!hasEditingRights}
+          onClick={(e) =>
+            handleRemoveItemFromList({
+              e,
+              listPropertyPath: "outputs",
+              itemId: field._id,
+            })
+          }
+          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+        >
+          <X size={16} />
+        </Button>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Entidad
+        </label>
+        <select
+          name={`outputs.${index}.entity`}
+          className="w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
+          disabled={!hasEditingRights}
+          onChange={(e) => {
+            entityFieldRegistration.onChange(e as unknown as ChangeEvent<HTMLInputElement | HTMLTextAreaElement>);
+          }}
+          onBlur={(e) => {
+            entityFieldRegistration.onBlur(e as unknown as React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>);
+          }}
+          ref={(el) => {
+            entityFieldRegistration.ref(el as HTMLInputElement | HTMLTextAreaElement | null);
+          }}
+        >
+          {entitiesList.fields.map((entity) => (
+            <option key={entity._id} value={entity._id}>
+              {entity.name || `Entidad ${entity._id.slice(-4)}`}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
 interface ObjetivosEntradasSalidasProps {
   hasEditingRights: boolean;
-  inputList: ReturnType<
-    typeof useFieldArray<ConceptualModel, "inputs">
-  >;
-  outputList: ReturnType<
-    typeof useFieldArray<ConceptualModel, "outputs">
-  >;
-  entitiesList: ReturnType<
-    typeof useFieldArray<ConceptualModel, "entities">
-  >;
+  inputList: ReturnType<typeof useFieldArray<ConceptualModel, "inputs">>;
+  outputList: ReturnType<typeof useFieldArray<ConceptualModel, "outputs">>;
+  entitiesList: ReturnType<typeof useFieldArray<ConceptualModel, "entities">>;
   watch: (name?: Path<ConceptualModel>) => unknown;
-  customRegisterField: ({
-    name,
-    propertyPath,
-    options,
-    propagateUpdateOnChange,
-  }: {
-    name: Path<ConceptualModel>;
-    propertyPath?: string;
-    options?: RegisterOptions<ConceptualModel, Path<ConceptualModel>>;
-    propagateUpdateOnChange?: boolean;
-  }) => {
-    onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-    onBlur: (
-      e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
-    ) => void;
-    readOnly: boolean;
-    name: Path<ConceptualModel>;
-    ref: (instance: HTMLInputElement | HTMLTextAreaElement | null) => void;
-  };
+  customRegisterField: CustomRegisterFieldFn;
   handleAddItemToList: ({
     e,
     listPropertyPath,
@@ -308,74 +399,17 @@ export default function ObjetivosEntradasSalidas({
 
         {outputList.fields.length > 0 ? (
           <div className="space-y-3">
-            {outputList.fields.map((field, index) => {
-              return (
-                <div
-                  key={field.id}
-                  className="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg border"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                         Descripción de la salida
-                        </label>
-                      <Input
-                        {...customRegisterField({
-                          name: `outputs.${index}.description`,
-                          propertyPath: `outputs:${field._id}.description`,
-                        })}
-                        placeholder="Describe la salida..."
-                        className="border-2 border-gray-200 focus:border-purple-400"
-                      />
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={!hasEditingRights}
-                      onClick={(e) =>
-                        handleRemoveItemFromList({
-                          e,
-                          listPropertyPath: "outputs",
-                          itemId: field._id,
-                        })
-                      }
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <X size={16} />
-                    </Button>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Entidad
-                    </label>
-                    <select
-                      name={`outputs.${index}.entity`}
-                      className="w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
-                      disabled={!hasEditingRights}
-                      value={watch(`outputs.${index}.entity`) as string || entitiesList.fields[0]?._id || ""}
-                      onChange={(e) => {
-                        const { onChange } = customRegisterField({
-                          name: `outputs.${index}.entity` as Path<ConceptualModel>,
-                        });
-                        onChange(e as unknown as ChangeEvent<HTMLInputElement | HTMLTextAreaElement>);
-                      }}
-                      onBlur={(e) => {
-                        const { onBlur } = customRegisterField({
-                          name: `outputs.${index}.entity` as Path<ConceptualModel>,
-                        });
-                        onBlur(e as unknown as React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>);
-                      }}
-                    >
-                      {entitiesList.fields.map((entity) => (
-                        <option key={entity._id} value={entity._id}>
-                          {entity.name || `Entidad ${entity._id.slice(-4)}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              );
-            })}
+            {outputList.fields.map((field, index) => (
+              <OutputItem
+                key={field.id}
+                field={field}
+                index={index}
+                hasEditingRights={hasEditingRights}
+                customRegisterField={customRegisterField}
+                entitiesList={entitiesList}
+                handleRemoveItemFromList={handleRemoveItemFromList}
+              />
+            ))}
           </div>
         ) : (
           <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
