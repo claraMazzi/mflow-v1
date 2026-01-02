@@ -48,7 +48,7 @@ export default function ForgotPassword() {
 			form.reset();
 		} catch (error) {
 			setErrorMessage(
-				"Se ha producido un error, por favor inténtelo de nuevo más tarde."
+				"Se ha producido un error. Por favor, inténtelo de nuevo más tarde."
 			);
 		} finally {
 			setIsLoading(false);

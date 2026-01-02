@@ -251,7 +251,7 @@ export class AuthService {
 			return { user: userEntity };
 		} catch (error) {
 			console.error("Update password: ", error)
-			throw CustomError.internalServer("Se ha producido un error, por favor inténtelo de nuevo más tarde.");
+			throw CustomError.internalServer("Se ha producido un error. Por favor, inténtelo de nuevo más tarde.");
 		}
 	};
 }

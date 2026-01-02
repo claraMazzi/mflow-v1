@@ -62,7 +62,7 @@ export default function CreateAccountForm({
 		} else {
 			setErrorMessage(
 				result.error ||
-					"Se ha producido un error, por favor inténtelo de nuevo más tarde."
+					"Se ha producido un error. Por favor, inténtelo de nuevo más tarde."
 			);
 		}
 

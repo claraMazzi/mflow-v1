@@ -1,12 +1,12 @@
 import { Schema, model } from "mongoose";
 
-export const PROJECT_STATES = ["CREADO", "PENDIENTE DE ELIMINACION", "ELIMINADO"] as const;
+export enum ProjectState {
+  Created = "CREADO",
+  Pending = "PENDIENTE DE ELIMINACION",
+  Deleted = "ELIMINADO",
+}
 
-export const ProjectStateEnum = {
-	created: "CREADO",
-	pending: "PENDIENTE DE ELIMINACION",
-	deleted: "ELIMINADO",
-} as const;
+export const PROJECT_STATES = Object.values(ProjectState);
 
 const projectSchema = new Schema(
 	{

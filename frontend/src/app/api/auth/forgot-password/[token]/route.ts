@@ -25,7 +25,7 @@ export async function GET(
 
 		if (!response.ok) {
 			return NextResponse.json(
-				{ message: "Se ha producido un error, por favor inténtelo de nuevo más tarde." },
+				{ message: "Se ha producido un error. Por favor, inténtelo de nuevo más tarde." },
 				{ status: 500 }
 			);
 		}
@@ -35,7 +35,7 @@ export async function GET(
 	} catch (error) {
 		console.error("Password recover request error:", error);
 		return NextResponse.json(
-			{ message: "Se ha producido un error, por favor inténtelo de nuevo más tarde." },
+			{ message: "Se ha producido un error. Por favor, inténtelo de nuevo más tarde." },
 			{ status: 500 }
 		);
 	}

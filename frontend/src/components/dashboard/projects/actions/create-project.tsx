@@ -56,7 +56,7 @@ export const createProject = async (
 				success: false,
 				error:
 					errorData.error ||
-					"Se ha producido un error, por favor inténtelo de nuevo más tarde.",
+					"Se ha producido un error. Por favor, inténtelo de nuevo más tarde.",
 			};
 		}
 
@@ -68,7 +68,7 @@ export const createProject = async (
 		return {
       success: false,
 			error:
-				"Se ha producido un error, por favor inténtelo de nuevo más tarde.",
+				"Se ha producido un error. Por favor, inténtelo de nuevo más tarde.",
 		};
 	}
 };

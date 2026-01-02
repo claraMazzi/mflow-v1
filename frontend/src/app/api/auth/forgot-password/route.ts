@@ -58,7 +58,7 @@ export async function PUT(request: Request) {
 			const errorData = await response.json().catch(() => {});
 			throw new Error(
 				errorData.error ||
-					"Se ha producido un error, por favor inténtelo de nuevo más tarde."
+					"Se ha producido un error. Por favor, inténtelo de nuevo más tarde."
 			);
 		}
 
@@ -68,7 +68,7 @@ export async function PUT(request: Request) {
 		return NextResponse.json(
 			{
 				error:
-					"Se ha producido un error, por favor inténtelo de nuevo más tarde.",
+					"Se ha producido un error. Por favor, inténtelo de nuevo más tarde.",
 			},
 			{ status: 400 }
 		);

@@ -3,251 +3,231 @@ import { auth } from "@lib/auth"; // or wherever your auth config is
 
 // Define the state type
 export type ActionState = {
-  error?: string;
-  success?: boolean;
-  data?: any;
+	error?: string;
+	success?: boolean;
+	data?: any;
 };
 
 export const sendProjectCollaborationInvitation = async (
-  prevState: ActionState,
-  formData: FormData
+	prevState: ActionState,
+	formData: FormData
 ): Promise<ActionState> => {
-  try {
-    // NextAuth v5 uses auth() instead of getServerSession
-    const session = await auth();
-    if (!session?.user) {
-      return { error: "Not authenticated" };
-    }
+	try {
+		// NextAuth v5 uses auth() instead of getServerSession
+		const session = await auth();
+		if (!session?.user) {
+			return {
+				error: "Tu sesión ha expirado. Por favor, inicie sesión nuevamente.",
+			};
+		}
 
-    const projectId = formData.get("id") as string;
-    // Validate required fields
-    if (!projectId) {
-      return { error: "Project id is required" };
-    }
+		const projectId = formData.get("id") as string;
+		// Validate required fields
+		if (!projectId) {
+			return { error: "El identificador del proyecto es obligatorio." };
+		}
 
-    const accessToken = session.auth;
+		const accessToken = session.auth;
 
-    if (!accessToken) {
-      return { error: "No access token available" };
-    }
+		if (!accessToken) {
+			return {
+				error: "Tu sesión ha expirado. Por favor, inicie sesión nuevamente.",
+			};
+		}
 
-    const response = await fetch(
-      `${process.env.API_URL}/api/projects/${projectId}/share`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          collaborators: JSON.parse(formData.get("collaborators") as string),
-        }),
-      }
-    );
+		const response = await fetch(
+			`${process.env.API_URL}/api/projects/${projectId}/share`,
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${accessToken}`,
+				},
+				body: JSON.stringify({
+					collaborators: JSON.parse(formData.get("collaborators") as string),
+				}),
+			}
+		);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return {
-        error:
-          errorData.error ||
-          "Send project collaboration invitation request failed",
-      };
-    }
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			return {
+				error:
+					errorData.error ||
+					"Se ha producido un error al enviar las invitaciones para el proyecto. Por favor, inténtelo de nuevo más tarde.",
+			};
+		}
 
-    const data = await response.json();
+		const data = await response.json();
 
-    return { success: true, data };
-  } catch (error) {
-    console.error("Send project collaboration invitation error:", error);
-    return { error: "Something went wrong." };
-  }
+		return { success: true, data };
+	} catch (error) {
+		console.error("Send project collaboration invitation error:", error);
+		return {
+			error:
+				"Se ha producido un error al enviar las invitaciones para el proyecto. Por favor, inténtelo de nuevo más tarde.",
+		};
+	}
 };
 
 export const getProjectSharingLink = async (
-  prevState: ActionState,
-  formData: FormData
+	prevState: ActionState,
+	formData: FormData
 ): Promise<ActionState> => {
-  try {
-    // NextAuth v5 uses auth() instead of getServerSession
-    const session = await auth();
-    if (!session?.user) {
-      return { error: "Not authenticated" };
-    }
-    const projectId = formData.get("id") as string;
+	try {
+		// NextAuth v5 uses auth() instead of getServerSession
+		const session = await auth();
+		if (!session?.user) {
+			return {
+				error: "Tu sesión ha expirado. Por favor, inicie sesión nuevamente.",
+			};
+		}
+		const projectId = formData.get("id") as string;
 
-    // Validate required fields
-    if (!projectId) {
-      return { error: "Project id is required" };
-    }
+		// Validate required fields
+		if (!projectId) {
+			return { error: "El identificador del proyecto es obligatorio." };
+		}
 
-    const accessToken = session.auth;
+		const accessToken = session.auth;
 
-    if (!accessToken) {
-      return { error: "No access token available" };
-    }
+		if (!accessToken) {
+			return {
+				error: "Tu sesión ha expirado. Por favor, inicie sesión nuevamente.",
+			};
+		}
 
-    const response = await fetch(
-      `${process.env.API_URL}/api/projects/${projectId}/share`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
+		const response = await fetch(
+			`${process.env.API_URL}/api/projects/${projectId}/share`,
+			{
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${accessToken}`,
+				},
+			}
+		);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return {
-        error: errorData.error || "Get Project sharing link request failed",
-      };
-    }
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			return {
+				error:
+					errorData.error ||
+					"Se ha producido un error al obtener el link para compartir el proyecto. Por favor, inténtelo de nuevo más tarde.",
+			};
+		}
 
-    const data = await response.json();
+		const data = await response.json();
 
-    return { success: true, data };
-  } catch (error) {
-    console.error("Get Project sharing link error:", error);
-    return { error: "Something went wrong." };
-  }
-};
-
-export const addCollaboratorToProject = async (
-  prevState: ActionState,
-  sharingToken: string
-): Promise<ActionState> => {
-  try {
-    // NextAuth v5 uses auth() instead of getServerSession
-    const session = await auth();
-    if (!session?.user) {
-      return { error: "Not authenticated" };
-    }
-
-    // Validate required fields
-    if (!sharingToken) {
-      return { error: "Sharing Token not present" };
-    }
-
-    const accessToken = session.auth;
-
-    if (!accessToken) {
-      return { error: "No access token available" };
-    }
-
-    const response = await fetch(
-      `${process.env.API_URL}/api/projects/share/${sharingToken}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return {
-        error: errorData.error || "Add Collaborator To Project request failed",
-      };
-    }
-
-    const data = await response.json();
-
-    return { success: true, data };
-  } catch (error) {
-    console.error("Add Collaborator To Project error:", error);
-    return { error: "Something went wrong." };
-  }
+		return { success: true, data };
+	} catch (error) {
+		console.error("Get Project sharing link error:", error);
+		return {
+			error:
+				"Se ha producido un error al obtener el link para compartir el proyecto. Por favor, inténtelo de nuevo más tarde.",
+		};
+	}
 };
 
 export const acceptProjectCollaborationInvitation = async (
-  prevState: ActionState,
-  token: string
+	prevState: ActionState,
+	token: string
 ): Promise<ActionState> => {
-  try {
-    // NextAuth v5 uses auth() instead of getServerSession
-    const session = await auth();
+	try {
+		// NextAuth v5 uses auth() instead of getServerSession
+		const session = await auth();
 
-    if (!session?.user) {
-      return { error: "Not authenticated" };
-    }
+		if (!session?.user) {
+			return {
+				error: "Tu sesión ha expirado. Por favor, inicie sesión nuevamente.",
+			};
+		}
 
-    // Validate required fields
-    if (!token) {
-      return { error: "Project id is required" };
-    }
+		// Validate required fields
+		if (!token) {
+			return { error: "El identificador del proyecto es obligatorio." };
+		}
 
-    const accessToken = session.auth;
+		const accessToken = session.auth;
 
-    if (!accessToken) {
-      return { error: "No access token available" };
-    }
+		if (!accessToken) {
+			return {
+				error: "Tu sesión ha expirado. Por favor, inicie sesión nuevamente.",
+			};
+		}
 
-    const response = await fetch(
-      `${process.env.API_URL}/api/projects/share/${token}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ requester: session.user.email }),
-      }
-    );
+		const response = await fetch(
+			`${process.env.API_URL}/api/projects/share/${token}`,
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${accessToken}`,
+				},
+			}
+		);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return {
-        error:
-          errorData.error ||
-          "Accept project collaboration invitation request failed",
-      };
-    }
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			return {
+				error:
+					errorData.error ||
+					"Se ha producido un error al aceptar la invitación. Por favor, inténtelo de nuevo más tarde.",
+			};
+		}
 
-    const data = await response.json();
+		const data = await response.json();
 
-    return { success: true, data };
-  } catch (error) {
-    console.error("Accept project collaboration invitation error:", error);
-    return { error: "Something went wrong." };
-  }
+		return { success: true, data };
+	} catch (error) {
+		console.error("Accept project collaboration invitation error:", error);
+		return {
+			error:
+				"Se ha producido un error al aceptar la invitación. Por favor, inténtelo de nuevo más tarde.",
+		};
+	}
 };
 
 export const getProjectFromShareRequest = async (
-  token: string
+	token: string
 ): Promise<ActionState> => {
-  try {
-    // NextAuth v5 uses auth() instead of getServerSession
-    const session = await auth();
+	try {
+		const session = await auth();
 
-    if (!session?.user) {
-      return { error: "Not authenticated" };
-    }
+		if (!session?.user) {
+			return {
+				error: "Tu sesión ha expirado. Por favor, inicie sesión nuevamente.",
+			};
+		}
 
-    // Call external API directly
-    const response = await fetch(
-      `${process.env.API_URL}/api/projects/share/${token}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.auth}`,
-        },
-      }
-    );
+		const response = await fetch(
+			`${process.env.API_URL}/api/projects/share/${token}`,
+			{
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${session?.auth}`,
+				},
+			}
+		);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return { error: errorData.error || "Project get failed" };
-    }
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			return {
+				error:
+					errorData.error ||
+					"Se ha producido un error al obtener la información de la invitación.",
+			};
+		}
 
-    const data = await response.json();
+		const data = await response.json();
 
-    return data;
-  } catch (error) {
-    console.error("Get project error:", error);
-    return { error: "Something went wrong." };
-  }
+		return data;
+	} catch (error) {
+		console.error("Get project error:", error);
+		return {
+			error:
+				"Se ha producido un error al obtener la infomación de la invitación.",
+		};
+	}
 };

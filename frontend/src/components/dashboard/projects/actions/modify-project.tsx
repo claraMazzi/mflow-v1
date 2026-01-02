@@ -66,7 +66,7 @@ export const modifyProject = async (
 			const errorData = await response.json().catch(() => ({}));
 			return {
 				success: false,
-				error: errorData.error || "Se ha producido un error, por favor inténtelo de nuevo más tarde.",
+				error: errorData.error || "Se ha producido un error. Por favor, inténtelo de nuevo más tarde.",
 			};
 		}
 
@@ -78,7 +78,7 @@ export const modifyProject = async (
 		return {
 			success: false,
 			error:
-				"Se ha producido un error, por favor inténtelo de nuevo más tarde.",
+				"Se ha producido un error. Por favor, inténtelo de nuevo más tarde.",
 		};
 	}
 };

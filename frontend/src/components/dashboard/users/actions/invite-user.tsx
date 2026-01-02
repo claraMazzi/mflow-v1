@@ -81,7 +81,7 @@ export async function inviteUsers(
 	} catch (error) {
 		console.error("Error sending invitations:", error);
 		return {
-			error: "Se ha producido un error, por favor inténtelo de nuevo más tarde.",
+			error: "Se ha producido un error. Por favor, inténtelo de nuevo más tarde.",
 			success: false,
 		};
 	}

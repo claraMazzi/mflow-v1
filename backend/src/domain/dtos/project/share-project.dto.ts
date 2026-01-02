@@ -2,23 +2,19 @@ export class ShareProjectDto {
   constructor(
     public readonly projectId: string,
     public readonly senderId: string,
-    public readonly collaborators: string[],
-    
+    public readonly emails: string[],
   ) {}
 
   static create(object: { [key: string]: any }): [string?, ShareProjectDto?] {
-    const { projectId, senderId, collaborators } = object;
-  
+    const { projectId, senderId, collaborators: emails } = object;
 
-    if (!projectId) return ['Project id is requeried'];
-    if (!senderId) return ['Sender Id is requeried'];
-    if (!collaborators || !Array.isArray(collaborators) || collaborators.length === 0) return ['At least one collaborator is required'];
-    if (collaborators.includes(senderId)) return ['Sender Id cannot be a collaborator'];
-
+    if (!projectId) return ['El identificador del proyecto es requerido.'];
+    if (!senderId) return ['Debe haber iniciado sesión para realizar esta acción.'];
+    if (!emails || !Array.isArray(emails) || emails.length === 0) return ['Se requiere de al menos un email para enviar las invitaciones.'];
   
     return [
       undefined,
-      new ShareProjectDto(projectId, senderId, collaborators),
+      new ShareProjectDto(projectId, senderId, emails),
     ];
   }
 }
