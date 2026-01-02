@@ -17,7 +17,6 @@ const userSchema = new Schema(
 		email: {
 			type: String,
 			required: [true, "El campo correo electrónico es obligatorio."],
-			unique: true, //no quiero ningun duplicado
 		},
 		emailValidated: {
 			type: Boolean,

@@ -35,9 +35,11 @@ export class RegisterUserDto {
 			];
 		}
 
-    if(!roles.includes("MODELADOR")) {
-      return ["Es obligatorio que el usuario tenga asignado el rol 'MODELADOR'."];
-    }
+		if (!roles.includes("MODELADOR")) {
+			return [
+				"Es obligatorio que el usuario tenga asignado el rol 'MODELADOR'.",
+			];
+		}
 
 		return [
 			undefined,

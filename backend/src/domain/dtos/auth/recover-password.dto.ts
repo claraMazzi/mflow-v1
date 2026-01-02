@@ -3,15 +3,15 @@ import {emailRegex, passwordRegex} from "../../../config";
 
 export class RecoverPasswordDto {
     constructor(
-        public readonly email: string,
+        public readonly token: string,
         public readonly newPassword: string
     ){}
 
     static create( object: {[key:string]:any}): [string?, RecoverPasswordDto?] {
-        const {email, newPassword} = object;
-        if (!email) return ['Missing email'];
-        if (!newPassword) return ['Missing New Password'];
-        if (!passwordRegex.test(newPassword)) return ['New Password is not valid'];
-        return [undefined, new RecoverPasswordDto(email, newPassword)]
+        const {token, newPassword} = object;
+        if (!token) return ['Debe proveer un token para restablecer para restablecer la contraseña.'];
+        if (!newPassword) return ['La nueva contraseña es obligatoria.'];
+        if (!passwordRegex.test(newPassword)) return ['La nueva contraseña no tiene un formato válido.'];
+        return [undefined, new RecoverPasswordDto(token, newPassword)]
     }
 }

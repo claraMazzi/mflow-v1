@@ -11,8 +11,8 @@ import { modifyProject, type ActionState } from "../actions/modify-project";
 
 export type ModifyProjectFormData = {
   id: string;
-  title?: string;
-  description?: string;
+  title: string;
+  description: string;
 };
 
 interface ModifyProjectFormProps {
@@ -51,20 +51,6 @@ export const ModifyProjectForm = ({
       onSuccess();
     }
   }, [state?.success, onSuccess]);
-
-  const parseErrorMessage = (error: string) => {
-    switch (error) {
-      case "Invalid credentials.":
-        return "Usuario o contraseña no corresponden a un usuario registrado";
-      case "Not authenticated":
-        return "Debes iniciar sesión para modificar un proyecto";
-      case "Data not updated":
-        return "Debe modificar algun campo para poder actualizarlo";
-      case "Something went wrong.":
-      default:
-        return "Ocurrió un error inesperado";
-    }
-  };
 
   const onSubmit = (data: ModifyProjectFormData) => {
     const formData = new FormData();
@@ -122,10 +108,10 @@ export const ModifyProjectForm = ({
           type="text"
           placeholder="Mi Proyecto"
           {...form.register("title", {
-            required: "El título del proyecto es requerido",
+            required: "El título del proyecto es obligatorio.",
             maxLength: {
               value: 100,
-              message: "Máximo 100 caracteres"
+              message: "Máximo 100 caracteres."
             }
           })}
           maxLength={100}
@@ -150,7 +136,7 @@ export const ModifyProjectForm = ({
           {...form.register("description", {
             maxLength: {
               value: 200,
-              message: "Máximo 200 caracteres"
+              message: "Máximo 200 caracteres."
             }
           })}
           maxLength={200}
@@ -163,7 +149,7 @@ export const ModifyProjectForm = ({
 
       {state?.error && (
         <p className="text-sm text-red-600">
-          {parseErrorMessage(state.error)}
+          {state.error}
         </p>
       )}
 

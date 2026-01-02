@@ -1,10 +1,18 @@
 import { Schema, model } from "mongoose";
 
+export enum ProjectState {
+  Created = "CREADO",
+  Pending = "PENDIENTE DE ELIMINACION",
+  Deleted = "ELIMINADO",
+}
+
+export const PROJECT_STATES = Object.values(ProjectState);
+
 const projectSchema = new Schema(
 	{
 		title: {
 			type: String,
-			required: [true, "El campo nombre del proyecto es obligatorio."],
+			required: [true, "El campo título del proyecto es obligatorio."],
 		},
 		description: {
 			type: String,
@@ -25,7 +33,7 @@ const projectSchema = new Schema(
 		],
 		state: {
 			type: String,
-			enum: ["CREADO", "PENDIENTE DE ELIMINACION", "ELIMINADO"],
+			enum: PROJECT_STATES,
 			default: "CREADO",
 		},
 		versions: [{ type: Schema.Types.ObjectId, ref: "Version", index: true }],

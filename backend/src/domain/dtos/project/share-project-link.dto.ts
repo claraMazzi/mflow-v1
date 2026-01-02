@@ -7,10 +7,9 @@ export class ShareProjectLinkDto {
 
   static create(object: { [key: string]: any }): [string?, ShareProjectLinkDto?] {
     const { projectId, senderId } = object;
-  
 
-    if (!projectId) return ['Project id is requeried'];
-    if (!senderId) return ['Sender Id is requeried'];
+    if (!projectId) return ['El identificador del proyecto es requerido.'];
+    if (!senderId) return ['Debe haber iniciado sesión para realizar esta acción.'];
  
     return [
       undefined,

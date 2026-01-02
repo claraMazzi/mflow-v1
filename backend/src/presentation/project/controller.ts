@@ -16,7 +16,9 @@ export class ProjectController {
 		}
 
 		console.log(`${error}`);
-		return res.status(500).json({ error: "Internal server error" });
+		return res
+			.status(500)
+			.json({ error: "Ha ocurrido un error interno en el servidor." });
 	};
 
 	getUserProjects = (req: Request, res: Response) => {
@@ -67,7 +69,7 @@ export class ProjectController {
 		if (!projectId) {
 			return res
 				.status(401)
-				.json({ error: "El id del proyecto es obligatorio." });
+				.json({ error: "El identificador del proyecto es obligatorio." });
 		}
 		const userSession = req.session;
 		if (!userSession) {
@@ -83,19 +85,19 @@ export class ProjectController {
 	updateProject = (req: Request, res: Response) => {
 		const { projectId } = req.params;
 		if (!projectId) {
-			return res.status(401).json({ error: "No project id provided" });
+			return res
+				.status(401)
+				.json({
+					error: "Debe especificar el identificador del proyecto a modificar.",
+				});
 		}
 		const projectData = req.body;
-		const user = req.session?.userId;
-
-		if (!user) {
-			return res.status(401).json({ error: "Unauthorized" });
-		}
+		const userId = req.session!.userId;
 
 		const [error, updateProjectDto] = UpdateProjectDto.create({
 			id: projectId,
 			...projectData,
-			owner: user,
+			requestingUserId: userId,
 		});
 
 		if (error || !updateProjectDto) return res.status(400).json({ error });
@@ -127,11 +129,7 @@ export class ProjectController {
 		const projectData = req.body;
 		const title = projectData.title;
 		const description = projectData.description;
-		const user = req.session?.userId;
-
-		if (!user) {
-			return res.status(401).json({ error: "Unauthorized" });
-		}
+		const user = req.session!.userId;
 
 		const [error, createProjectDto] = CreateProjectDto.create({
 			title,
@@ -150,15 +148,8 @@ export class ProjectController {
 	// Share a specific project
 	sendProjectCollaborationInvitation = (req: Request, res: Response) => {
 		const { projectId } = req.params;
-		const senderId = req.session?.userId ?? "";
+		const senderId = req.session!.userId;
 		const { collaborators } = req.body;
-		if (!senderId) {
-			return res.status(401).json({ error: "Unauthorized" });
-		}
-
-		if (!projectId) {
-			return res.status(401).json({ error: "No project id provided" });
-		}
 
 		const [error, shareProjectDto] = ShareProjectDto.create({
 			projectId,
@@ -172,7 +163,7 @@ export class ProjectController {
 			.sendProjectCollaborationInvitation(shareProjectDto)
 			.then(() =>
 				res.json({
-					message: "Project collaboration invitations sent successfully",
+					message: "Las invitaciones se envieron correctamente.",
 				})
 			)
 			.catch((error) => this.handleError(error, res));
@@ -180,7 +171,10 @@ export class ProjectController {
 
 	getProjectFromInvitationToken = (req: Request, res: Response) => {
 		const { token } = req.params;
-		if (!token) return res.status(401).json({ error: "Unauthorized" });
+		if (!token)
+			return res
+				.status(401)
+				.json({ error: "Debe proveer un token de invitación." });
 
 		this.projectService
 			.getProjectFromInvitationToken(token)
@@ -191,16 +185,8 @@ export class ProjectController {
 	// Share a specific project
 	getProjectSharingLink = (req: Request, res: Response) => {
 		const { projectId } = req.params;
-		const senderId = req.session?.userId ?? "";
+		const senderId = req.session!.userId;
 		const { collaborators } = req.body;
-
-		if (!senderId) {
-			return res.status(401).json({ error: "Unauthorized" });
-		}
-
-		if (!projectId) {
-			return res.status(401).json({ error: "No project id provided" });
-		}
 
 		const [error, shareProjectDto] = ShareProjectLinkDto.create({
 			projectId,
@@ -218,11 +204,11 @@ export class ProjectController {
 
 	addCollaboratorToProject = (req: Request, res: Response) => {
 		const { token } = req.params;
-		const { requester } = req.body;
+		const newCollaboratorUserId = req.session!.userId;
 		if (!token) return res.status(401).json({ error: "Unauthorized" });
 
 		this.projectService
-			.addCollaboratorToProject(token, requester)
+			.addCollaboratorToProject(token, newCollaboratorUserId)
 			.then((response) => res.json(response))
 			.catch((error) => this.handleError(error, res));
 	};

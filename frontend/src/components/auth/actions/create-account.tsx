@@ -28,7 +28,7 @@ export async function createAccount(data: RegisterUserFormData) {
 		console.error("Unexpected error modifying the User Roles: ", error);
     return {
       success: false,
-      error: "Se ha producido un error, por favor inténtelo de nuevo más tarde.",
+      error: "Se ha producido un error. Por favor, inténtelo de nuevo más tarde.",
     }
   }
 }

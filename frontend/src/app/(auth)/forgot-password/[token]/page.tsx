@@ -76,7 +76,7 @@ export default function PasswordRecovery({
       form.setError("root", {
         type: "manual",
         message:
-          "Ocurrió un error mientras se actualizaba la contraseña. Por favor recargue la página y vuelva a intentarlo",
+          "Ocurrió un error al actualizar la contraseña. Por favor recargue la página y vuelva a intentarlo.",
       });
     }
   };
@@ -93,10 +93,10 @@ export default function PasswordRecovery({
             Tu solicitud de recuperación expiró
           </h2>
           <p className="text-lg  text-red-600 mb-8">
-            Podés volver a solicitar la recuperación de contraseña nuevamente
+            Podés volver a solicitar la recuperación de contraseña nuevamente.
           </p>
           <Button as="a" href="/forgot-password">
-            Solicitar Nuevamente
+            Solicitar nuevamente
           </Button>
         </div>
       </div>
@@ -106,11 +106,11 @@ export default function PasswordRecovery({
   return (
     <div className="min-h-screen flex items-center justify-center bg-purple-200 p-4">
       <div className="w-full max-w-xl flex flex-col gap-8 bg-white shadow-md rounded-md p-8 border border-gray-200">
-        <h1 className="text-2xl font-bold mb-5">Restablece tu contraseña</h1>
+        <h1 className="text-2xl font-bold mb-5">Restablecé tu contraseña</h1>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <div className="space-y-2">
             <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              New Password
+              Nueva contraseña
             </label>
             <Input 
               type="password" 
@@ -119,11 +119,11 @@ export default function PasswordRecovery({
                 pattern: {
                   value: passwordRegex,
                   message:
-                    "Contraseña debe tener entre 6-25 caracteres con al menos una minúscula, una mayúscula, un número y un caracter especial (@$!%*?&)",
+                    "La contraseña debe tener entre 6-25 caracteres con al menos una minúscula, una mayúscula, un número y un caracter especial (@$!%*?&)",
                 },
                 validate: (val: string) => {
                   if (form.watch("confirmPassword") != val) {
-                    return "Your passwords do no match";
+                    return "Las contraseñas ingresadas no son iguales.";
                   }
                 },
               })}
@@ -135,7 +135,7 @@ export default function PasswordRecovery({
           
           <div className="space-y-2">
             <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              Confirm New Password
+              Repita su nueva contraseña
             </label>
             <Input 
               type="password" 
@@ -144,11 +144,11 @@ export default function PasswordRecovery({
                 pattern: {
                   value: passwordRegex,
                   message:
-                    "Contraseña debe tener entre 6-25 caracteres con al menos una minúscula, una mayúscula, un número y un caracter especial (@$!%*?&)",
+                    "La contraseña debe tener entre 6-25 caracteres con al menos una minúscula, una mayúscula, un número y un caracter especial (@$!%*?&)",
                 },
                 validate: (val: string) => {
                   if (form.watch("password") != val) {
-                    return "Your passwords do no match";
+                    return "Las contraseñas ingresadas no son iguales.";
                   }
                 },
               })}
@@ -158,7 +158,7 @@ export default function PasswordRecovery({
             )}
           </div>
           
-          <Button type="submit">Reset Password</Button>
+          <Button type="submit">Restablecer contraseña</Button>
         </form>
       </div>
     </div>

@@ -1,29 +1,38 @@
-import { NextResponse } from "next/server"
+import { NextResponse } from "next/server";
 
-export async function GET(request: Request, { params }: { params: { token: string } }) {
-  const token = params.token
+export async function GET(
+	request: Request,
+	{ params }: { params: Promise<{ token: string }> }
+) {
+	const { token } = await params;
 
-  if (!token) {
-    return NextResponse.json({ message: "Invalid token" }, { status: 400 })
-  }
+	if (!token) {
+		return NextResponse.json({ message: "Invalid token" }, { status: 400 });
+	}
 
-  try {
-    const response = await fetch(`${process.env.API_URL}/api/auth/validate-email/${token}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
+	try {
+		const response = await fetch(
+			`${process.env.API_URL}/api/auth/validate-email/${token}`,
+			{
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+				},
+			}
+		);
 
-    if (!response.ok) {
-      throw new Error("Email validation failed")
-    }
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			throw new Error(errorData.error || "La validación del email falló.");
+		}
 
-    const data = await response.json()
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error("Email validation error:", error)
-    return NextResponse.json({ message: "Email validation failed" }, { status: 500 })
-  }
+		const data = await response.json();
+		return NextResponse.json(data);
+	} catch (error) {
+		console.error("Email validation error:", error);
+		return NextResponse.json(
+			{ message: "La validación del email falló." },
+			{ status: 500 }
+		);
+	}
 }
-

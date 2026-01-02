@@ -20,20 +20,6 @@ const initialState = {
   success: false,
 };
 
-const parseErrorMessage = (error:string) => { 
-  switch (error) {
-    case 'Owner cannot be collaborator':
-        return "El dueño del proyecto no puede aceptar la invitación a colaborar"
-    case 'User is already a collaborator':
-      return "Usted ya es un colaborador en este proyecto"
-    case 'Project does not exists - deleted':
-      return "El proyecto al que fue invitado ya no existe"
-    
-    default:
-      break;
-  }
-}
-
 export const ProjectInvitationForm = ({
   project,
   token,
@@ -51,7 +37,7 @@ export const ProjectInvitationForm = ({
   };
 
   if (inviteState?.success) {
-    router.push("/dashboard/shared");
+    router.push("dashboard/shared/projects");
   }
 
   if (!project || !token)
@@ -95,7 +81,7 @@ export const ProjectInvitationForm = ({
       {/* Error Messages */}
       {inviteState?.error && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg w-full text-center">
-          <p className="text-sm text-red-600">{parseErrorMessage(inviteState?.error)}</p>
+          <p className="text-sm text-red-600">{inviteState?.error}</p>
         </div>
       )}
     </div>

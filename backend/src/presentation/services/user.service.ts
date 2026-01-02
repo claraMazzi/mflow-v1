@@ -39,7 +39,7 @@ export class UserService {
 		const html = `<h1>Has sido invitado/a a ser ${user.roles.map(
 			(role) => role
 		)}</h1>
-        <p> Hace Click en el siguiente <a href=${frontendInvitationLink}>link</a> para aceptar la invitación </p>`;
+        <p> Hacé click en el siguiente <a href=${frontendInvitationLink}>link</a> para aceptar la invitación. </p>`;
 
 		const options = {
 			to: user.email,

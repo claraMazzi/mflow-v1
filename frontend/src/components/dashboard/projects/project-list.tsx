@@ -160,7 +160,11 @@ const ProjectList = ({
 					})}
 				</div>
 			) : (
-				<div>Todavía no tenes ningun proyecto creado</div>
+				<div>
+					{isSharing
+						? "Todavía no te han asignado como colaborador en ningún proyecto."
+						: "Todavía no tienes ningún proyecto creado."}
+				</div>
 			)}
 		</div>
 	);

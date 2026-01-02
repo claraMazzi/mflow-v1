@@ -16,8 +16,8 @@ export class CreateProjectDto {
     const versions = [] as string[]
     const description = reqDes ? reqDes : ''
 
-    if (!title) return ['Title is requeried'];
-    if (!owner) return ['Owner is requeried'];
+    if (!title) return ['El título del proyecto es obligatorio.'];
+    if (!owner) return ['Se debe especificar el dueño del proyecto.'];
 
     return [
       undefined,
