@@ -43,6 +43,8 @@ import DiagramaFlujo from "@components/conceptual-model/DiagramaDeFlujo";
 import { RemoteCursor } from "@components/versions/RemoteCursor";
 import { useUI } from "@components/ui/context";
 import { FinalizeVersionModal } from "@components/versions/FinalizeVersionModal";
+import { toast } from "sonner";
+import { FinalizeVersionResultModal } from "@components/versions/FinalizeVersionResultModal";
 
 function throttle(func: any, delay: number) {
   let timeout: NodeJS.Timeout | null = null;
@@ -311,15 +313,17 @@ export default function Page({
       const newImageInfos = new Map<string, ImageInfo>();
       imageInfos
         .map((i) => {
-          const { id, sizeInBytes, url } = i;
+          // Handle both 'id' and '_id' from server (MongoDB uses _id)
+          const imageId = i.id ?? (i as unknown as { _id?: string })._id;
           return {
-            id,
-            sizeInBytes,
-            url,
+            id: imageId,
+            sizeInBytes: i.sizeInBytes,
+            url: i.url,
             uploadedAt: new Date(i.createdAt),
             filename: i.originalFilename,
           };
         })
+        .filter((i): i is typeof i & { id: string } => !!i.id) // Only add images with valid IDs
         .forEach((i) => newImageInfos.set(i.id, i));
       setImageInfos(newImageInfos);
       setIsModelInitialized(true);
@@ -432,6 +436,41 @@ export default function Page({
     }
     socket.on("finalize-version-modal-close", onFinalizeVersionModalClose);
 
+    function onFinalizeVersionResult(payload: {
+      type: string;
+      isValid: boolean;
+      errors: string[];
+      warnings: string[];
+      timestamp: Date;
+    }) {
+      closeModal(); // Close any open modal first
+      
+      if (payload.isValid) {
+        toast.success("Revisión finalizada exitosamente", {
+          description: payload.warnings.length > 0 
+            ? `${payload.warnings.length} advertencia(s) encontrada(s)`
+            : "El modelo conceptual ha sido validado correctamente.",
+          duration: 5000,
+        });
+      } else {
+        // Show error modal with details
+        openModal({
+          name: "finalize-version-result-modal",
+          title: "Error al Finalizar Revisión",
+          size: "md",
+          showCloseButton: true,
+          content: (
+            <FinalizeVersionResultModal
+              errors={payload.errors}
+              warnings={payload.warnings}
+              onClose={closeModal}
+            />
+          ),
+        });
+      }
+    }
+    socket.on("finalize-version-result", onFinalizeVersionResult);
+
     return () => {
       socket.off("field-update", onFieldUpdate);
       socket.off("image-added", onImageAdded);
@@ -453,6 +492,7 @@ export default function Page({
       );
       socket.off("finalize-version-modal", onFinalizeVersionModal);
       socket.off("finalize-version-modal-close", onFinalizeVersionModalClose);
+      socket.off("finalize-version-result", onFinalizeVersionResult);
     };
   }, [isSocketConnected]);
 

@@ -285,7 +285,7 @@ export class VersionService {
 						{
 							$project: {
 								_id: 0,
-								id: { $toString: "_id" },
+								id: { $toString: "$_id" }, // Fixed: was "_id" (literal), now "$_id" (field reference)
 								url: 1,
 								sizeInBytes: 1,
 								originalFilename: 1,
@@ -476,6 +476,8 @@ export class VersionService {
 		// Convert to plain object to allow modifications
 		const model = JSON.parse(JSON.stringify(version.conceptualModel));
 
+		console.log("Model: ", model);
+
 		// Validate objective, name, and description
 		if (!model.objective || model.objective.trim() === "") {
 			errors.push("El objetivo no puede estar vacío.");
@@ -517,6 +519,7 @@ export class VersionService {
 
 			// Check if usesPlantText is explicitly set
 			if (diagram.usesPlantText === true) {
+				console.log("Diagram uses PlantText: ", diagram.plantTextCode);
 				if (!diagram.plantTextCode || diagram.plantTextCode.trim() === "") {
 					errors.push(`El código PlantText del diagrama ${diagramName} no puede estar vacío cuando usesPlantText está activado.`);
 				}
@@ -527,27 +530,25 @@ export class VersionService {
 					diagram.imageFileId = null;
 				}
 			} else if (diagram.usesPlantText === false) {
+				console.log("Diagram does not use PlantText, imageFileId: ", diagram.imageFileId);
 				if (!diagram.imageFileId || diagram.imageFileId === null) {
 					errors.push(`El diagrama ${diagramName} debe tener una imagen cuando usesPlantText está desactivado.`);
 				}
+			} else {
+				// usesPlantText is undefined - diagram is not properly configured
+				errors.push(`El diagrama ${diagramName} debe especificar si usa PlantText o una imagen.`);
 			}
 		};
 
-		// Validate structureDiagram if it exists
-		if (model.structureDiagram && (
-			model.structureDiagram.usesPlantText !== undefined ||
-			model.structureDiagram.imageFileId ||
-			model.structureDiagram.plantTextCode
-		)) {
+		// Validate structureDiagram if the object exists
+		if (model.structureDiagram) {
+			console.log("Structure Diagram: ", model.structureDiagram);
 			validateDiagram(model.structureDiagram, "de estructura");
 		}
 
-		// Validate flowDiagram if it exists
-		if (model.flowDiagram && (
-			model.flowDiagram.usesPlantText !== undefined ||
-			model.flowDiagram.imageFileId ||
-			model.flowDiagram.plantTextCode
-		)) {
+		// Validate flowDiagram if the object exists
+		if (model.flowDiagram) {
+			console.log("Flow Diagram: ", model.flowDiagram);
 			validateDiagram(model.flowDiagram, "de flujo");
 		}
 

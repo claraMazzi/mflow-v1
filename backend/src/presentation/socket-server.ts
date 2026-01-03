@@ -741,13 +741,13 @@ export class SocketServer {
 			);
 			return;
 		}
-
+		console.log("Finalizing version for room: ", payload.roomId);
 		try {
 			// Validate and finalize the version
 			const validationResult = await this.versionService.validateAndFinalizeVersion(
 				payload.roomId
 			);
-
+			console.log("Validation result: ", validationResult);
 			// Emit the validation results to all users in the room
 			this.emitFinalizeVersionResult(payload.roomId, {
 				isValid: validationResult.isValid,

@@ -62,12 +62,12 @@ const DiagramImageUploadComponent = ({
   >();
   const [optimisticFile, setOptimisticFile] = useState<ImageInfo | null>(null);
 
+  // Only set error from uploadState when it changes (not when error changes)
   useEffect(() => {
     if (uploadState.error) {
       setError(uploadState.error);
     }
-    return () => {};
-  }, [uploadState, error]);
+  }, [uploadState]);
 
   // PlantText functionality
   // Use useWatch to ensure re-renders when values change
@@ -149,9 +149,23 @@ const DiagramImageUploadComponent = ({
     createdAt?: string | Date;
   };
 
+  // Helper to find image in imageInfos by any matching ID
+  const findImageById = (id: string): ImageInfo | null => {
+    // Direct lookup first
+    const direct = imageInfos.get(id);
+    if (direct) return direct;
+    
+    // Search through all values in case key format differs
+    for (const img of imageInfos.values()) {
+      if (img.id === id) return img;
+    }
+    return null;
+  };
+
   const file = useMemo(() => {
     if (!imageFileField) return null;
-    // If backend populated the image object directly (after aggregation)
+    
+    // If backend populated the image object directly (after aggregation) with url
     if (
       typeof imageFileField === "object" &&
       imageFileField !== null &&
@@ -168,11 +182,26 @@ const DiagramImageUploadComponent = ({
         uploadedAt: createdAt ? new Date(createdAt) : new Date(),
       } as ImageInfo;
     }
-    // Else, it's likely an id string – resolve from the provided map
-    if (typeof imageFileField === "string") {
-      return imageInfos.get(imageFileField) ?? null;
+    
+    // If it's an object with _id but no url, try to look it up in imageInfos
+    if (
+      typeof imageFileField === "object" &&
+      imageFileField !== null
+    ) {
+      const obj = imageFileField as PopulatedImageInfo;
+      const id = obj.id ?? obj._id;
+      if (id && typeof id === "string") {
+        return findImageById(id);
+      }
     }
+    
+    // If it's a string ID, resolve from the provided map
+    if (typeof imageFileField === "string") {
+      return findImageById(imageFileField);
+    }
+    
     return null;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageFileField, imageInfos]);
 
   // Clear optimistic preview when authoritative id changes
@@ -243,6 +272,15 @@ const DiagramImageUploadComponent = ({
         });
       }
 
+      // Set usesPlantText to false when uploading an image
+      if (socket) {
+        socket.emit("field-update", {
+          roomId: versionId,
+          propertyPath: `${diagramPropertyPath}.usesPlantText`,
+          value: false,
+        });
+      }
+
       setUploadState({ success: true });
     } catch (error) {
       console.error("Unexpected error during diagram image upload:", error);
@@ -304,6 +342,15 @@ const DiagramImageUploadComponent = ({
           uploadedAt: data.imageInfo.createdAt
             ? new Date(data.imageInfo.createdAt)
             : new Date(),
+        });
+      }
+
+      // Set usesPlantText to false when replacing with an image
+      if (socket) {
+        socket.emit("field-update", {
+          roomId: versionId,
+          propertyPath: `${diagramPropertyPath}.usesPlantText`,
+          value: false,
         });
       }
 
@@ -400,6 +447,8 @@ const DiagramImageUploadComponent = ({
 
   const clearError = () => {
     setError(null);
+    // Also clear uploadState.error so the useEffect doesn't re-set the error
+    setUploadState(prev => ({ ...prev, error: undefined }));
   };
 
   useEffect(() => {
@@ -407,7 +456,9 @@ const DiagramImageUploadComponent = ({
     return () => {};
   }, [plantTextImageUrl]);
 
-  const hasFile = !!file;
+  // Include optimisticFile in the check - after upload, file might not be set yet
+  // but optimisticFile will have the uploaded image data
+  const hasFile = !!file || !!optimisticFile;
   const canUpload = !hasFile && !isUploadPending && hasEditingRights;
 
   const plantTextRegisterProps = register
@@ -593,8 +644,8 @@ const DiagramImageUploadComponent = ({
                 {/* Image Preview */}
                 <div className="relative overflow-hidden rounded-lg border h-screen">
                   <Image
-                    src={optimisticFile?.url || file.url}
-                    alt={optimisticFile?.filename || file.filename}
+                    src={optimisticFile?.url || file?.url || ''}
+                    alt={optimisticFile?.filename || file?.filename || 'Diagram'}
                     fill
                     className="object-contain bg-white"
                   />
