@@ -37,7 +37,7 @@ export const ProjectInvitationForm = ({
   };
 
   if (inviteState?.success) {
-    router.push("dashboard/shared/projects");
+    router.push("/dashboard/shared/projects");
   }
 
   if (!project || !token)
