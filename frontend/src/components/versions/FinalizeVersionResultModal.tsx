@@ -70,7 +70,7 @@ export function FinalizeVersionResultModal({
       {/* Close Button */}
       <div className="flex justify-center mt-2">
         <Button onClick={onClose} variant="outline" size="sm">
-          Cerrar
+          Aceptar
         </Button>
       </div>
     </div>

@@ -458,7 +458,7 @@ export default function Page({
           name: "finalize-version-result-modal",
           title: "Error al Finalizar Revisión",
           size: "md",
-          showCloseButton: true,
+          showCloseButton: false,
           content: (
             <FinalizeVersionResultModal
               errors={payload.errors}

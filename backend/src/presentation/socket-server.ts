@@ -582,7 +582,11 @@ export class SocketServer {
 			case "entity":
 				listField.push({
 					name: "",
-					scopeDecision: {},
+					scopeDecision: {
+						include: true,
+						justification: "",
+						argumentType: "SALIDA",
+					},
 					dynamicDiagram: {},
 					properties: [],
 				});

@@ -553,7 +553,10 @@ export class VersionService {
 		}
 
 		// Validate inputs
-		if (model.inputs) {
+		if (model.inputs.length === 0) {
+			errors.push("Debe tener al menos una entrada.");
+		}
+		else if (model.inputs && model.inputs.length > 0) {
 			model.inputs.forEach((input: Input, index: number) => {
 				if (!input.description || input.description.trim() === "") {
 					errors.push(`La entrada ${index + 1} debe tener una descripción.`);
@@ -562,10 +565,16 @@ export class VersionService {
 		}
 
 		// Validate outputs
-		if (model.outputs) {
+		if (model.outputs.length === 0) {
+			errors.push("Debe tener al menos una salida.");
+		}
+		else if (model.outputs && model.outputs.length > 0) {
 			model.outputs.forEach((output: Output, index: number) => {
 				if (!output.description || output.description.trim() === "") {
 					errors.push(`La salida ${index + 1} debe tener una descripción.`);
+				}
+				if (!output.entity || output.entity.trim() === "") {
+					errors.push(`La salida ${index + 1} debe tener una entidad asignada.`);
 				}
 			});
 		}
@@ -583,7 +592,7 @@ export class VersionService {
 						!entity.dynamicDiagram.imageFileId &&
 						(!entity.dynamicDiagram.plantTextCode || entity.dynamicDiagram.plantTextCode.trim() === ""))
 				) {
-					errors.push(`La entidad "${entityName}" no puede tener un diagrama dinámico vacío.`);
+					errors.push(`La entidad "${entityName}" no puede tener un diagrama de dinamica vacío.`);
 				}
 
 				// Validate dynamicDiagram if it exists and has content
@@ -592,13 +601,17 @@ export class VersionService {
 					entity.dynamicDiagram.imageFileId ||
 					(entity.dynamicDiagram.plantTextCode && entity.dynamicDiagram.plantTextCode.trim() !== "")
 				)) {
-					validateDiagram(entity.dynamicDiagram, `dinámico de "${entityName}"`);
+					validateDiagram(entity.dynamicDiagram, `de dinamica de la entidad "${entityName}"`);
 				}
 
-				if (entity.scopeDecision?.include === false) {
+				if (entity.scopeDecision === undefined) {
+					errors.push(`La entidad "${entityName}" debe marcarse como incluida o excluida del modelo.`);
+				}
+
+				if (entity.scopeDecision?.include === false ) {
 					// If include is false, shouldn't have properties
 					if (entity.properties && entity.properties.length > 0) {
-						warnings.push(`La entidad "${entityName}" tiene scopeDecision.include en false pero tiene propiedades asignadas.`);
+						warnings.push(`La entidad "${entityName}" no se encuentra incluída en el alcance por lo que no puede tener propiedades asignadas.`);
 					}
 				} else if (entity.scopeDecision?.include === true) {
 					// If include is true, validate argumentType
@@ -607,7 +620,7 @@ export class VersionService {
 						entity.scopeDecision.argumentType === "SIMPLIFICACION"
 					) {
 						errors.push(
-							`La entidad "${entityName}" no puede tener argumentType "NO VINCULADO A OBJETIVOS" ni "SIMPLIFICACION" cuando scopeDecision.include es true.`
+							`La entidad "${entityName}" se encuentra incluída en el alcance por lo que no puede tener como tipo de argumento los valores "NO VINCULADO A OBJETIVOS" ni "SIMPLIFICACION".`
 						);
 					}
 
@@ -625,7 +638,7 @@ export class VersionService {
 								property.detailLevelDecision.justification.trim() === ""
 							) {
 								errors.push(
-									`La propiedad ${propIndex + 1} de la entidad "${entityName}" debe tener una justificación.`
+									`La propiedad ${propIndex + 1} de la entidad "${entityName}" se encuentra incluída en el alcance por lo que debe tener una justificación.`
 								);
 							}
 							if (property.detailLevelDecision?.include === true) {

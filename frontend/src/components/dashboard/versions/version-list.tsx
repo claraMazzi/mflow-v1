@@ -232,19 +232,6 @@ const VersionList = ({
 								content: (
 									<Button
 										variant={"optionList"}
-										onClick={() => handleFinalizeVersion(version)}
-										className={cn({
-											hidden: version.state !== "EN EDICION",
-										})}
-									>
-										Finalizar Versión
-									</Button>
-								),
-							},
-							{
-								content: (
-									<Button
-										variant={"optionList"}
 										onClick={() => handleExportVersion(version)}
 									>
 										Exportar Versión
