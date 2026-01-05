@@ -1,9 +1,9 @@
 import { Schema, model } from "mongoose";
 
 export enum ProjectState {
-  Created = "CREADO",
-  Pending = "PENDIENTE DE ELIMINACION",
-  Deleted = "ELIMINADO",
+  CREATED = "CREADO",
+  PENDING = "PENDIENTE DE ELIMINACION",
+  DELETED = "ELIMINADO",
 }
 
 export const PROJECT_STATES = Object.values(ProjectState);

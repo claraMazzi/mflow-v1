@@ -1,8 +1,12 @@
 import { Schema, SchemaTypes, model } from "mongoose";
 
-export const USER_ROLES = ["VERIFICADOR", "MODELADOR", "ADMIN"] as const;
+export enum UserRole {
+	VERIFICADOR = "VERIFICADOR",
+	MODELADOR = "MODELADOR",
+	ADMIN = "ADMIN",
+}
 
-export type UserRole = typeof USER_ROLES[number];
+export const USER_ROLES = Object.values(UserRole);
 
 const userSchema = new Schema(
 	{
