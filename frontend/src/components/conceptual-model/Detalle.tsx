@@ -280,6 +280,15 @@ export default function Detalle({
 }: DetalleProps) {
   // State to track which entities are collapsed
   const [collapsedEntities, setCollapsedEntities] = useState<Set<string>>(new Set());
+  const [includedEntities, setIncludedEntities] = useState<Set<string>>(new Set());
+  const [excludedEntities, setExcludedEntities] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (entitiesList && entitiesList.fields.length > 0) {
+      setIncludedEntities(new Set(entitiesList.fields.filter(entity => entity.scopeDecision?.include === true).map(entity => entity._id)));
+      setExcludedEntities(new Set(entitiesList.fields.filter(entity => entity.scopeDecision?.include === false).map(entity => entity._id)));
+    }
+  }, [entitiesList]);
 
   // Toggle collapse state for a specific entity
   const toggleCollapse = (entityId: string) => {
@@ -299,13 +308,14 @@ export default function Detalle({
       <div className="space-y-2">
         <p className="text-lg font-bold text-center">Detalle de Propiedades de Entidades</p>
         <p className="text-sm text-gray-500">
-          Gestiona las propiedades de cada entidad del modelo de simulación
+          Gestiona las propiedades de cada una de las entidades <strong>incluídas</strong> en el alcance del modelo de simulación
         </p>
       </div>
 
-      {entitiesList.fields.map((entity, index) => {
-        const isCollapsed = collapsedEntities.has(entity._id);
-        
+        {includedEntities.size > 0 && Array.from(includedEntities).map((entityId, index) => {
+          const entity = entitiesList.fields.find(entity => entity._id === entityId);
+          if (entity) {
+            const isCollapsed = collapsedEntities.has(entity._id);
         return (
           <div key={entity._id} className="border border-gray-200 rounded-lg bg-gray-50">
             {/* Collapsible Header */}
@@ -345,7 +355,19 @@ export default function Detalle({
             </div>
           </div>
         );
-      })}
+        }
+        
+      })} 
+      {excludedEntities.size > 0 && Array.from(excludedEntities).map((entityId) => {
+        const entity = entitiesList.fields.find(entity => entity._id === entityId);
+        if (entity) {
+          return (
+            <div key={entity._id} className="border border-gray-200 rounded-lg bg-gray-50">
+              <p className="text-lg font-medium text-gray-900">Entidad: <strong>{entity.name}</strong></p>
+            </div>
+          ); } 
+          
+          })}
     </div>
   );
 }

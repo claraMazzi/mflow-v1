@@ -638,13 +638,13 @@ export class VersionService {
 								property.detailLevelDecision.justification.trim() === ""
 							) {
 								errors.push(
-									`La propiedad ${propIndex + 1} de la entidad "${entityName}" se encuentra incluída en el alcance por lo que debe tener una justificación.`
+									`La propiedad ${propIndex + 1} de la entidad "${entityName}" no puede tener una justificación vacía.`
 								);
 							}
 							if (property.detailLevelDecision?.include === true) {
 								if (property.detailLevelDecision.argumentType === "SIMPLIFICACION") {
 									errors.push(
-										`La propiedad ${propIndex + 1} de la entidad "${entityName}" no puede tener argumentType "SIMPLIFICACION" cuando include es true.`
+										`La propiedad ${propIndex + 1} de la entidad "${entityName}" está incluída en el alcance por lo que no puede tener como tipo de argumento el valor "SIMPLIFICACION".`
 									);
 								}
 							}

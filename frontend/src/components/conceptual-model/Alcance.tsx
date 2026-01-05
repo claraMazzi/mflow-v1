@@ -28,12 +28,16 @@ type CustomRegisterFieldFn = ({
   ref: (instance: HTMLInputElement | HTMLTextAreaElement | null) => void;
 };
 
+// Type for watch function
+type WatchFn = (name?: string) => unknown;
+
 // Extracted component to prevent infinite re-renders from inline customRegisterField calls
 interface EntityScopeEditorProps {
   entity: FieldArrayWithId<ConceptualModel, "entities", "id">;
   index: number;
   hasEditingRights: boolean;
   customRegisterField: CustomRegisterFieldFn;
+  watch: WatchFn;
 }
 
 function EntityScopeEditor({
@@ -41,6 +45,7 @@ function EntityScopeEditor({
   index,
   hasEditingRights,
   customRegisterField,
+  watch,
 }: EntityScopeEditorProps) {
   // Register fields once at component level, not inside callbacks
   const includeFieldRegistration = useMemo(
@@ -57,6 +62,10 @@ function EntityScopeEditor({
     [customRegisterField, index]
   );
 
+  // Watch the current form values to ensure the select updates when changed
+  const includeValue = watch(`entities.${index}.scopeDecision.include`);
+  const argumentTypeValue = watch(`entities.${index}.scopeDecision.argumentType`);
+
   return (
     <div className="p-4 pt-0 space-y-4">
       <div className="space-y-2">
@@ -69,7 +78,7 @@ function EntityScopeEditor({
             "w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
           )}
           disabled={!hasEditingRights}
-          value={String(entity.scopeDecision?.include ?? true)}
+          value={String(includeValue ?? entity.scopeDecision?.include ?? true)}
           onChange={(e) => {
             includeFieldRegistration.onChange(e as unknown as ChangeEvent<HTMLInputElement | HTMLTextAreaElement>);
           }}
@@ -106,7 +115,7 @@ function EntityScopeEditor({
           name={`entities.${index}.scopeDecision.argumentType`}
           className="w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
           disabled={!hasEditingRights}
-          value={entity.scopeDecision?.argumentType ?? "SALIDA"}
+          value={(argumentTypeValue as string) ?? entity.scopeDecision?.argumentType ?? "SALIDA"}
           onChange={(e) => {
             argumentTypeFieldRegistration.onChange(e as unknown as ChangeEvent<HTMLInputElement | HTMLTextAreaElement>);
           }}
@@ -133,12 +142,14 @@ interface AlcanceProps {
   hasEditingRights: boolean;
   entitiesList: ReturnType<typeof useFieldArray<ConceptualModel, "entities">>;
   customRegisterField: CustomRegisterFieldFn;
+  watch: WatchFn;
 }
 
 export default function Alcance({
   hasEditingRights,
   entitiesList,
   customRegisterField,
+  watch,
 }: AlcanceProps) {
   // State to track which entities are collapsed
   const [collapsedEntities, setCollapsedEntities] = useState<Set<string>>(new Set());
@@ -202,6 +213,7 @@ export default function Alcance({
                 index={index}
                 hasEditingRights={hasEditingRights}
                 customRegisterField={customRegisterField}
+                watch={watch}
               />
             </div>
           </div>

@@ -823,6 +823,7 @@ export default function Page({
                 hasEditingRights={hasEditingRights}
                 entitiesList={entitiesList}
                 customRegisterField={customRegisterField}
+                watch={watch}
               />
             </TabsContent>
 
