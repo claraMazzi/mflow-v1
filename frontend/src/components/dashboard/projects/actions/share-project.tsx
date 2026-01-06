@@ -71,8 +71,7 @@ export const sendProjectCollaborationInvitation = async (
 };
 
 export const getProjectSharingLink = async (
-	prevState: ActionState,
-	formData: FormData
+	projectId: string
 ): Promise<ActionState> => {
 	try {
 		// NextAuth v5 uses auth() instead of getServerSession
@@ -82,9 +81,7 @@ export const getProjectSharingLink = async (
 				error: "Tu sesión ha expirado. Por favor, inicie sesión nuevamente.",
 			};
 		}
-		const projectId = formData.get("id") as string;
 
-		// Validate required fields
 		if (!projectId) {
 			return { error: "El identificador del proyecto es obligatorio." };
 		}
@@ -125,6 +122,78 @@ export const getProjectSharingLink = async (
 		return {
 			error:
 				"Se ha producido un error al obtener el link para compartir el proyecto. Por favor, inténtelo de nuevo más tarde.",
+		};
+	}
+};
+
+export const removeCollaboratorFromProject = async (
+	{ collaboratorId, projectId }: { collaboratorId: string; projectId: string }
+): Promise<ActionState> => {
+	try {
+		// NextAuth v5 uses auth() instead of getServerSession
+		const session = await auth();
+
+		if (!session?.user) {
+			return {
+				success: false,
+				error: "Tu sesión ha expirado. Por favor, inicie sesión nuevamente.",
+			};
+		}
+
+		// Validate required fields
+		if (!projectId) {
+			return {
+				success: false,
+				error: "El identificador del proyecto es obligatorio.",
+			};
+		}
+
+		if (!collaboratorId) {
+			return {
+				success: false,
+				error: "El identificador del colaborador a remover obligatorio.",
+			};
+		}
+
+		const accessToken = session.auth;
+
+		if (!accessToken) {
+			return {
+				success: false,
+				error: "Tu sesión ha expirado. Por favor, inicie sesión nuevamente.",
+			};
+		}
+
+		const response = await fetch(
+			`${process.env.API_URL}/api/projects/${projectId}/collaboration/${collaboratorId}`,
+			{
+				method: "DELETE",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${accessToken}`,
+				},
+			}
+		);
+
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			return {
+				success: false,
+				error:
+					errorData.error ||
+					"Se ha producido un error al remover al colaborador del proyecto. Por favor, inténtelo de nuevo más tarde.",
+			};
+		}
+
+		const data = await response.json();
+
+		return { success: true, data };
+	} catch (error) {
+		console.error("Remove collaborator from project error:", error);
+		return {
+			success: false,
+			error:
+				"Se ha producido un error al remover al colaborador del proyecto. Por favor, inténtelo de nuevo más tarde.",
 		};
 	}
 };

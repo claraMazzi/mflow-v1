@@ -53,10 +53,8 @@ export class ProjectController {
 				.status(401)
 				.json({ error: "El id del proyecto es obligatorio." });
 		}
-		const userSession = req.session;
-		if (!userSession) {
-			return res.status(401).json({ error: "Unauthorized" });
-		}
+		const userSession = req.session!;
+
 		this.projectService
 			.getProjectByIdWithCollaborators({ projectId, userSession })
 			.then((project) => res.json(project))

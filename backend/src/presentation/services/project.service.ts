@@ -138,6 +138,7 @@ export class ProjectService {
 		})
 			.populate({
 				path: "collaborators",
+				select: ["name", "lastName", "email"],
 				match: { deletedAt: null },
 			})
 			.exec();
@@ -156,6 +157,7 @@ export class ProjectService {
 		})
 			.populate({
 				path: "collaborators",
+				select: ["name", "lastName", "email"],
 				match: { deletedAt: null },
 			})
 			.exec();
@@ -228,6 +230,7 @@ export class ProjectService {
 		const project = await ProjectModel.findOne({ _id: projectId })
 			.populate({
 				path: "collaborators",
+				select: ["name", "lastName", "email"],
 				match: { deletedAt: null },
 			})
 			.exec();
@@ -240,7 +243,7 @@ export class ProjectService {
 		if (project.state == ProjectState.DELETED)
 			throw CustomError.badRequest("El proyecto solicitado fue eliminado.");
 
-		const projectEntity = ProjectEntity.fromObject(project);
+		const projectEntity = ProjectEntity.fromObject(project, {includeCollaborators: true});
 
 		return {
 			project: projectEntity,

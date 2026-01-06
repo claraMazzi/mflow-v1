@@ -8,10 +8,13 @@ import QRCode from "qrcode";
 import {
 	sendProjectCollaborationInvitation,
 	getProjectSharingLink,
+	removeCollaboratorFromProject,
 } from "../actions/share-project";
-import { ProjectEntity } from "#types/project";
+import { ProjectCollaborator, ProjectEntity } from "#types/project";
 import { useUI } from "@components/ui/context";
 import { toast } from "sonner";
+import { useSession } from "@node_modules/next-auth/react";
+import { Collaborator } from "@src/types/collaboration";
 
 export type ShareProjectFormData = {
 	id: string;
@@ -19,7 +22,6 @@ export type ShareProjectFormData = {
 };
 
 interface ShareProjectFormProps {
-	onSuccess?: () => void;
 	project: ProjectEntity;
 }
 
@@ -28,58 +30,39 @@ const initialState = {
 	success: false,
 };
 
-export const ShareProjectForm = ({
-	onSuccess,
-	project,
-}: ShareProjectFormProps) => {
+export const ShareProjectForm = ({ project }: ShareProjectFormProps) => {
 	const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
 	const [shareLink, setShareLink] = useState<string>("");
 	const [emailInput, setEmailInput] = useState<string>("");
 	const [error, setError] = useState<string | undefined>();
-
-	const validateEmail = (value: string) => {
-		// basic email regex, good enough for most cases
-		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-		return emailRegex.test(value);
-	};
-
-	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const value = e.target.value;
-		setEmailInput(value);
-
-		// live validation
-		if (value && !validateEmail(value)) {
-			setError("Por favor, ingrese un email válido.");
-		} else {
-			setError(undefined);
-		}
-	};
+	const { data: session } = useSession();
 
 	const [newCollaborators, setNewCollaborators] = useState<string[]>([]);
-	const [existingCollaborators] = useState<string[]>(
-		project.collaborators.map((item) => item.email)
-	);
 	const { closeModal } = useUI();
 
 	const [inviteState, inviteAction, isInvitePending] = useActionState(
 		sendProjectCollaborationInvitation,
 		initialState
 	);
-
-	const [linkState, linkAction, isLinkPending] = useActionState(
-		getProjectSharingLink,
-		initialState
-	);
+	const [existingCollaborators, setExistingCollaborators] = useState<
+		ProjectCollaborator[]
+	>([]);
+	const [isLoadingExistingCollaborators, setIsLoadingExistingCollaborators] =
+		useState(true);
+	const [existingCollaboratorsError, setExistingCollaboratorsError] = useState<
+		string | null
+	>(null);
+	const [isCollaboratorRemovalPending, setIsCollaboratorRemovalPending] =
+		useState(true);
+	const [collaboratorRemovalError, setCollaboratorRemovalError] = useState<
+		string | null
+	>(null);
 
 	// Generate QR code and get sharing link on component mount
 	useEffect(() => {
 		const generateQRAndLink = async () => {
-			// Get sharing link from server
-			const formData = new FormData();
-			formData.append("id", project.id);
-
 			try {
-				const result = await getProjectSharingLink(initialState, formData);
+				const result = await getProjectSharingLink(project.id);
 
 				if (result.success && result.data?.shareLink) {
 					const link = result.data.shareLink;
@@ -101,13 +84,58 @@ export const ShareProjectForm = ({
 			}
 		};
 
-		generateQRAndLink();
-	}, [project.id]);
+		const fetchProjectCollaborators = async () => {
+			setIsLoadingExistingCollaborators(true);
+			setExistingCollaboratorsError(null);
+			try {
+				const response = await fetch(
+					`${process.env.NEXT_PUBLIC_API_URL}/api/projects/${project.id}`,
+					{
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${session?.auth}`,
+						},
+					}
+				);
 
-	const addCollaborator = () => {
+				if (!response.ok) {
+					const errorData = await response.json().catch(() => ({}));
+					setExistingCollaboratorsError(
+						errorData.error ||
+							"Error al obtener los colaboradores del proyecto desde el servidor."
+					);
+				}
+
+				const data: { project: { collaborators: ProjectCollaborator[] } } =
+					await response.json();
+
+				console.log("Returned collaborators: ", data.project.collaborators);
+				setExistingCollaborators(data.project.collaborators);
+			} catch (error) {
+				console.error(
+					`Unexpected error during fething of Collaborators for project: ${project.id}`,
+					error
+				);
+				setExistingCollaboratorsError(
+					"Error al obtener los colaboradores del proyecto desde el servidor."
+				);
+			} finally {
+				setIsLoadingExistingCollaborators(false);
+			}
+		};
+
+		if (session?.auth) {
+			generateQRAndLink();
+			fetchProjectCollaborators();
+		}
+	}, [project.id, session?.auth]);
+
+	const addNewCollaborator = () => {
 		if (emailInput.trim() && validateEmail(emailInput)) {
 			if (newCollaborators.includes(emailInput.trim())) {
-				setError("Este email ya se encuentra en la lista de personas a agregar al proyecto.");
+				setError(
+					"Este email ya se encuentra en la lista de personas a agregar al proyecto."
+				);
 				return;
 			}
 
@@ -116,7 +144,7 @@ export const ShareProjectForm = ({
 		}
 	};
 
-	const removeCollaborator = (email: string) => {
+	const removeNewCollaborator = (email: string) => {
 		setNewCollaborators(newCollaborators.filter((c) => c !== email));
 	};
 
@@ -129,7 +157,7 @@ export const ShareProjectForm = ({
 		}
 	};
 
-	const sendInvitations = async () => {
+	const sendInvitations = () => {
 		if (newCollaborators.length === 0) return;
 
 		const formData = new FormData();
@@ -140,7 +168,47 @@ export const ShareProjectForm = ({
 		});
 	};
 
-	if (inviteState?.success && onSuccess) {
+	const validateEmail = (value: string) => {
+		// basic email regex, good enough for most cases
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		return emailRegex.test(value);
+	};
+
+	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value;
+		setEmailInput(value);
+
+		// live validation
+		if (value && !validateEmail(value)) {
+			setError("Por favor, ingrese un email válido.");
+		} else {
+			setError(undefined);
+		}
+	};
+
+	const removeCollaborator = (collaboratorId: string) => {
+		startTransition(async () => {
+			setIsCollaboratorRemovalPending(true);
+			setCollaboratorRemovalError(null);
+
+			const actionResult = await removeCollaboratorFromProject({
+				projectId: project.id,
+				collaboratorId,
+			});
+
+			setIsCollaboratorRemovalPending(false);
+
+			if (actionResult.success) {
+				setExistingCollaborators((prevCollaborators) => {
+					return prevCollaborators.filter((c) => c.id !== collaboratorId);
+				});
+			} else {
+				setCollaboratorRemovalError(actionResult.error!);
+			}
+		});
+	};
+
+	if (inviteState?.success) {
 		return (
 			<div className="flex flex-col gap-4 justify-center p-2 items-center">
 				<h2 className="font-medium">
@@ -199,13 +267,13 @@ export const ShareProjectForm = ({
 						placeholder="Ingresa email"
 						value={emailInput}
 						onChange={handleChange}
-						onKeyPress={(e) => e.key === "Enter" && addCollaborator()}
+						onKeyPress={(e) => e.key === "Enter" && addNewCollaborator()}
 						className="flex-1"
 						containerClassName="w-full"
 						error={error}
 					/>
 					<Button
-						onClick={addCollaborator}
+						onClick={addNewCollaborator}
 						size="sm"
 						variant="outline"
 						className="px-3 bg-transparent"
@@ -231,7 +299,8 @@ export const ShareProjectForm = ({
 							>
 								<span className="text-sm text-gray-900">{email}</span>
 								<button
-									onClick={() => removeCollaborator(email)}
+									disabled={isCollaboratorRemovalPending}
+									onClick={() => removeNewCollaborator(email)}
 									className="text-gray-400 hover:text-red-500"
 								>
 									<X size={16} />
@@ -255,30 +324,41 @@ export const ShareProjectForm = ({
 				<h3 className="text-sm font-medium text-gray-700 mb-3">
 					Personas que tienen acceso
 				</h3>
-				<div className="bg-gray-50 rounded-lg p-3">
-					<div className="flex justify-between text-xs font-medium text-gray-600 mb-2">
-						<span>Integrante</span>
-						<span>Acción</span>
+				{existingCollaboratorsError ? (
+					<div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+						<p className="text-sm text-red-600">{existingCollaboratorsError}</p>
 					</div>
-					{existingCollaborators.map((email, index) => (
-						<div
-							key={index}
-							className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0"
-						>
-							<span className="text-sm text-gray-900">{email}</span>
-							<button className="text-gray-400 hover:text-red-500">
-								<X size={16} />
-							</button>
+				) : (
+					<div className="bg-gray-50 rounded-lg p-3">
+						<div className="flex justify-between text-xs font-medium text-gray-600 mb-2">
+							<span>Integrante</span>
+							<span>Acción</span>
 						</div>
-					))}
-				</div>
+						{existingCollaborators.map((collaborator) => (
+							<div
+								key={collaborator.id}
+								className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0"
+							>
+								<span className="text-sm text-gray-900">
+									{collaborator.email}
+								</span>
+								<button
+									className="text-gray-400 hover:text-red-500"
+									onClick={() => removeCollaborator(collaborator.id)}
+								>
+									<X size={16} />
+								</button>
+							</div>
+						))}
+					</div>
+				)}
 			</div>
 
 			{/* Error Messages */}
-			{(inviteState?.error || linkState?.error) && (
+			{(inviteState?.error || collaboratorRemovalError) && (
 				<div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
 					<p className="text-sm text-red-600">
-						{inviteState?.error || linkState?.error}
+						{inviteState?.error || collaboratorRemovalError}
 					</p>
 				</div>
 			)}

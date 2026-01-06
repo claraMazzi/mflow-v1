@@ -50,7 +50,11 @@ const ProjectList = ({
 			title: "Compartir proyecto",
 			size: "md",
 			showCloseButton: false,
-			content: <ShareProjectForm project={project} />,
+			content: (
+				<ShareProjectForm
+					project={project}
+				/>
+			),
 		});
 	};
 
