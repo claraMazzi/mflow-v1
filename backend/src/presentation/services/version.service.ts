@@ -7,6 +7,8 @@ import {
 import { VersionImage } from "../../data/mongo/models/version-image.model";
 import { Assumption, Input, Simplification, Output, Entity, ConceptualModel } from "../../data/mongo/models/subdocuments-schemas";
 
+const plantumlEncoder = require("plantuml-encoder");
+
 // Valid states for parent versions
 const VALID_PARENT_VERSION_STATES = ["FINALIZADA", "PENDIENTE DE REVISION", "REVISADA"];
 
@@ -507,8 +509,36 @@ export class VersionService {
 			});
 		}
 
+		// Helper function to validate PlantUML code by calling the PlantUML server
+		const validatePlantUMLCode = async (plantTextCode: string): Promise<{ isValid: boolean; error?: string }> => {
+			try {
+				const encoded = plantumlEncoder.encode(plantTextCode);
+				// Use the /txt/ endpoint to get text output - errors are clearly indicated in the response
+				const response = await fetch(`http://www.plantuml.com/plantuml/txt/${encoded}`);
+				
+				if (!response.ok) {
+					return { isValid: false, error: "No se pudo validar el código PlantText con el servidor." };
+				}
+				
+				const textOutput = await response.text();
+				
+				// Check for common error indicators in PlantUML text output
+				if (textOutput.includes("Syntax Error") || 
+					textOutput.includes("@startuml") === false && textOutput.includes("Error") ||
+					textOutput.includes("Not valid")) {
+					return { isValid: false, error: textOutput.trim() };
+				}
+				
+				return { isValid: true };
+			} catch (error) {
+				console.error("Error validating PlantUML code:", error);
+				// If we can't reach the server, we'll skip validation and add a warning instead
+				return { isValid: true }; // Don't block if server is unreachable
+			}
+		};
+
 		// Validate diagramSchema fields (structureDiagram and flowDiagram)
-		const validateDiagram = (
+		const validateDiagram = async (
 			diagram: any,
 			diagramName: string
 		) => {
@@ -522,7 +552,14 @@ export class VersionService {
 				console.log("Diagram uses PlantText: ", diagram.plantTextCode);
 				if (!diagram.plantTextCode || diagram.plantTextCode.trim() === "") {
 					errors.push(`El código PlantText del diagrama ${diagramName} no puede estar vacío cuando usesPlantText está activado.`);
+				} else {
+					// Validate that the plantTextCode is valid by calling PlantUML server
+					const validation = await validatePlantUMLCode(diagram.plantTextCode);
+					if (!validation.isValid) {
+						errors.push(`El código PlantText del diagrama ${diagramName} contiene errores de sintaxis: ${validation.error || "código inválido"}`);
+					}
 				}
+				
 				// Check if there's an image and add warning
 				if (diagram.imageFileId && diagram.imageFileId !== null) {
 					warnings.push(`Se eliminará la imagen del diagrama ${diagramName} ya que se está usando PlantText.`);
@@ -534,6 +571,7 @@ export class VersionService {
 				if (!diagram.imageFileId || diagram.imageFileId === null) {
 					errors.push(`El diagrama ${diagramName} debe tener una imagen cuando usesPlantText está desactivado.`);
 				}
+				
 			} else {
 				// usesPlantText is undefined - diagram is not properly configured
 				errors.push(`El diagrama ${diagramName} debe especificar si usa PlantText o una imagen.`);
@@ -543,13 +581,13 @@ export class VersionService {
 		// Validate structureDiagram if the object exists
 		if (model.structureDiagram) {
 			console.log("Structure Diagram: ", model.structureDiagram);
-			validateDiagram(model.structureDiagram, "de estructura");
+			await validateDiagram(model.structureDiagram, "de estructura");
 		}
 
 		// Validate flowDiagram if the object exists
 		if (model.flowDiagram) {
 			console.log("Flow Diagram: ", model.flowDiagram);
-			validateDiagram(model.flowDiagram, "de flujo");
+			await validateDiagram(model.flowDiagram, "de flujo");
 		}
 
 		// Validate inputs
@@ -585,7 +623,8 @@ export class VersionService {
 
 		// Validate entities
 		if (model.entities) {
-			model.entities.forEach((entity: Entity, entityIndex: number) => {
+			for (let entityIndex = 0; entityIndex < model.entities.length; entityIndex++) {
+				const entity: Entity = model.entities[entityIndex];
 				const entityName = entity.name || `Entidad ${entityIndex + 1}`;
 
 				// Check if entity has empty dynamicDiagram
@@ -605,7 +644,7 @@ export class VersionService {
 					entity.dynamicDiagram.imageFileId ||
 					(entity.dynamicDiagram.plantTextCode && entity.dynamicDiagram.plantTextCode.trim() !== "")
 				)) {
-					validateDiagram(entity.dynamicDiagram, `de dinamica de la entidad "${entityName}"`);
+					await validateDiagram(entity.dynamicDiagram, `de dinamica de la entidad "${entityName}"`);
 				}
 
 				if (entity.scopeDecision === undefined) {
@@ -638,7 +677,8 @@ export class VersionService {
 						errors.push(`La entidad "${entityName}" debe tener al menos una propiedad cuando scopeDecision.include es true.`);
 					} else {
 						// Validate each property
-						entity.properties.forEach((property, propIndex) => {
+						for (let propIndex = 0; propIndex < entity.properties.length; propIndex++) {
+							const property = entity.properties[propIndex];
 							if (!property.name || property.name.trim() === "") {
 								errors.push(`La propiedad ${propIndex + 1} de la entidad "${entityName}" debe tener un nombre.`);
 							}
@@ -657,10 +697,10 @@ export class VersionService {
 									);
 								}
 							}
-						});
+						}
 					}
 				}
-			});
+			}
 		}
 
 		// If there are no errors, update the version state to "FINALIZADA"

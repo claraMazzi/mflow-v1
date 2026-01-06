@@ -7,7 +7,7 @@ import { Input } from "@components/ui/common/input";
 import { Button } from "@components/ui/common/button";
 import { X, Plus } from "lucide-react";
 
-// Type for the customRegisterField function
+// Type for the customRegisterField function - includes HTMLSelectElement for proper select handling
 type CustomRegisterFieldFn = ({
   name,
   propertyPath,
@@ -19,11 +19,11 @@ type CustomRegisterFieldFn = ({
   options?: RegisterOptions<ConceptualModel, Path<ConceptualModel>>;
   propagateUpdateOnChange?: boolean;
 }) => {
-  onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   readOnly: boolean;
   name: Path<ConceptualModel>;
-  ref: (instance: HTMLInputElement | HTMLTextAreaElement | null) => void;
+  ref: (instance: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null) => void;
 };
 
 // Extracted OutputItem component to properly handle select registration
@@ -53,6 +53,7 @@ function OutputItem({
   handleRemoveItemFromList,
 }: OutputItemProps) {
   // Register the entity select field once at component level
+  // The customRegisterField now properly handles select elements with immediate propagation
   const entityFieldRegistration = useMemo(
     () => customRegisterField({
       name: `outputs.${index}.entity` as Path<ConceptualModel>,
@@ -98,18 +99,11 @@ function OutputItem({
           Entidad
         </label>
         <select
-          name={`outputs.${index}.entity`}
-          className="w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
+          {...entityFieldRegistration}
+          className={`w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none ${
+            !hasEditingRights ? "bg-gray-100 cursor-not-allowed" : ""
+          }`}
           disabled={!hasEditingRights}
-          onChange={(e) => {
-            entityFieldRegistration.onChange(e as unknown as ChangeEvent<HTMLInputElement | HTMLTextAreaElement>);
-          }}
-          onBlur={(e) => {
-            entityFieldRegistration.onBlur(e as unknown as React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>);
-          }}
-          ref={(el) => {
-            entityFieldRegistration.ref(el as HTMLInputElement | HTMLTextAreaElement | null);
-          }}
         >
           {entitiesList.fields.map((entity) => (
             <option key={entity._id} value={entity._id}>
@@ -118,6 +112,88 @@ function OutputItem({
           ))}
         </select>
       </div>
+    </div>
+  );
+}
+
+// Extracted InputItem component to properly handle select registration
+interface InputItemProps {
+  field: FieldArrayWithId<ConceptualModel, "inputs", "id">;
+  index: number;
+  hasEditingRights: boolean;
+  customRegisterField: CustomRegisterFieldFn;
+  handleRemoveItemFromList: ({
+    e,
+    listPropertyPath,
+    itemId,
+  }: {
+    e: MouseEvent;
+    listPropertyPath: string;
+    itemId: string;
+  }) => void;
+}
+
+function InputItem({
+  field,
+  index,
+  hasEditingRights,
+  customRegisterField,
+  handleRemoveItemFromList,
+}: InputItemProps) {
+  // Register the type select field once at component level
+  const typeFieldRegistration = useMemo(
+    () => customRegisterField({
+      name: `inputs.${index}.type` as Path<ConceptualModel>,
+      propertyPath: `inputs:${field._id}.type`,
+    }),
+    [customRegisterField, index, field._id]
+  );
+
+  return (
+    <div className="flex items-end gap-3 p-3 bg-gray-50 rounded-lg border">
+      <div className="space-y-2 flex-1">
+        <label className="block text-sm font-medium text-gray-700">
+          {index + 1}. Descripción de la entrada
+        </label>
+        <Input
+          {...customRegisterField({
+            name: `inputs.${index}.description`,
+            propertyPath: `inputs:${field._id}.description`,
+          })}
+          placeholder="Describe la entrada..."
+          className="border-2 border-gray-200 focus:border-purple-400"
+        />
+      </div>
+      <div className="w-48 space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          Tipo de entrada
+        </label>
+        <select
+          {...typeFieldRegistration}
+          className={`w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none ${
+            !hasEditingRights ? "bg-gray-100 cursor-not-allowed" : ""
+          }`}
+          disabled={!hasEditingRights}
+        >
+          <option value="PARAMETRO">Parámetro</option>
+          <option value="FACTOR EXPERIMENTAL">Factor Experimental</option>
+        </select>
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={!hasEditingRights}
+        onClick={(e) =>
+          handleRemoveItemFromList({
+            e,
+            listPropertyPath: "inputs",
+            itemId: field._id,
+          })
+        }
+        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+      >
+        <X size={16} />
+      </Button>
     </div>
   );
 }
@@ -314,52 +390,14 @@ export default function ObjetivosEntradasSalidas({
           <div className="space-y-3">
             {inputList.fields.map((field, index) => {
               return (
-                <div
+                <InputItem
                   key={field.id}
-                  className="flex items-end gap-3 p-3 bg-gray-50 rounded-lg border"
-                >
-                  <div className="space-y-2 flex-1">
-                  <label className="block text-sm font-medium text-gray-700">
-                         {index + 1}. Descripción de la entrada
-                        </label>
-                    <Input
-                      {...customRegisterField({
-                        name: `inputs.${index}.description`,
-                        propertyPath: `inputs:${field._id}.description`,
-                      })}
-                      placeholder="Describe la entrada..."
-                      className="border-2 border-gray-200 focus:border-purple-400"
-                    />
-                  </div>
-                  <div className="w-48 space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                         Tipo de entrada
-                        </label>
-                    <select
-                      name={`inputs.${index}.type`}
-                      className="w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
-                      disabled={!hasEditingRights}
-                    >
-                      <option value="PARAMETRO">Parámetro</option>
-                      <option value="FACTOR EXPERIMENTAL">Factor Experimental</option>
-                    </select>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={!hasEditingRights}
-                    onClick={(e) =>
-                      handleRemoveItemFromList({
-                        e,
-                        listPropertyPath: "inputs",
-                        itemId: field._id,
-                      })
-                    }
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <X size={16} />
-                  </Button>
-                </div>
+                  field={field}
+                  index={index}
+                  hasEditingRights={hasEditingRights}
+                  customRegisterField={customRegisterField}
+                  handleRemoveItemFromList={handleRemoveItemFromList}
+                />
               );
             })}
           </div>

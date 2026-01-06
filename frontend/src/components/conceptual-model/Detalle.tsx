@@ -1,7 +1,20 @@
 "use client";
 
-import { ChangeEvent, MouseEvent, useEffect, useRef, useState, useMemo } from "react";
-import { useFieldArray, RegisterOptions, Path, Control, FieldArrayWithId } from "react-hook-form";
+import {
+  ChangeEvent,
+  MouseEvent,
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+} from "react";
+import {
+  useFieldArray,
+  RegisterOptions,
+  Path,
+  Control,
+  FieldArrayWithId,
+} from "react-hook-form";
 import { ConceptualModel } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
 import { Button } from "@components/ui/common/button";
@@ -9,7 +22,7 @@ import { X, Plus } from "lucide-react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import cn from "clsx";
 
-// Type for the customRegisterField function
+// Type for the customRegisterField function - includes HTMLSelectElement for proper select handling
 type CustomRegisterFieldFn = ({
   name,
   propertyPath,
@@ -21,11 +34,11 @@ type CustomRegisterFieldFn = ({
   options?: RegisterOptions<ConceptualModel, Path<ConceptualModel>>;
   propagateUpdateOnChange?: boolean;
 }) => {
-  onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   readOnly: boolean;
   name: Path<ConceptualModel>;
-  ref: (instance: HTMLInputElement | HTMLTextAreaElement | null) => void;
+  ref: (instance: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null) => void;
 };
 
 // Type for handleRemoveItemFromList function
@@ -52,7 +65,11 @@ type HandleAddItemToListFn = ({
 
 // Extracted component to prevent infinite re-renders from inline customRegisterField calls
 interface PropertyEditorProps {
-  field: FieldArrayWithId<ConceptualModel, `entities.${number}.properties`, "id">;
+  field: FieldArrayWithId<
+    ConceptualModel,
+    `entities.${number}.properties`,
+    "id"
+  >;
   propIndex: number;
   entityIndex: number;
   hasEditingRights: boolean;
@@ -68,18 +85,21 @@ function PropertyEditor({
   customRegisterField,
   handleRemoveItemFromList,
 }: PropertyEditorProps) {
-  // Register fields once at component level, not inside callbacks
+  // Register fields once at component level using useMemo
+  // The customRegisterField now properly handles select elements with immediate propagation
   const includeFieldRegistration = useMemo(
-    () => customRegisterField({
-      name: (`entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.include` as unknown) as Path<ConceptualModel>,
-    }),
+    () =>
+      customRegisterField({
+        name: `entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.include` as unknown as Path<ConceptualModel>,
+      }),
     [customRegisterField, entityIndex, propIndex]
   );
 
   const argumentTypeFieldRegistration = useMemo(
-    () => customRegisterField({
-      name: (`entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.argumentType` as unknown) as Path<ConceptualModel>,
-    }),
+    () =>
+      customRegisterField({
+        name: `entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.argumentType` as unknown as Path<ConceptualModel>,
+      }),
     [customRegisterField, entityIndex, propIndex]
   );
 
@@ -87,10 +107,12 @@ function PropertyEditor({
     <div className="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg border">
       <div className="flex items-end gap-3">
         <div className="flex-1 space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Nombre de la propiedad</label>
+          <label className="block text-sm font-medium text-gray-700">
+            Nombre de la propiedad
+          </label>
           <Input
             {...customRegisterField({
-              name: (`entities.${entityIndex}.properties.${propIndex}.name` as unknown) as Path<ConceptualModel>,
+              name: `entities.${entityIndex}.properties.${propIndex}.name` as unknown as Path<ConceptualModel>,
             })}
             placeholder="Nombre..."
             className="border-2 border-gray-200 focus:border-purple-400"
@@ -100,11 +122,13 @@ function PropertyEditor({
           variant="ghost"
           size="sm"
           disabled={!hasEditingRights}
-          onClick={(e) => handleRemoveItemFromList({
-            e: e,
-            listPropertyPath: `entities.${entityIndex}.properties`,
-            itemId: field._id,
-          })}
+          onClick={(e) =>
+            handleRemoveItemFromList({
+              e: e,
+              listPropertyPath: `entities.${entityIndex}.properties`,
+              itemId: field._id,
+            })
+          }
           className="text-red-500 hover:text-red-700 hover:bg-red-50"
         >
           <X size={16} />
@@ -113,20 +137,16 @@ function PropertyEditor({
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Incluir</label>
+          <label className="block text-sm font-medium text-gray-700">
+            Incluir
+          </label>
           <select
-            name={`entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.include`}
-            className="w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
+            {...includeFieldRegistration}
+            className={cn(
+              "w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none",
+              !hasEditingRights && "bg-gray-100 cursor-not-allowed"
+            )}
             disabled={!hasEditingRights}
-            onChange={(e) => {
-              includeFieldRegistration.onChange(e as unknown as ChangeEvent<HTMLInputElement | HTMLTextAreaElement>);
-            }}
-            onBlur={(e) => {
-              includeFieldRegistration.onBlur(e as unknown as React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>);
-            }}
-            ref={(el) => {
-              includeFieldRegistration.ref(el as HTMLInputElement | HTMLTextAreaElement | null);
-            }}
           >
             <option value="true">Incluir</option>
             <option value="false">Excluir</option>
@@ -134,10 +154,12 @@ function PropertyEditor({
         </div>
 
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Justificación</label>
+          <label className="block text-sm font-medium text-gray-700">
+            Justificación
+          </label>
           <Input
             {...customRegisterField({
-              name: (`entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.justification` as unknown) as Path<ConceptualModel>,
+              name: `entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.justification` as unknown as Path<ConceptualModel>,
             })}
             placeholder="Describe la justificación..."
             className="border-2 border-gray-200 focus:border-purple-400"
@@ -145,20 +167,16 @@ function PropertyEditor({
         </div>
 
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Tipo de argumento</label>
+          <label className="block text-sm font-medium text-gray-700">
+            Tipo de argumento
+          </label>
           <select
-            name={`entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.argumentType`}
-            className="w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
+            {...argumentTypeFieldRegistration}
+            className={cn(
+              "w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none",
+              !hasEditingRights && "bg-gray-100 cursor-not-allowed"
+            )}
             disabled={!hasEditingRights}
-            onChange={(e) => {
-              argumentTypeFieldRegistration.onChange(e as unknown as ChangeEvent<HTMLInputElement | HTMLTextAreaElement>);
-            }}
-            onBlur={(e) => {
-              argumentTypeFieldRegistration.onBlur(e as unknown as React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>);
-            }}
-            ref={(el) => {
-              argumentTypeFieldRegistration.ref(el as HTMLInputElement | HTMLTextAreaElement | null);
-            }}
           >
             <option value="CALCULO SALIDA">Cálculo de salida</option>
             <option value="DATO DE ENTRADA">Dato de entrada</option>
@@ -201,9 +219,9 @@ function EntityPropertiesEditor({
     if (propertiesList.fields.length > previousPropertiesLength.current) {
       // A new item was added, focus on the last one
       const lastIndex = propertiesList.fields.length - 1;
-      const input = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
-        `[name="entities.${entityIndex}.properties.${lastIndex}.name"]`
-      );
+      const input = document.querySelector<
+        HTMLInputElement | HTMLTextAreaElement
+      >(`[name="entities.${entityIndex}.properties.${lastIndex}.name"]`);
       if (input) {
         // Use setTimeout to ensure the DOM is updated
         setTimeout(() => {
@@ -253,7 +271,9 @@ function EntityPropertiesEditor({
       ) : (
         <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
           <p>No hay propiedades agregadas</p>
-          <p className="text-sm">Haz clic en &quot;Agregar Propiedad&quot; para comenzar</p>
+          <p className="text-sm">
+            Haz clic en &quot;Agregar Propiedad&quot; para comenzar
+          </p>
         </div>
       )}
     </div>
@@ -280,44 +300,52 @@ export default function Detalle({
   watch,
 }: DetalleProps) {
   // State to track which entities are collapsed
-  const [collapsedEntities, setCollapsedEntities] = useState<Set<string>>(new Set());
+  const [collapsedEntities, setCollapsedEntities] = useState<Set<string>>(
+    new Set()
+  );
 
   // Watch entities to get current form values (including scopeDecision.include changes from Alcance)
-  const watchedEntities = watch("entities") as Array<{
-    _id: string;
-    name: string;
-    scopeDecision?: { include?: boolean };
-  }> | undefined;
+  const watchedEntities = watch("entities") as
+    | Array<{
+        _id: string;
+        name: string;
+        scopeDecision?: { include?: boolean };
+      }>
+    | undefined;
 
   // Compute included/excluded entities from watched values
   const { includedEntities, excludedEntities } = useMemo(() => {
     if (!watchedEntities || !entitiesList?.fields) {
-      return { includedEntities: new Set<string>(), excludedEntities: new Set<string>() };
+      return {
+        includedEntities: new Set<string>(),
+        excludedEntities: new Set<string>(),
+      };
     }
-    
+
     const included = new Set<string>();
     const excluded = new Set<string>();
-    
+
     // Use entitiesList.fields for the _id values, but watchedEntities for the scopeDecision.include value
     entitiesList.fields.forEach((field, index) => {
       const watchedEntity = watchedEntities[index];
       const includeValue = watchedEntity?.scopeDecision?.include;
       // Handle both boolean and string values (select returns strings "true"/"false")
       // Default to true if include is undefined (matches backend default)
-      const isIncluded = includeValue !== false && String(includeValue) !== "false";
+      const isIncluded =
+        includeValue !== false && String(includeValue) !== "false";
       if (isIncluded) {
         included.add(field._id);
       } else {
         excluded.add(field._id);
       }
     });
-    
+
     return { includedEntities: included, excludedEntities: excluded };
   }, [watchedEntities, entitiesList?.fields]);
 
   // Toggle collapse state for a specific entity
   const toggleCollapse = (entityId: string) => {
-    setCollapsedEntities(prev => {
+    setCollapsedEntities((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(entityId)) {
         newSet.delete(entityId);
@@ -331,65 +359,89 @@ export default function Detalle({
   return (
     <div className="flex flex-col gap-6 p-6 bg-white rounded-lg shadow-sm">
       <div className="space-y-2">
-        <p className="text-lg font-bold text-center">Detalle de Propiedades de Entidades</p>
+        <p className="text-lg font-bold text-center">
+          Detalle de Propiedades de Entidades
+        </p>
         <p className="text-sm text-gray-500">
-          Gestiona las propiedades de cada una de las entidades <strong>incluídas</strong> en el alcance del modelo de simulación
+          Gestiona las propiedades de cada una de las entidades{" "}
+          <strong>incluídas</strong> en el alcance del modelo de simulación
         </p>
       </div>
 
-        {includedEntities.size > 0 && Array.from(includedEntities).map((entityId) => {
-          const entityIndex = entitiesList.fields.findIndex(entity => entity._id === entityId);
+      {includedEntities.size > 0 ? (
+        Array.from(includedEntities).map((entityId) => {
+          const entityIndex = entitiesList.fields.findIndex(
+            (entity) => entity._id === entityId
+          );
           const entity = entitiesList.fields[entityIndex];
           if (entity && entityIndex !== -1) {
             const isCollapsed = collapsedEntities.has(entity._id);
-        return (
-          <div key={entity._id} className="border border-gray-200 rounded-lg bg-gray-50">
-            {/* Collapsible Header */}
-            <button
-              onClick={() => toggleCollapse(entity._id)}
-              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-100 transition-colors duration-200 rounded-lg"
-            >
-              <div className="flex items-center gap-3">
-                {isCollapsed ? (
-                  <ChevronRight className="w-5 h-5 text-gray-500" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-gray-500" />
-                )}
-                <p className="text-lg font-medium text-gray-900">
-                  Entidad: <strong>{entity.name}</strong>
-                </p>
-              </div>
-            </button>
+            return (
+              <div
+                key={entity._id}
+                className="border border-gray-200 rounded-lg bg-gray-50"
+              >
+                {/* Collapsible Header */}
+                <button
+                  onClick={() => toggleCollapse(entity._id)}
+                  className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-100 transition-colors duration-200 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    {isCollapsed ? (
+                      <ChevronRight className="w-5 h-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-500" />
+                    )}
+                    <p className="text-lg font-medium text-gray-900">
+                      Entidad: <strong>{entity.name}</strong>
+                    </p>
+                  </div>
+                </button>
 
-            {/* Collapsible Content */}
-            <div
-              className={cn(
-                "overflow-hidden transition-all duration-300 ease-in-out",
-                isCollapsed ? "max-h-0 opacity-0" : "max-h-[500px] opacity-100"
-              )}
-            >
-              <div className="p-4 pt-0 space-y-4">
-                <EntityPropertiesEditor
-                  entityIndex={entityIndex}
-                  control={control}
-                  hasEditingRights={hasEditingRights}
-                  customRegisterField={customRegisterField}
-                  handleAddItemToList={handleAddItemToList}
-                  handleRemoveItemFromList={handleRemoveItemFromList}
-                />
+                {/* Collapsible Content */}
+                <div
+                  className={cn(
+                    "overflow-hidden transition-all duration-300 ease-in-out",
+                    isCollapsed
+                      ? "max-h-0 opacity-0"
+                      : "max-h-[500px] opacity-100"
+                  )}
+                >
+                  <div className="p-4 pt-0 space-y-4">
+                    <EntityPropertiesEditor
+                      entityIndex={entityIndex}
+                      control={control}
+                      hasEditingRights={hasEditingRights}
+                      customRegisterField={customRegisterField}
+                      handleAddItemToList={handleAddItemToList}
+                      handleRemoveItemFromList={handleRemoveItemFromList}
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        );
-        }
-        return null;
-      })} 
+            );
+          }
+          return null;
+        })
+      ) : (
+        <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+          <p>No hay entidades incluidas para gestionar propiedades</p>
+          <p className="text-sm">
+            Ingrese al menos una entidad en la seccion &quot;Entidades y Diagramas Dinámicas&quot; para poder definir el nivel de detalle de las mismas en el modelo conceptual
+          </p>
+        </div>
+      )}
       {excludedEntities.size > 0 && (
         <div className="p-8 text-bordo-800 bg-bordo-50 rounded-lg border-2 border-dashed border-bordo-300">
-          <p>Las siguientes entidades <strong>no fueron incluidas</strong> en el alcance del modelo de simulación:</p>
+          <p>
+            Las siguientes entidades <strong>no fueron incluidas</strong> en el
+            alcance del modelo de simulación:
+          </p>
           <ul className="list-disc list-inside ml-2">
             {Array.from(excludedEntities).map((entityId) => {
-              const entity = entitiesList.fields.find(entity => entity._id === entityId);
+              const entity = entitiesList.fields.find(
+                (entity) => entity._id === entityId
+              );
               if (entity) {
                 return <li key={entity._id}>{entity.name}</li>;
               }

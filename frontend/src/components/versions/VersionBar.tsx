@@ -5,13 +5,13 @@ import {
   EditingRequest,
 } from "@hooks/use-request-editing-rights";
 import { Collaborator } from "#types/collaboration";
-import { Check, Edit } from "lucide-react";
+import { ArrowLeft, Check, Edit } from "lucide-react";
 import { useUI } from "../ui/context";
 import { CollaboratorAvatar } from "./CollaboratorAvatar";
 import { Socket } from "socket.io-client";
 import { ConceptualModel, ImageInfo } from "#types/conceptual-model";
 import { exportVersionToExcel } from "@lib/export-version";
-
+import { useRouter } from "next/navigation";
 interface VersionBarProps {
   canUserSendEditingRequest: boolean;
   handleRequestEditingRights: () => void;
@@ -51,7 +51,7 @@ const VersionBar = ({
 }: VersionBarProps) => {
   const { addEditingRequestToast, removeEditingRequestToast } = useUI();
   const shownRequestsRef = useRef<Set<string>>(new Set());
-
+  const router = useRouter();
   const handleExport = async () => {
     await exportVersionToExcel({
       conceptualModel,
@@ -108,7 +108,10 @@ const VersionBar = ({
   return (
     <div className="bg-blue-50 h-16 flex justify-between items-center p-4">
       <div className="flex items-center w-full justify-between">
+        <div className="flex items-center gap-2">
+<ArrowLeft className="w-5 h-5 text-gray-500" onClick={() => router.push(`/dashboard`)} />
         <p className="text-lg font-bold">{title}</p>
+        </div>
         <div className="flex items-center gap-3">
           {/* Active collaborators avatars */}
           <div className="flex items-center gap-2 -space-x-2">

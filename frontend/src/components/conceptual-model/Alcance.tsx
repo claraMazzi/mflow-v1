@@ -7,7 +7,7 @@ import { Input } from "@components/ui/common/input";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import cn from "clsx";
 
-// Type for the customRegisterField function
+// Type for the customRegisterField function - includes HTMLSelectElement for proper select handling
 type CustomRegisterFieldFn = ({
   name,
   propertyPath,
@@ -19,13 +19,13 @@ type CustomRegisterFieldFn = ({
   options?: RegisterOptions<ConceptualModel, Path<ConceptualModel>>;
   propagateUpdateOnChange?: boolean;
 }) => {
-  onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   onBlur: (
-    e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => void;
   readOnly: boolean;
   name: Path<ConceptualModel>;
-  ref: (instance: HTMLInputElement | HTMLTextAreaElement | null) => void;
+  ref: (instance: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null) => void;
 };
 
 // Type for watch function
@@ -47,7 +47,8 @@ function EntityScopeEditor({
   customRegisterField,
   watch,
 }: EntityScopeEditorProps) {
-  // Register fields once at component level, not inside callbacks
+  // Register fields once at component level using useMemo
+  // The customRegisterField now properly handles select elements with immediate propagation
   const includeFieldRegistration = useMemo(
     () => customRegisterField({
       name: `entities.${index}.scopeDecision.include` as Path<ConceptualModel>,
@@ -73,21 +74,13 @@ function EntityScopeEditor({
           Incluir
         </label>
         <select
-          name={`entities.${index}.scopeDecision.include`}
+          {...includeFieldRegistration}
           className={cn(
-            "w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
+            "w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none",
+            !hasEditingRights && "bg-gray-100 cursor-not-allowed"
           )}
           disabled={!hasEditingRights}
           value={String(includeValue ?? entity.scopeDecision?.include ?? true)}
-          onChange={(e) => {
-            includeFieldRegistration.onChange(e as unknown as ChangeEvent<HTMLInputElement | HTMLTextAreaElement>);
-          }}
-          onBlur={(e) => {
-            includeFieldRegistration.onBlur(e as unknown as React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>);
-          }}
-          ref={(el) => {
-            includeFieldRegistration.ref(el as HTMLInputElement | HTMLTextAreaElement | null);
-          }}
         >
           <option value="true">Incluir</option>
           <option value="false">Excluir</option>
@@ -112,19 +105,13 @@ function EntityScopeEditor({
           Tipo de argumento
         </label>
         <select
-          name={`entities.${index}.scopeDecision.argumentType`}
-          className="w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none"
+          {...argumentTypeFieldRegistration}
+          className={cn(
+            "w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none",
+            !hasEditingRights && "bg-gray-100 cursor-not-allowed"
+          )}
           disabled={!hasEditingRights}
           value={(argumentTypeValue as string) ?? entity.scopeDecision?.argumentType ?? "SALIDA"}
-          onChange={(e) => {
-            argumentTypeFieldRegistration.onChange(e as unknown as ChangeEvent<HTMLInputElement | HTMLTextAreaElement>);
-          }}
-          onBlur={(e) => {
-            argumentTypeFieldRegistration.onBlur(e as unknown as React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>);
-          }}
-          ref={(el) => {
-            argumentTypeFieldRegistration.ref(el as HTMLInputElement | HTMLTextAreaElement | null);
-          }}
         >
           <option value="SALIDA">Salida</option>
           <option value="ENTRADA">Entrada</option>
