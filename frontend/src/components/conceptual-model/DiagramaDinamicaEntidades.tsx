@@ -4,10 +4,11 @@ import { MouseEvent, ChangeEvent, useState, useCallback, useMemo, memo } from "r
 import { DiagramImageUpload } from "@components/ui/conceptual-model/diagram";
 import { ImageInfo } from "#types/conceptual-model";
 import { useFieldArray, RegisterOptions, Path, Control } from "react-hook-form";
-import { ConceptualModel } from "#types/conceptual-model";
+import { ConceptualModel, Entity } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
 import { Button } from "@components/ui/common/button";
 import { X, Plus, ChevronDown, ChevronRight } from "lucide-react";
+import { useUI } from "@components/ui/context";
 
 interface DiagramaEstructuraEntidadesProps {
   sessionToken?: string;
@@ -80,6 +81,7 @@ const DiagramaDinamicaEntidadesComponent = ({
   socket,
 }: DiagramaEstructuraEntidadesProps) => {
   const [collapsedEntities, setCollapsedEntities] = useState<Set<string>>(new Set());
+  const { openModal, closeModal } = useUI();
   
   // Memoize entitiesList.fields to prevent unnecessary re-renders
   const memoizedEntitiesFields = useMemo(() => entitiesList.fields, [entitiesList.fields]);
@@ -103,6 +105,63 @@ const DiagramaDinamicaEntidadesComponent = ({
       return newSet;
     });
   }, []);
+
+  const handleEntityRemoval = useCallback(({
+    e,
+    entityId,
+  }: {
+    e: MouseEvent;
+    entityId: string;
+  }) => {
+    const entities = watch("entities") as Entity[] | undefined;
+    const entity = entities?.find((ent) => ent._id === entityId);
+    
+    if (entity && entity.properties && entity.properties.length > 0) {
+      // Entity has properties, show confirmation modal
+      openModal({
+        name: "confirm-entity-deletion",
+        title: "Confirmar eliminación",
+        size: "md",
+        showCloseButton: false,
+        content: (
+          <div className="flex flex-col mx-auto justify-center items-center p-4 space-y-4">
+            <p className="text-base text-center">
+              Excluir una entidad provocará que se elimine la lista de propiedades asociadas a esa entidad, esta acción no es reversible.
+            </p>
+            <p className="text-base text-center font-semibold">
+              ¿Desea continuar?
+            </p>
+            <div className="flex justify-center space-x-3 mt-3 w-full">
+              <Button variant="outline" size="sm" onClick={closeModal}>
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={(confirmE) => {
+                  handleRemoveItemFromList({
+                    e: confirmE,
+                    listPropertyPath: "entities",
+                    itemId: entityId,
+                  });
+                  closeModal();
+                }}
+              >
+                Aceptar
+              </Button>
+            </div>
+          </div>
+        ),
+      });
+    } else {
+      // No properties, remove directly
+      handleRemoveItemFromList({
+        e,
+        listPropertyPath: "entities",
+        itemId: entityId,
+      });
+    }
+  }, [watch, openModal, closeModal, handleRemoveItemFromList]);
 
   const addItemToList = useCallback(({
     listPropertyPath,
@@ -216,10 +275,9 @@ const DiagramaDinamicaEntidadesComponent = ({
                         size="sm"
                         disabled={!hasEditingRights}
                         onClick={(e) =>
-                          handleRemoveItemFromList({
+                          handleEntityRemoval({
                             e,
-                            listPropertyPath: "entities",
-                            itemId: field._id,
+                            entityId: field._id,
                           })
                         }
                         className="text-red-500 hover:text-red-700 hover:bg-red-50"

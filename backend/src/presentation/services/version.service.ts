@@ -579,6 +579,10 @@ export class VersionService {
 			});
 		}
 
+		if (!model.entities || !model.entities.length) {
+			errors.push('El modelo debe tener al menos una entidad definida.')
+		}
+
 		// Validate entities
 		if (model.entities) {
 			model.entities.forEach((entity: Entity, entityIndex: number) => {
@@ -606,6 +610,11 @@ export class VersionService {
 
 				if (entity.scopeDecision === undefined) {
 					errors.push(`La entidad "${entityName}" debe marcarse como incluida o excluida del modelo.`);
+				}
+
+				//check if at least one entity from the list of entites has scopeDecision.include === true
+				if (model.entities.some((e: Entity) => e.scopeDecision?.include === true)) {
+					errors.push("Debe tener al menos una entidad incluída en el alcance del modelo.");
 				}
 
 				if (entity.scopeDecision?.include === false ) {

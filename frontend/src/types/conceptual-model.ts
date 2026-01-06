@@ -23,7 +23,7 @@ type Property = {
 	};
 };
 
-type Entity = {
+export type Entity = {
 	_id: string;
 	name: string;
 	scopeDecision: {
