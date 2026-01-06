@@ -135,13 +135,7 @@ export class ProjectService {
 		const projects = await ProjectModel.find({
 			owner: owner,
 			state: { $ne: ProjectState.DELETED },
-		})
-			.populate({
-				path: "collaborators",
-				select: ["name", "lastName", "email"],
-				match: { deletedAt: null },
-			})
-			.exec();
+		}).exec();
 
 		return {
 			count: projects.length,
@@ -154,26 +148,11 @@ export class ProjectService {
 		const projects = await ProjectModel.find({
 			collaborators: userId,
 			state: { $ne: ProjectState.DELETED },
-		})
-			.populate({
-				path: "collaborators",
-				select: ["name", "lastName", "email"],
-				match: { deletedAt: null },
-			})
-			.exec();
-
-		if (!projects) throw CustomError.badRequest("User has no shared Projects");
-
-		const filteredProjects = projects
-			.map((p) => ProjectEntity.fromObject(p))
-			.filter((item) => item.state !== ProjectState.DELETED);
-
-		if (!filteredProjects.length)
-			throw CustomError.badRequest("User has no active Projects");
+		}).exec();
 
 		return {
-			count: filteredProjects.length,
-			projects: filteredProjects,
+			count: projects.length,
+			projects: projects.map((p) => ProjectEntity.fromObject(p)),
 		};
 	}
 
@@ -213,7 +192,9 @@ export class ProjectService {
 			);
 		}
 
-		const projectEntity = ProjectEntity.fromObject(project);
+		const projectEntity = ProjectEntity.fromObject(project, {
+			includeVersions: true,
+		});
 
 		return {
 			project: projectEntity,
@@ -243,7 +224,9 @@ export class ProjectService {
 		if (project.state == ProjectState.DELETED)
 			throw CustomError.badRequest("El proyecto solicitado fue eliminado.");
 
-		const projectEntity = ProjectEntity.fromObject(project, {includeCollaborators: true});
+		const projectEntity = ProjectEntity.fromObject(project, {
+			includeCollaborators: true,
+		});
 
 		return {
 			project: projectEntity,
@@ -255,6 +238,7 @@ export class ProjectService {
 		const existName = await ProjectModel.findOne({
 			title: createDto.title,
 			owner: createDto.owner,
+			state: { $ne: ProjectState.DELETED },
 		});
 		if (existName)
 			throw CustomError.conflict(
@@ -304,9 +288,10 @@ export class ProjectService {
 			);
 
 		const existName = await ProjectModel.findOne({
-			_id: { $ne: new mongoose.Types.ObjectId(id) },
+			_id: { $ne: id },
 			title: title,
-			owner: new mongoose.Types.ObjectId(requestingUserId),
+			state: { $ne: ProjectState.DELETED },
+			owner: requestingUserId,
 		});
 		if (existName) {
 			throw CustomError.conflict(
