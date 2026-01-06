@@ -75,8 +75,11 @@ export type ConceptualModel = {
 	entities: Entity[];
 };
 
+export type VersionState = "EN EDICION" | "FINALIZADA" | "PENDIENTE DE REVISION" | "REVISADA";
+
 export type Version = {
 	conceptualModel: ConceptualModel;
 	imageInfos: ImageInfo[];
 	title: string;
+	state: VersionState;
 };

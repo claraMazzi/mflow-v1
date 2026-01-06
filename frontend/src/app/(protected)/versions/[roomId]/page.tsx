@@ -11,7 +11,7 @@ import {
 } from "react";
 import { socket } from "@lib/socket";
 import { Path, RegisterOptions, useFieldArray, useForm } from "react-hook-form";
-import { ConceptualModel, ImageInfo } from "#types/conceptual-model";
+import { ConceptualModel, ImageInfo, VersionState } from "#types/conceptual-model";
 import {
   Tabs,
   TabsContent,
@@ -80,6 +80,7 @@ export default function Page({
   const [currentTab, setCurrentTab] = useState("descripcion-sistema");
   const [isModelInitialized, setIsModelInitialized] = useState(false);
   const [title, setTitle] = useState("");
+  const [versionState, setVersionState] = useState<VersionState>("EN EDICION");
   const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(
     new Map()
   );
@@ -102,11 +103,17 @@ export default function Page({
     sessionRef.current = session;
   }, [session]);
   
+  // Check if the version is in an editable state
+  const isVersionEditable = useMemo(() => {
+    return versionState === "EN EDICION";
+  }, [versionState]);
+
   const hasEditingRights = useMemo(() => {
-    // console.log("Has Editing Rights was recalculated.");
+    // Version must be in "EN EDICION" state AND user must have editing rights
+    if (!isVersionEditable) return false;
     if (!session?.user.id) return false;
     return !!collaborators.get(session.user.id)?.hasEditingRights;
-  }, [collaborators, session?.user.id]);
+  }, [collaborators, session?.user.id, isVersionEditable]);
 
   const {
     canUserSendEditingRequest,
@@ -317,6 +324,7 @@ export default function Page({
       console.log("Initial State: ", version);
       const conceptualModel = version.conceptualModel;
       setTitle(version.title);
+      setVersionState(version.state ?? "EN EDICION");
       reset(conceptualModel);
       const newImageInfos = new Map<string, ImageInfo>();
       imageInfos
@@ -737,10 +745,14 @@ export default function Page({
         sendPropertyUpdate(value, propertyPath);
       },
       readOnly: !hasEditingRights,
+      disabled: !hasEditingRights,
     };
 
     return enhancedRegister;
   }, [register, getValues, hasEditingRights, sendPropertyUpdate, scheduleDebouncedUpdate]);
+
+  // Check if the form should be in read-only mode (version not editable)
+  const isFormReadOnly = !isVersionEditable;
 
   // Get all active cursors for the current tab
   const activeCursors = useMemo(() => {
@@ -839,6 +851,7 @@ export default function Page({
         socket={socket}
         conceptualModel={watch()}
         imageInfos={imageInfos}
+        versionState={versionState}
       />
 
       {!isModelInitialized ? (
@@ -849,14 +862,19 @@ export default function Page({
             console.log("Form Submitted");
             e.preventDefault();
           }}
-          className="flex flex-col overflow-hidden"
+          className="flex flex-col overflow-hidden relative"
         >
+          {/* Read-only overlay when version is not editable */}
+          {isFormReadOnly && (
+            <div className="absolute inset-0 bg-gray-500/10 z-10 pointer-events-none" />
+          )}
           <br />
           <Tabs
             value={currentTab}
             onValueChange={handleCurrentTabChange}
             defaultValue="descripcion-sistema"
             orientation="vertical"
+            className={isFormReadOnly ? "opacity-75" : ""}
           >
             <TabsList className="h-full  flex ">
               <TabsTrigger value="descripcion-sistema" className="word-break">

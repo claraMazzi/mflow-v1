@@ -9,7 +9,7 @@ import { ArrowLeft, Check, Edit } from "lucide-react";
 import { useUI } from "../ui/context";
 import { CollaboratorAvatar } from "./CollaboratorAvatar";
 import { Socket } from "socket.io-client";
-import { ConceptualModel, ImageInfo } from "#types/conceptual-model";
+import { ConceptualModel, ImageInfo, VersionState } from "#types/conceptual-model";
 import { exportVersionToExcel } from "@lib/export-version";
 import { useRouter } from "next/navigation";
 interface VersionBarProps {
@@ -32,6 +32,7 @@ interface VersionBarProps {
   socket: Socket;
   conceptualModel: ConceptualModel;
   imageInfos?: Map<string, ImageInfo>;
+  versionState: VersionState;
 }
 
 const VersionBar = ({
@@ -48,7 +49,9 @@ const VersionBar = ({
   socket,
   conceptualModel,
   imageInfos,
+  versionState,
 }: VersionBarProps) => {
+  const isVersionEditable = versionState === "EN EDICION";
   const { addEditingRequestToast, removeEditingRequestToast } = useUI();
   const shownRequestsRef = useRef<Set<string>>(new Set());
   const router = useRouter();
@@ -105,12 +108,46 @@ const VersionBar = ({
 
   const collaboratorList = Array.from(collaborators.values());
 
+  // Get state badge styling based on version state
+  const getStateBadge = () => {
+    switch (versionState) {
+      case "EN EDICION":
+        return null; // Don't show badge for editable state
+      case "FINALIZADA":
+        return (
+          <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+            Finalizada
+          </span>
+        );
+      case "PENDIENTE DE REVISION":
+        return (
+          <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+            Pendiente de Revisión
+          </span>
+        );
+      case "REVISADA":
+        return (
+          <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+            Revisada
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="bg-blue-50 h-16 flex justify-between items-center p-4">
       <div className="flex items-center w-full justify-between">
         <div className="flex items-center gap-2">
-<ArrowLeft className="w-5 h-5 text-gray-500" onClick={() => router.push(`/dashboard`)} />
-        <p className="text-lg font-bold">{title}</p>
+          <ArrowLeft className="w-5 h-5 text-gray-500 cursor-pointer" onClick={() => router.push(`/dashboard`)} />
+          <p className="text-lg font-bold">{title}</p>
+          {getStateBadge()}
+          {!isVersionEditable && (
+            <span className="px-2 py-1 text-xs font-medium bg-gray-200 text-gray-600 rounded-full">
+              Solo lectura
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           {/* Active collaborators avatars */}
@@ -129,8 +166,9 @@ const VersionBar = ({
             })}
           </div>
           <Button
-            disabled={!canUserSendEditingRequest}
+            disabled={!isVersionEditable || !canUserSendEditingRequest}
             onClick={handleRequestEditingRights}
+            title={!isVersionEditable ? "Esta versión no se puede editar" : undefined}
           >
             <Edit className="h-4 w-4" />
             SOLICITAR EDICIÓN
@@ -142,10 +180,11 @@ const VersionBar = ({
 
           <Button
             variant="secondary"
-            disabled={canUserSendEditingRequest} //if can't send editing request it because it has editing rights
+            disabled={!isVersionEditable || canUserSendEditingRequest} //if can't send editing request it's because user has editing rights
             onClick={() => {
               socket.emit("finalize-version", { roomId });
             }}
+            title={!isVersionEditable ? "Esta versión ya fue finalizada" : undefined}
           >
             <Check className="h-4 w-4" />
             FINALIZAR
