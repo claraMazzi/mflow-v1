@@ -277,18 +277,43 @@ export default function Detalle({
   customRegisterField,
   handleAddItemToList,
   handleRemoveItemFromList,
+  watch,
 }: DetalleProps) {
   // State to track which entities are collapsed
   const [collapsedEntities, setCollapsedEntities] = useState<Set<string>>(new Set());
-  const [includedEntities, setIncludedEntities] = useState<Set<string>>(new Set());
-  const [excludedEntities, setExcludedEntities] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (entitiesList && entitiesList.fields.length > 0) {
-      setIncludedEntities(new Set(entitiesList.fields.filter(entity => entity.scopeDecision?.include === true).map(entity => entity._id)));
-      setExcludedEntities(new Set(entitiesList.fields.filter(entity => entity.scopeDecision?.include === false).map(entity => entity._id)));
+  // Watch entities to get current form values (including scopeDecision.include changes from Alcance)
+  const watchedEntities = watch("entities") as Array<{
+    _id: string;
+    name: string;
+    scopeDecision?: { include?: boolean };
+  }> | undefined;
+
+  // Compute included/excluded entities from watched values
+  const { includedEntities, excludedEntities } = useMemo(() => {
+    if (!watchedEntities || !entitiesList?.fields) {
+      return { includedEntities: new Set<string>(), excludedEntities: new Set<string>() };
     }
-  }, [entitiesList]);
+    
+    const included = new Set<string>();
+    const excluded = new Set<string>();
+    
+    // Use entitiesList.fields for the _id values, but watchedEntities for the scopeDecision.include value
+    entitiesList.fields.forEach((field, index) => {
+      const watchedEntity = watchedEntities[index];
+      const includeValue = watchedEntity?.scopeDecision?.include;
+      // Handle both boolean and string values (select returns strings "true"/"false")
+      // Default to true if include is undefined (matches backend default)
+      const isIncluded = includeValue !== false && String(includeValue) !== "false";
+      if (isIncluded) {
+        included.add(field._id);
+      } else {
+        excluded.add(field._id);
+      }
+    });
+    
+    return { includedEntities: included, excludedEntities: excluded };
+  }, [watchedEntities, entitiesList?.fields]);
 
   // Toggle collapse state for a specific entity
   const toggleCollapse = (entityId: string) => {
@@ -312,9 +337,10 @@ export default function Detalle({
         </p>
       </div>
 
-        {includedEntities.size > 0 && Array.from(includedEntities).map((entityId, index) => {
-          const entity = entitiesList.fields.find(entity => entity._id === entityId);
-          if (entity) {
+        {includedEntities.size > 0 && Array.from(includedEntities).map((entityId) => {
+          const entityIndex = entitiesList.fields.findIndex(entity => entity._id === entityId);
+          const entity = entitiesList.fields[entityIndex];
+          if (entity && entityIndex !== -1) {
             const isCollapsed = collapsedEntities.has(entity._id);
         return (
           <div key={entity._id} className="border border-gray-200 rounded-lg bg-gray-50">
@@ -344,7 +370,7 @@ export default function Detalle({
             >
               <div className="p-4 pt-0 space-y-4">
                 <EntityPropertiesEditor
-                  entityIndex={index}
+                  entityIndex={entityIndex}
                   control={control}
                   hasEditingRights={hasEditingRights}
                   customRegisterField={customRegisterField}
@@ -356,18 +382,21 @@ export default function Detalle({
           </div>
         );
         }
-        
+        return null;
       })} 
-      {excludedEntities.size > 0 && Array.from(excludedEntities).map((entityId) => {
-        const entity = entitiesList.fields.find(entity => entity._id === entityId);
-        if (entity) {
-          return (
-            <div key={entity._id} className="border border-gray-200 rounded-lg bg-gray-50">
-              <p className="text-lg font-medium text-gray-900">Entidad: <strong>{entity.name}</strong></p>
-            </div>
-          ); } 
-          
-          })}
+      {excludedEntities.size > 0 && (
+        <div className="p-8 text-bordo-800 bg-bordo-50 rounded-lg border-2 border-dashed border-bordo-300">
+          <p>Las siguientes entidades <strong>no fueron incluidas</strong> en el alcance del modelo de simulación:</p>
+          <ul className="list-disc list-inside ml-2">
+            {Array.from(excludedEntities).map((entityId) => {
+              const entity = entitiesList.fields.find(entity => entity._id === entityId);
+              if (entity) {
+                return <li key={entity._id}>{entity.name}</li>;
+              }
+            })}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
