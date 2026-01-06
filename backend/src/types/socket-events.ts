@@ -67,11 +67,14 @@ export const setValue = (
 ) => {
 	const parts = parsePropertyPath(conceptualModel, propertyPath);
 	let current: any = conceptualModel;
+	console.log("Setting value: ", parts, current);
 
 	while (
 		parts!.length > 1
 	) {
 		current = current[parts!.shift()!];
 	}
+
+	console.log("Setting value: ", parts![0], value);
 	current[parts![0]] = value;
 };

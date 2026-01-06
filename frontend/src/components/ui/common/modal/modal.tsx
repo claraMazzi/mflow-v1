@@ -70,7 +70,6 @@ export const Modal = ({
     <Dialog open={isOpen} onOpenChange={(open) => !open && closeModal()}>
       <DialogContent className={getContentClasses()} id={id} showCloseButton={showCloseButton}>
         {/* Custom close button if specified */}
-        {closeButtonClass && (
           <button
             onClick={closeModal}
             className={cn(
@@ -81,7 +80,6 @@ export const Modal = ({
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </button>
-        )}
 
         <ModalHead title={title} />
 

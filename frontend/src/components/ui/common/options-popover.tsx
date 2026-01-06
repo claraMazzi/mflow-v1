@@ -61,7 +61,7 @@ const OptionsPopover = ({
       {isOpen && (
         <div ref={popoverRef} className={popoverClassName} role="menu">
           {options.map((options, index) => (
-            <div className="w-full min-w-[150px]" key={index}>
+            <div className="w-full min-w-[150px]" key={`option-${index}`}>
               {options.content}
             </div>
           ))}

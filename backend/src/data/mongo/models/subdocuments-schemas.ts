@@ -38,11 +38,18 @@ const entitySchema = new Schema({
 		default: "",
 	},
 	scopeDecision: {
-		include: Boolean,
-		justification: String,
+		include: {
+			type: Boolean,
+			default: true,
+		},
+		justification: {
+			type: String,
+			default: "",
+		},
 		argumentType: {
 			type: String,
 			enum: ["SALIDA", "ENTRADA", "NO VINCULADO A OBJETIVOS", "SIMPLIFICACION"],
+			default: "SALIDA",
 		},
 	},
 	dynamicDiagram: diagramSchema,

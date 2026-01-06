@@ -28,7 +28,7 @@ export function FinalizeVersionResultModal({
           <ul className="space-y-2 pl-7">
             {errors.map((error, index) => (
               <li
-                key={index}
+                key={`error-${index}`}
                 className="flex items-start gap-2 text-sm text-red-700 bg-red-50 p-2 rounded-md"
               >
                 <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
@@ -51,7 +51,7 @@ export function FinalizeVersionResultModal({
           <ul className="space-y-2 pl-7">
             {warnings.map((warning, index) => (
               <li
-                key={index}
+                key={`warning-${index}`}
                 className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 p-2 rounded-md"
               >
                 <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
@@ -70,7 +70,7 @@ export function FinalizeVersionResultModal({
       {/* Close Button */}
       <div className="flex justify-center mt-2">
         <Button onClick={onClose} variant="outline" size="sm">
-          Cerrar
+          Aceptar
         </Button>
       </div>
     </div>

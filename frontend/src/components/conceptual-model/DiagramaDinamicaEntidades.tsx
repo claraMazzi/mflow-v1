@@ -4,10 +4,12 @@ import { MouseEvent, ChangeEvent, useState, useCallback, useMemo, memo } from "r
 import { DiagramImageUpload } from "@components/ui/conceptual-model/diagram";
 import { ImageInfo } from "#types/conceptual-model";
 import { useFieldArray, RegisterOptions, Path, Control } from "react-hook-form";
-import { ConceptualModel } from "#types/conceptual-model";
+import { ConceptualModel, Entity } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
 import { Button } from "@components/ui/common/button";
 import { X, Plus, ChevronDown, ChevronRight } from "lucide-react";
+import { useUI } from "@components/ui/context";
+import cn from "clsx";
 
 interface DiagramaEstructuraEntidadesProps {
   sessionToken?: string;
@@ -80,6 +82,7 @@ const DiagramaDinamicaEntidadesComponent = ({
   socket,
 }: DiagramaEstructuraEntidadesProps) => {
   const [collapsedEntities, setCollapsedEntities] = useState<Set<string>>(new Set());
+  const { openModal, closeModal } = useUI();
   
   // Memoize entitiesList.fields to prevent unnecessary re-renders
   const memoizedEntitiesFields = useMemo(() => entitiesList.fields, [entitiesList.fields]);
@@ -103,6 +106,63 @@ const DiagramaDinamicaEntidadesComponent = ({
       return newSet;
     });
   }, []);
+
+  const handleEntityRemoval = useCallback(({
+    e,
+    entityId,
+  }: {
+    e: MouseEvent;
+    entityId: string;
+  }) => {
+    const entities = watch("entities") as Entity[] | undefined;
+    const entity = entities?.find((ent) => ent._id === entityId);
+    
+    if (entity && entity.properties && entity.properties.length > 0) {
+      // Entity has properties, show confirmation modal
+      openModal({
+        name: "confirm-entity-deletion",
+        title: "Confirmar eliminación",
+        size: "md",
+        showCloseButton: false,
+        content: (
+          <div className="flex flex-col mx-auto justify-center items-center p-4 space-y-4">
+            <p className="text-base text-center">
+              Excluir una entidad provocará que se elimine la lista de propiedades asociadas a esa entidad, esta acción no es reversible.
+            </p>
+            <p className="text-base text-center font-semibold">
+              ¿Desea continuar?
+            </p>
+            <div className="flex justify-center space-x-3 mt-3 w-full">
+              <Button variant="outline" size="sm" onClick={closeModal}>
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={(confirmE) => {
+                  handleRemoveItemFromList({
+                    e: confirmE,
+                    listPropertyPath: "entities",
+                    itemId: entityId,
+                  });
+                  closeModal();
+                }}
+              >
+                Aceptar
+              </Button>
+            </div>
+          </div>
+        ),
+      });
+    } else {
+      // No properties, remove directly
+      handleRemoveItemFromList({
+        e,
+        listPropertyPath: "entities",
+        itemId: entityId,
+      });
+    }
+  }, [watch, openModal, closeModal, handleRemoveItemFromList]);
 
   const addItemToList = useCallback(({
     listPropertyPath,
@@ -183,12 +243,20 @@ const DiagramaDinamicaEntidadesComponent = ({
                   key={field.id}
                   className="bg-gray-50 rounded-lg border"
                 >
-                  {/* Header with name input and controls */}
-                  <div className="flex items-center gap-3 p-3">
-                    <div className="flex-1">
-                      <div className="space-y-2">
+                  {/* Collapsible Header */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => toggleEntityCollapse(field._id)}
+                      className="flex-1 flex items-center gap-3 p-3 text-left hover:bg-gray-100 transition-colors duration-200 rounded-l-lg"
+                    >
+                      {isCollapsed ? (
+                        <ChevronRight className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                      )}
+                      <div className="flex-1 space-y-2">
                         <label className="block text-sm font-medium text-gray-700">
-                         {index + 1}. Nombre de la entidad
+                          {index + 1}. Nombre de la entidad
                         </label>
                         <Input
                           {...customRegisterField({
@@ -197,29 +265,21 @@ const DiagramaDinamicaEntidadesComponent = ({
                           })}
                           placeholder="Nombre de la entidad..."
                           className="border-2 border-gray-200 focus:border-purple-400"
+                          onClick={(e) => e.stopPropagation()}
                         />
                       </div>
-                    </div>
+                    </button>
                     
-                    {/* Control buttons */}
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleEntityCollapse(field._id)}
-                        className="text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                      >
-                        {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                      </Button>
+                    {/* Delete button */}
+                    <div className="pr-3">
                       <Button
                         variant="ghost"
                         size="sm"
                         disabled={!hasEditingRights}
                         onClick={(e) =>
-                          handleRemoveItemFromList({
+                          handleEntityRemoval({
                             e,
-                            listPropertyPath: "entities",
-                            itemId: field._id,
+                            entityId: field._id,
                           })
                         }
                         className="text-red-500 hover:text-red-700 hover:bg-red-50"
@@ -229,8 +289,13 @@ const DiagramaDinamicaEntidadesComponent = ({
                     </div>
                   </div>
 
-                  {/* Collapsible content */}
-                  {!isCollapsed && (
+                  {/* Collapsible Content with smooth transition */}
+                  <div
+                    className={cn(
+                      "overflow-hidden transition-all duration-300 ease-in-out",
+                      isCollapsed ? "max-h-0 opacity-0" : "max-h-[1000px] opacity-100"
+                    )}
+                  >
                     <div className="px-3 pb-3">
                       {/** TODO: Actualizar para cada entidades */}
                       <DiagramImageUpload
@@ -239,7 +304,7 @@ const DiagramaDinamicaEntidadesComponent = ({
                         diagramPropertyPath={`entities:${field._id}.dynamicDiagram`}
                       />
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             })}

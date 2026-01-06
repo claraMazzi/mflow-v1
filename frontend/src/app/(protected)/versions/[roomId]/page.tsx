@@ -11,7 +11,7 @@ import {
 } from "react";
 import { socket } from "@lib/socket";
 import { Path, RegisterOptions, useFieldArray, useForm } from "react-hook-form";
-import { ConceptualModel, ImageInfo } from "#types/conceptual-model";
+import { ConceptualModel, ImageInfo, VersionState } from "#types/conceptual-model";
 import {
   Tabs,
   TabsContent,
@@ -58,6 +58,9 @@ function throttle(func: any, delay: number) {
   };
 }
 
+// Debounce delay for auto-saving field updates (ms)
+const FIELD_UPDATE_DEBOUNCE_DELAY = 500;
+
 const MOUSE_POSITION_UPDATE_DELAY = 33; //30 fps
 
 export default function Page({
@@ -77,6 +80,7 @@ export default function Page({
   const [currentTab, setCurrentTab] = useState("descripcion-sistema");
   const [isModelInitialized, setIsModelInitialized] = useState(false);
   const [title, setTitle] = useState("");
+  const [versionState, setVersionState] = useState<VersionState>("EN EDICION");
   const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(
     new Map()
   );
@@ -84,6 +88,11 @@ export default function Page({
   const containerRef = useRef<HTMLDivElement>(null);
   const collaboratorsRef = useRef(collaborators);
   const sessionRef = useRef(session);
+  
+  // Track pending field updates for debounced auto-save
+  const pendingUpdatesRef = useRef<Map<string, { value: any; timerId: NodeJS.Timeout }>>(new Map());
+  // Track the last synced values to detect actual changes
+  const lastSyncedValuesRef = useRef<Map<string, any>>(new Map());
   
   // Keep refs in sync with state
   useEffect(() => {
@@ -94,11 +103,17 @@ export default function Page({
     sessionRef.current = session;
   }, [session]);
   
+  // Check if the version is in an editable state
+  const isVersionEditable = useMemo(() => {
+    return versionState === "EN EDICION";
+  }, [versionState]);
+
   const hasEditingRights = useMemo(() => {
-    // console.log("Has Editing Rights was recalculated.");
+    // Version must be in "EN EDICION" state AND user must have editing rights
+    if (!isVersionEditable) return false;
     if (!session?.user.id) return false;
     return !!collaborators.get(session.user.id)?.hasEditingRights;
-  }, [collaborators, session?.user.id]);
+  }, [collaborators, session?.user.id, isVersionEditable]);
 
   const {
     canUserSendEditingRequest,
@@ -309,6 +324,7 @@ export default function Page({
       console.log("Initial State: ", version);
       const conceptualModel = version.conceptualModel;
       setTitle(version.title);
+      setVersionState(version.state ?? "EN EDICION");
       reset(conceptualModel);
       const newImageInfos = new Map<string, ImageInfo>();
       imageInfos
@@ -458,7 +474,7 @@ export default function Page({
           name: "finalize-version-result-modal",
           title: "Error al Finalizar Revisión",
           size: "md",
-          showCloseButton: true,
+          showCloseButton: false,
           content: (
             <FinalizeVersionResultModal
               errors={payload.errors}
@@ -496,10 +512,74 @@ export default function Page({
     };
   }, [isSocketConnected]);
 
+  // Immediately send property update to backend
   const sendPropertyUpdate = useCallback((value: any, propertyPath: string) => {
     if (!hasEditingRights) return;
-    socket.emit("field-update", { roomId, propertyPath, value }); // Emit partial form data
-  }, [hasEditingRights, socket, roomId]);
+    
+    // Clear any pending debounced update for this field
+    const pending = pendingUpdatesRef.current.get(propertyPath);
+    if (pending) {
+      clearTimeout(pending.timerId);
+      pendingUpdatesRef.current.delete(propertyPath);
+    }
+    
+    // Track the synced value
+    lastSyncedValuesRef.current.set(propertyPath, value);
+    
+    socket.emit("field-update", { roomId, propertyPath, value });
+  }, [hasEditingRights, roomId]);
+
+  // Schedule a debounced property update
+  const scheduleDebouncedUpdate = useCallback((value: any, propertyPath: string) => {
+    if (!hasEditingRights) return;
+    
+    // Clear existing timer for this field if any
+    const existing = pendingUpdatesRef.current.get(propertyPath);
+    if (existing) {
+      clearTimeout(existing.timerId);
+    }
+    
+    // Schedule new debounced update
+    const timerId = setTimeout(() => {
+      pendingUpdatesRef.current.delete(propertyPath);
+      lastSyncedValuesRef.current.set(propertyPath, value);
+      socket.emit("field-update", { roomId, propertyPath, value });
+    }, FIELD_UPDATE_DEBOUNCE_DELAY);
+    
+    pendingUpdatesRef.current.set(propertyPath, { value, timerId });
+  }, [hasEditingRights, roomId]);
+
+  // Flush all pending updates immediately (used before tab switch, navigation, etc.)
+  const flushPendingUpdates = useCallback(() => {
+    if (!hasEditingRights) return;
+    
+    pendingUpdatesRef.current.forEach(({ value, timerId }, propertyPath) => {
+      clearTimeout(timerId);
+      lastSyncedValuesRef.current.set(propertyPath, value);
+      socket.emit("field-update", { roomId, propertyPath, value });
+    });
+    pendingUpdatesRef.current.clear();
+  }, [hasEditingRights, roomId]);
+
+  // Cleanup: flush pending updates on unmount or before page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Flush synchronously before page unloads
+      pendingUpdatesRef.current.forEach(({ value, timerId }, propertyPath) => {
+        clearTimeout(timerId);
+        socket.emit("field-update", { roomId, propertyPath, value });
+      });
+      pendingUpdatesRef.current.clear();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Flush pending updates when component unmounts
+      flushPendingUpdates();
+    };
+  }, [flushPendingUpdates, roomId]);
 
   const handleMouseMove = (e: MouseEvent) => {
     //Had to change the previous implementation because using offsetX and offsetY caused inconsistent values
@@ -518,6 +598,9 @@ export default function Page({
   };
 
   const handleCurrentTabChange = (newTab: string) => {
+    // Flush any pending updates before switching tabs to prevent data loss
+    flushPendingUpdates();
+    
     setCurrentTab(newTab);
     socket.volatile.emit("client-volatile-broadcast", {
       roomId,
@@ -600,37 +683,76 @@ export default function Page({
 
     const enhancedRegister = {
       ...registerResult,
-      onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         // Call the original onChange handler
         registerResult.onChange(e);
 
-        if (propagateUpdateOnChange) {
-          // For checkboxes, get the value from e.target.checked, otherwise use getValues
-          // We need to use setTimeout to ensure React Hook Form has updated the value
+        const target = e.target;
+        const isCheckbox = target.type === 'checkbox';
+        const isSelect = target.tagName === 'SELECT';
+        
+        // Capture field name synchronously - React synthetic events are pooled
+        // and e.currentTarget becomes null after the handler returns
+        const fieldName = target.name;
+        
+        // Get the value based on element type
+        const getValue = () => {
+          if (isCheckbox) {
+            return (target as HTMLInputElement).checked;
+          }
+          // Get the current value from React Hook Form
+          return getValues(fieldName as Path<ConceptualModel>);
+        };
+
+        if (propagateUpdateOnChange || isSelect) {
+          // For selects and fields that need immediate propagation,
+          // send update immediately (selects don't have "typing in progress" state)
           setTimeout(() => {
-            const value = e.target.type === 'checkbox' 
-              ? (e.target as HTMLInputElement).checked 
-              : getValues(e.currentTarget.name as any);
+            const value = getValue();
             sendPropertyUpdate(value, propertyPath);
+          }, 0);
+        } else if (!isCheckbox) {
+          // For text inputs, use debounced update
+          // Schedule a debounced update so changes are auto-saved after typing stops
+          setTimeout(() => {
+            const value = getValue();
+            scheduleDebouncedUpdate(value, propertyPath);
           }, 0);
         }
       },
-      onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         // Call the original onBlur handler
         registerResult.onBlur(e);
-        if (!propagateUpdateOnChange) {
-          // For checkboxes, get the value from e.target.checked, otherwise use getValues
-          const value = e.target.type === 'checkbox' 
-            ? (e.target as HTMLInputElement).checked 
-            : getValues(e.currentTarget.name as any);
-          sendPropertyUpdate(value, propertyPath);
+        
+        const target = e.target;
+        const isCheckbox = target.type === 'checkbox';
+        const isSelect = target.tagName === 'SELECT';
+        
+        // For selects with propagateUpdateOnChange, they already updated on change
+        // Skip redundant blur update
+        if (isSelect && propagateUpdateOnChange) {
+          return;
         }
+        
+        // For checkboxes, get the value from e.target.checked, otherwise use getValues
+        // Use target.name instead of e.currentTarget.name for consistency
+        const value = isCheckbox
+          ? (target as HTMLInputElement).checked 
+          : getValues(target.name as Path<ConceptualModel>);
+        
+        // Always send immediate update on blur as a safeguard
+        // This also clears any pending debounced updates
+        sendPropertyUpdate(value, propertyPath);
       },
       readOnly: !hasEditingRights,
+      disabled: !hasEditingRights,
     };
 
     return enhancedRegister;
-  }, [register, getValues, hasEditingRights, sendPropertyUpdate]);
+  }, [register, getValues, hasEditingRights, sendPropertyUpdate, scheduleDebouncedUpdate]);
+
+  // Check if the form should be in read-only mode (version not editable)
+  const isFormReadOnly = !isVersionEditable;
 
   // Get all active cursors for the current tab
   const activeCursors = useMemo(() => {
@@ -729,6 +851,7 @@ export default function Page({
         socket={socket}
         conceptualModel={watch()}
         imageInfos={imageInfos}
+        versionState={versionState}
       />
 
       {!isModelInitialized ? (
@@ -739,14 +862,19 @@ export default function Page({
             console.log("Form Submitted");
             e.preventDefault();
           }}
-          className="flex flex-col overflow-hidden"
+          className="flex flex-col overflow-hidden relative"
         >
+          {/* Read-only overlay when version is not editable */}
+          {isFormReadOnly && (
+            <div className="absolute inset-0 bg-gray-500/10 z-10 pointer-events-none" />
+          )}
           <br />
           <Tabs
             value={currentTab}
             onValueChange={handleCurrentTabChange}
             defaultValue="descripcion-sistema"
             orientation="vertical"
+            className={isFormReadOnly ? "opacity-75" : ""}
           >
             <TabsList className="h-full  flex ">
               <TabsTrigger value="descripcion-sistema" className="word-break">
@@ -823,6 +951,7 @@ export default function Page({
                 hasEditingRights={hasEditingRights}
                 entitiesList={entitiesList}
                 customRegisterField={customRegisterField}
+                watch={watch}
               />
             </TabsContent>
 
