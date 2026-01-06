@@ -74,10 +74,9 @@ export class ProjectRoutes {
     //get project data from invitation token
     router.get("/share/:token", controller.getProjectFromInvitationToken);
 
-    //TODO: IMPLEMENT THESE ROUTES
     //remove collaborator
     router.delete(
-      "/:projectId/collaboration/:userId",
+      "/:projectId/collaboration/:collaboratorToRemove",
       controller.removeCollaborator
     );
 

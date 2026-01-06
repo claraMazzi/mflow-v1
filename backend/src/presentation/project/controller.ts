@@ -53,10 +53,8 @@ export class ProjectController {
 				.status(401)
 				.json({ error: "El id del proyecto es obligatorio." });
 		}
-		const userSession = req.session;
-		if (!userSession) {
-			return res.status(401).json({ error: "Unauthorized" });
-		}
+		const userSession = req.session!;
+
 		this.projectService
 			.getProjectByIdWithCollaborators({ projectId, userSession })
 			.then((project) => res.json(project))
@@ -71,12 +69,12 @@ export class ProjectController {
 				.status(401)
 				.json({ error: "El identificador del proyecto es obligatorio." });
 		}
-		const userSession = req.session;
-		if (!userSession) {
-			return res.status(401).json({ error: "Unauthorized" });
-		}
+		const userSession = req.session!;
 		this.projectService
-			.getProjectByIdWithVersions({ projectId, userSession })
+			.getProjectByIdWithVersions({
+				projectId,
+				requestingUserSession: userSession,
+			})
 			.then((project) => res.json(project))
 			.catch((error) => this.handleError(error, res));
 	};
@@ -85,11 +83,9 @@ export class ProjectController {
 	updateProject = (req: Request, res: Response) => {
 		const { projectId } = req.params;
 		if (!projectId) {
-			return res
-				.status(401)
-				.json({
-					error: "Debe especificar el identificador del proyecto a modificar.",
-				});
+			return res.status(401).json({
+				error: "Debe especificar el identificador del proyecto a modificar.",
+			});
 		}
 		const projectData = req.body;
 		const userId = req.session!.userId;
@@ -185,12 +181,12 @@ export class ProjectController {
 	// Share a specific project
 	getProjectSharingLink = (req: Request, res: Response) => {
 		const { projectId } = req.params;
-		const senderId = req.session!.userId;
+		const requestingUser = req.session!.userId;
 		const { collaborators } = req.body;
 
 		const [error, shareProjectDto] = ShareProjectLinkDto.create({
 			projectId,
-			senderId,
+			requestingUser,
 			collaborators,
 		});
 
@@ -205,7 +201,10 @@ export class ProjectController {
 	addCollaboratorToProject = (req: Request, res: Response) => {
 		const { token } = req.params;
 		const newCollaboratorUserId = req.session!.userId;
-		if (!token) return res.status(401).json({ error: "Unauthorized" });
+		if (!token)
+			return res
+				.status(401)
+				.json({ error: "Debe proveer un token de invitación." });
 
 		this.projectService
 			.addCollaboratorToProject(token, newCollaboratorUserId)
@@ -242,22 +241,32 @@ export class ProjectController {
 			.catch((error) => this.handleError(error, res));
 	};
 
-	// Accept or deny collaboration
-	handleCollaboration = (req: Request, res: Response) => {
-		const { projectId } = req.params;
-		const { userId, action } = req.body; // action: accept or deny
-		this.projectService
-			.handleCollaboration(projectId, userId, action)
-			.then(() => res.json({ message: `Collaboration ${action}ed` }))
-			.catch((error) => this.handleError(error, res));
-	};
-
 	// Remove a collaborator from a project
 	removeCollaborator = (req: Request, res: Response) => {
-		const { projectId, userId } = req.params;
+		const { projectId, collaboratorToRemove } = req.params;
+		const requestingUser = req.session!.userId;
+
+		if (!projectId) {
+			return res
+				.status(401)
+				.json({ error: "El identificador del proyecto es obligaorio." });
+		}
+
+		if (!collaboratorToRemove) {
+			return res
+				.status(401)
+				.json({ error: "Debe proveer el colaborador a remover del proyecto." });
+		}
+
 		this.projectService
-			.removeCollaborator(projectId, userId)
-			.then(() => res.json({ message: "Collaborator removed successfully" }))
+			.removeCollaboratorFromProject({
+				collaboratorToRemove,
+				requestingUser,
+				projectId,
+			})
+			.then(() =>
+				res.json({ message: "El colaborador fue removido existosamente." })
+			)
 			.catch((error) => this.handleError(error, res));
 	};
 

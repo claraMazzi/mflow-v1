@@ -176,9 +176,10 @@ const VersionList = ({
 			showCloseButton: false,
 			content: (
 				<div className="flex max-w-md flex-col mx-auto justify-center items-center p-4 space-y-4">
-					<p className="text-base text-center flex flex-col items-center gap-2">
-						¿Está seguro que desea eliminar la versión{" "}
-						<span className="font-bold">{version.title}</span>?
+					<p className="text-base text-center">
+						<span>¿Está seguro que desea eliminar la versión </span>
+						<span className="font-bold">{version.title}</span>
+						<span>?</span>
 						<span className="font-bold text-red-600">
 							Esta operación no es reversible.
 						</span>

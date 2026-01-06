@@ -136,7 +136,7 @@ export class DeletionRequestService {
       // Update the project state to pending deletion
       const project = await ProjectModel.findById(deletionRequest.project);
       if (project) {
-        project.state = ProjectState.Pending;
+        project.state = ProjectState.PENDING;
         await project.save();
       }
 
@@ -178,7 +178,7 @@ export class DeletionRequestService {
       // Update the project state back to created
       const project = await ProjectModel.findById(deletionRequest.project);
       if (project) {
-        project.state = ProjectState.Created;
+        project.state = ProjectState.CREATED;
         await project.save();
       }
 

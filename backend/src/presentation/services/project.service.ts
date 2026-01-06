@@ -3,6 +3,7 @@ import {
 	ProjectModel,
 	ProjectState,
 	UserModel,
+	UserRole,
 } from "../../data";
 import { CustomError, UpdateUserDto } from "../../domain";
 import { CreateDeletionRequestDto } from "../../domain/dtos/project/create-deletion-request.dto";
@@ -15,6 +16,7 @@ import { EmailService } from "./email.service";
 import { jwtAdapter } from "../../config";
 import { ShareProjectLinkDto } from "../../domain/dtos/project/share-project-link.dto";
 import mongoose, { Schema } from "mongoose";
+import { ProjectInviteTokenPayload } from "../../types/tokens";
 
 export class ProjectService {
 	constructor(
@@ -27,24 +29,17 @@ export class ProjectService {
 
 	private sendEmailInvitationLink = async ({
 		email,
-		senderId,
+		requestingUser,
 		projectId,
 	}: {
-		senderId: string;
+		requestingUser: string;
 		projectId: string;
 		email: string;
 	}) => {
-		const token = await jwtAdapter.generateToken(
-			{ senderId: senderId, projectId: projectId },
-			"7d"
-		);
-
-		if (!token)
-			throw CustomError.internalServer(
-				"Se produjo un error al generar el link para compartir el proyecto."
-			);
-		//link de retorno
-		const link = `${this.frontEndUrl}/share/projects/?token=${token}`;
+		const link = await this.generateProjectSharingLink({
+			requestingUser,
+			projectId,
+		});
 
 		const html = `<h1>Has sido invitado/a a colaborar en un proyecto!</h1>
       <p> Hace Click en el siguiente <a href=${link}>link</a> para aceptar la invitación </p>
@@ -64,30 +59,87 @@ export class ProjectService {
 			);
 	};
 
+	async sendProjectCollaborationInvitation(shareProjectDto: ShareProjectDto) {
+		const project = await ProjectModel.findOne({
+			_id: shareProjectDto.projectId,
+			state: { $ne: ProjectState.DELETED },
+		});
+		if (!project)
+			throw CustomError.badRequest(
+				"No se pudo encontrar el proyecto especificado."
+			);
+
+		const uniqueEmails = new Set<string>(shareProjectDto.emails);
+		await Promise.all(
+			Array.from(uniqueEmails).map((email) => {
+				return this.sendEmailInvitationLink({
+					email,
+					requestingUser: shareProjectDto.senderId,
+					projectId: shareProjectDto.projectId,
+				});
+			})
+		);
+
+		return {
+			message: "Las invitaciones fueron enviadas correctamente.",
+			request: uniqueEmails,
+		};
+	}
+
+	async getProjectSharingLink(shareProjectDto: ShareProjectLinkDto) {
+		const { requestingUser, projectId } = shareProjectDto;
+		const project = await ProjectModel.findOne({
+			_id: projectId,
+			state: { $ne: ProjectState.DELETED },
+		});
+		if (!project)
+			throw CustomError.notFound(
+				"No se pudo encontrar el proyecto especificado."
+			);
+
+		if (!project.owner.equals(requestingUser))
+			throw CustomError.unauthorized(
+				"No puedes compartir un proyecto del que no eres propietario."
+			);
+
+		const link = await this.generateProjectSharingLink({
+			requestingUser,
+			projectId,
+		});
+
+		return {
+			message: "El link para compartir el proyecto fue generado correctamente.",
+			shareLink: link,
+		};
+	}
+
+	private async generateProjectSharingLink({
+		requestingUser,
+		projectId,
+	}: ProjectInviteTokenPayload) {
+		const token = await jwtAdapter.generateToken(
+			{ requestingUser, projectId },
+			"7d"
+		);
+
+		if (!token)
+			throw CustomError.internalServer(
+				"Se produjo un error al generar el link para compartir el proyecto."
+			);
+
+		return `${this.frontEndUrl}/share/projects/?token=${token}`;
+	}
+
 	//get user active projects
 	async getUserProjects(owner: string) {
 		const projects = await ProjectModel.find({
 			owner: owner,
-			state: { $ne: ProjectState.Deleted },
-		})
-			.populate({
-				path: "collaborators",
-				match: { deletedAt: null },
-			})
-			.exec();
-
-		if (!projects) throw CustomError.badRequest("User has no Projects");
-
-		const filteredProjects = projects
-			.map((p) => ProjectEntity.fromObject(p))
-			.filter((item) => item.state !== ProjectState.Deleted);
-
-		if (!filteredProjects.length)
-			throw CustomError.badRequest("User has no active Projects");
+			state: { $ne: ProjectState.DELETED },
+		}).exec();
 
 		return {
-			count: filteredProjects.length,
-			projects: filteredProjects,
+			count: projects.length,
+			projects: projects.map((p) => ProjectEntity.fromObject(p)),
 		};
 	}
 
@@ -95,35 +147,21 @@ export class ProjectService {
 	async getUserSharedProjects(userId: string) {
 		const projects = await ProjectModel.find({
 			collaborators: userId,
-			state: { $ne: ProjectState.Deleted },
-		})
-			.populate({
-				path: "collaborators",
-				match: { deletedAt: null },
-			})
-			.exec();
-
-		if (!projects) throw CustomError.badRequest("User has no shared Projects");
-
-		const filteredProjects = projects
-			.map((p) => ProjectEntity.fromObject(p))
-			.filter((item) => item.state !== ProjectState.Deleted);
-
-		if (!filteredProjects.length)
-			throw CustomError.badRequest("User has no active Projects");
+			state: { $ne: ProjectState.DELETED },
+		}).exec();
 
 		return {
-			count: filteredProjects.length,
-			projects: filteredProjects,
+			count: projects.length,
+			projects: projects.map((p) => ProjectEntity.fromObject(p)),
 		};
 	}
 
 	async getProjectByIdWithVersions({
 		projectId,
-		userSession,
+		requestingUserSession,
 	}: {
 		projectId: string;
-		userSession: { userId: string; roles: string[] };
+		requestingUserSession: { userId: string; roles: string[] };
 	}) {
 		const project = await ProjectModel.findById(projectId)
 			.populate({
@@ -139,13 +177,24 @@ export class ProjectService {
 
 		if (!project)
 			throw CustomError.notFound(
-				"El proyecto solicitado no pudo ser encontrado en el servidor."
+				"El proyecto solicitado no existe o fue eliminado."
 			);
 
-		if (project.state === ProjectState.Deleted)
-			throw CustomError.badRequest("El proyecto solicitado fue eliminado.");
+		const isOwner = project.owner.equals(requestingUserSession.userId);
+		const isCollaborator = project.collaborators.some((c) =>
+			c.equals(requestingUserSession.userId)
+		);
+		const isAdmin = requestingUserSession.roles.includes(UserRole.ADMIN);
 
-		const projectEntity = ProjectEntity.fromObject(project);
+		if (!isOwner && !isCollaborator && !isAdmin) {
+			throw CustomError.unauthorized(
+				"No cuenta con los permisos necesarios para acceder al proyecto especificado."
+			);
+		}
+
+		const projectEntity = ProjectEntity.fromObject(project, {
+			includeVersions: true,
+		});
 
 		return {
 			project: projectEntity,
@@ -162,6 +211,7 @@ export class ProjectService {
 		const project = await ProjectModel.findOne({ _id: projectId })
 			.populate({
 				path: "collaborators",
+				select: ["name", "lastName", "email"],
 				match: { deletedAt: null },
 			})
 			.exec();
@@ -171,10 +221,12 @@ export class ProjectService {
 				"El proyecto solicitado no pudo ser encontrado en el servidor."
 			);
 
-		if (project.state == ProjectState.Deleted)
+		if (project.state == ProjectState.DELETED)
 			throw CustomError.badRequest("El proyecto solicitado fue eliminado.");
 
-		const projectEntity = ProjectEntity.fromObject(project);
+		const projectEntity = ProjectEntity.fromObject(project, {
+			includeCollaborators: true,
+		});
 
 		return {
 			project: projectEntity,
@@ -186,6 +238,7 @@ export class ProjectService {
 		const existName = await ProjectModel.findOne({
 			title: createDto.title,
 			owner: createDto.owner,
+			state: { $ne: ProjectState.DELETED },
 		});
 		if (existName)
 			throw CustomError.conflict(
@@ -217,7 +270,7 @@ export class ProjectService {
 		if (!project)
 			throw CustomError.notFound("El proyecto especificado no existe.");
 
-		if (project.state !== ProjectState.Created) {
+		if (project.state !== ProjectState.CREATED) {
 			throw CustomError.conflict(
 				"El proyecto no se encuentra en un estado editable."
 			);
@@ -235,9 +288,10 @@ export class ProjectService {
 			);
 
 		const existName = await ProjectModel.findOne({
-			_id: { $ne: new mongoose.Types.ObjectId(id) },
+			_id: { $ne: id },
 			title: title,
-			owner: new mongoose.Types.ObjectId(requestingUserId),
+			state: { $ne: ProjectState.DELETED },
+			owner: requestingUserId,
 		});
 		if (existName) {
 			throw CustomError.conflict(
@@ -269,12 +323,12 @@ export class ProjectService {
 		if (!project) throw CustomError.badRequest("Project does not exists");
 
 		switch (project.state) {
-			case ProjectState.Deleted:
+			case ProjectState.DELETED:
 				throw CustomError.badRequest("Project already deleted");
 
-			case ProjectState.Pending:
+			case ProjectState.PENDING:
 				try {
-					project.state = ProjectState.Deleted;
+					project.state = ProjectState.DELETED;
 
 					await project.save();
 					return {
@@ -284,70 +338,61 @@ export class ProjectService {
 					throw CustomError.internalServer(`${error}`);
 				}
 
-			case ProjectState.Created:
+			case ProjectState.CREATED:
 				throw CustomError.badRequest(
 					"To delete a Project you need to request it first"
 				);
 		}
 	}
 
-	async sendProjectCollaborationInvitation(shareProjectDto: ShareProjectDto) {
-		const project = await ProjectModel.findOne({
-			_id: shareProjectDto.projectId,
-			state: { $ne: ProjectState.Deleted },
+	async removeCollaboratorFromProject({
+		projectId,
+		collaboratorToRemove,
+		requestingUser,
+	}: {
+		projectId: string;
+		requestingUser: string;
+		collaboratorToRemove: string;
+	}) {
+		const collaborator = await UserModel.findOne({
+			_id: collaboratorToRemove,
+			deletedAt: null,
 		});
-		if (!project)
-			throw CustomError.badRequest(
-				"No se pudo encontrar el proyecto especificado."
+
+		if (!collaborator) {
+			throw CustomError.notFound(
+				"El colaborador especificado no existe o fue eliminado."
 			);
+		}
 
-		const uniqueEmails = new Set<string>(shareProjectDto.emails);
-		await Promise.all(
-			Array.from(uniqueEmails).map((email) => {
-				return this.sendEmailInvitationLink({
-					email,
-					senderId: shareProjectDto.senderId,
-					projectId: shareProjectDto.projectId,
-				});
-			})
-		);
-
-		return {
-			message: "Las invitaciones fueron enviadas correctamente.",
-			request: uniqueEmails,
-		};
-	}
-
-	async getProjectSharingLink(shareProjectDto: ShareProjectLinkDto) {
-		const { senderId, projectId } = shareProjectDto;
 		const project = await ProjectModel.findOne({
 			_id: projectId,
-			state: { $ne: ProjectState.Deleted },
+			state: { $ne: ProjectState.DELETED },
 		});
+
 		if (!project)
 			throw CustomError.notFound(
-				"No se pudo encontrar el proyecto especificado."
+				"El proyecto especificado no existe o fue eliminado."
 			);
 
-		if (!project.owner.equals(senderId))
+		if (!project.owner.equals(requestingUser))
 			throw CustomError.unauthorized(
-				"No puedes compartir un proyecto del que no eres propietario."
+				"Solo el dueño del proyecto puede remover colaboradores."
 			);
 
-		const token = await jwtAdapter.generateToken(
-			{ senderId: senderId, projectId: projectId },
-			"7d"
-		);
-		if (!token)
+		try {
+			await ProjectModel.updateOne(
+				{ _id: projectId },
+				{ $pull: { collaborators: collaboratorToRemove } }
+			);
+		} catch (error) {
+			console.error(
+				`Error occurred while removing collaborator from project: ${error}`
+			);
 			throw CustomError.internalServer(
-				"Se produjo un error al generar el link para compartir el proyecto."
+				`Se ha producido un error al remover al colaborador del proyecto. Por favor, inténtelo de nuevo más tarde.`
 			);
-		const link = `${this.frontEndUrl}/share/projects/?token=${token}`;
-
-		return {
-			message: "El link para compartir el proyecto fue generado correctamente.",
-			shareLink: link,
-		};
+		}
 	}
 
 	async addCollaboratorToProject(token: string, newCollaboratorUserId: string) {
@@ -355,21 +400,22 @@ export class ProjectService {
 		if (!payload)
 			throw CustomError.unauthorized("El token de invitación es inválido.");
 
-		const { senderId, projectId } = payload as {
-			senderId: string;
-			projectId: string;
-		};
+		const { requestingUser, projectId } = payload as ProjectInviteTokenPayload;
 
 		if (!projectId)
 			throw CustomError.internalServer("El token de invitación es inválido.");
 
-		if (!senderId) throw CustomError.internalServer("El token de invitación es inválido.");
+		if (!requestingUser)
+			throw CustomError.internalServer("El token de invitación es inválido.");
 
 		const project = await ProjectModel.findOne({
 			_id: projectId,
-			state: { $ne: ProjectState.Deleted },
+			state: { $ne: ProjectState.DELETED },
 		});
-		if (!project) throw CustomError.badRequest("El proyecto asociado a la invitación no existe o fue eliminado.");
+		if (!project)
+			throw CustomError.badRequest(
+				"El proyecto asociado a la invitación no existe o fue eliminado."
+			);
 
 		const user = await UserModel.findOne({
 			_id: newCollaboratorUserId,
@@ -377,13 +423,19 @@ export class ProjectService {
 		});
 
 		if (!user)
-			throw CustomError.unauthorized("El usuario debe encontrarse registrado en la plataforma.");
+			throw CustomError.unauthorized(
+				"El usuario debe encontrarse registrado en la plataforma."
+			);
 
 		if (project.owner.equals(user._id))
-			throw CustomError.badRequest("El dueño del proyecto no puede ser asignado como colaborador.");
+			throw CustomError.badRequest(
+				"El dueño del proyecto no puede ser asignado como colaborador."
+			);
 
 		if (project.collaborators.includes(user._id))
-			throw CustomError.badRequest("El usuario ya se encuentra asignado como colaborador en el proyecto.");
+			throw CustomError.badRequest(
+				"El usuario ya se encuentra asignado como colaborador en el proyecto."
+			);
 
 		try {
 			project.collaborators.push(user._id);
@@ -392,12 +444,17 @@ export class ProjectService {
 			const projectEntity = ProjectEntity.fromObject(project);
 
 			return {
-				message: "El usuario fue asignado exitosamente como colaborador en el proyecto.",
+				message:
+					"El usuario fue asignado exitosamente como colaborador en el proyecto.",
 				project: projectEntity,
 			};
 		} catch (error) {
-			console.error(`Error occurred while adding collaborator to project: ${error}`)
-			throw CustomError.internalServer(`Se ha producido un error al añadir al usuario como colaborador en el proyecto. Por favor, inténtelo de nuevo más tarde.`);
+			console.error(
+				`Error occurred while adding collaborator to project: ${error}`
+			);
+			throw CustomError.internalServer(
+				`Se ha producido un error al añadir al usuario como colaborador en el proyecto. Por favor, inténtelo de nuevo más tarde.`
+			);
 		}
 	}
 
@@ -406,26 +463,23 @@ export class ProjectService {
 		if (!payload)
 			throw CustomError.unauthorized("El token de invitación es inválido.");
 
-		const { senderId, projectId } = payload as {
-			senderId: string;
-			projectId: string;
-		};
+		const { requestingUser, projectId } = payload as ProjectInviteTokenPayload;
 
 		if (!projectId)
 			throw CustomError.internalServer(
 				"El token de invitación no contiene el identificador del proyecto."
 			);
 
-		if (!senderId)
+		if (!requestingUser)
 			throw CustomError.internalServer("El token de invitación es inválido.");
 
 		const project = await ProjectModel.findOne({
 			_id: projectId,
-			state: { $ne: ProjectState.Deleted },
+			state: { $ne: ProjectState.DELETED },
 		});
 		if (!project)
-			throw CustomError.badRequest(
-				"El proyecto especificado no existe o fue eliminado."
+			throw CustomError.notFound(
+				"El proyecto asociado a la invitación no existe o fue eliminado."
 			);
 
 		return {
@@ -455,7 +509,7 @@ export class ProjectService {
 			const delitionRequestEntity =
 				DelitionRequestEntity.fromObject(delitionRequest);
 
-			project.state = ProjectState.Pending;
+			project.state = ProjectState.PENDING;
 			await project.save();
 
 			return {
@@ -479,10 +533,6 @@ export class ProjectService {
 	}
 
 	async handleCollaboration(projectId: string, userId: string, action: string) {
-		throw new Error("To be implemented");
-	}
-
-	async removeCollaborator(projectId: string, userId: string) {
 		throw new Error("To be implemented");
 	}
 

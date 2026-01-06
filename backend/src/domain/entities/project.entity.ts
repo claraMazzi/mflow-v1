@@ -27,7 +27,10 @@ export class ProjectEntity {
 		public versions: ReducedVersionEntity[]
 	) {}
 
-	static fromObject(object: { [key: string]: any }) {
+	static fromObject(
+		object: { [key: string]: any },
+		{ includeCollaborators = false, includeVersions = false } = {}
+	) {
 		const {
 			id,
 			_id,
@@ -39,39 +42,56 @@ export class ProjectEntity {
 			versions,
 		} = object;
 
-		if (!_id && !id) throw CustomError.badRequest("El identificador del proyecto es obligatorio.");
-		if (!title) throw CustomError.badRequest("El título del proyecto es obligatorio.");
-		if (!owner) throw CustomError.badRequest("El dueño del proyecto es obligatorio.");
-		if (!collaborators) throw CustomError.badRequest("Los colaboradores del proyecto son obligatorios.");
-		if (!versions) throw CustomError.badRequest("Las versiones de modelos del proyecto son requeridas.");
+		if (!_id && !id)
+			throw CustomError.badRequest(
+				"El identificador del proyecto es obligatorio."
+			);
+		if (!title)
+			throw CustomError.badRequest("El título del proyecto es obligatorio.");
+		if (!owner)
+			throw CustomError.badRequest("El dueño del proyecto es obligatorio.");
+		if (includeCollaborators && !collaborators)
+			throw CustomError.badRequest(
+				"Los colaboradores del proyecto son obligatorios."
+			);
+		if (includeVersions && !versions)
+			throw CustomError.badRequest(
+				"Las versiones de modelos del proyecto son requeridas."
+			);
 
 		return new ProjectEntity(
 			_id || id,
 			title,
 			description,
 			owner,
-			collaborators.map((item: UserEntity) => ({
-				email: item.email,
-				id: item.id,
-			})),
+			includeCollaborators
+				? collaborators.map((item: UserEntity) => ({
+						email: item.email,
+						lastname: item.lastName,
+						firstName: item.name,
+						id: item.id,
+				  }))
+				: [],
 			state,
-			versions.map(
-				(
-					item: Omit<Version, "parentVersion"> & {
-						parentVersion: { id: string; title: string } | null;
-					}
-				) => ({
-					id: item.id,
-					title: item.title,
-					state: item.state,
-					parentVersion: item.parentVersion && {
-						id: item.parentVersion.id,
-						title: item.parentVersion.title,
-					},
-					createdAt: item.createdAt,
-					updatedAt: item.updatedAt,
-				})
-			)
+			includeVersions
+				? versions.map(
+						(
+							item: Omit<Version, "parentVersion"> & {
+								parentVersion: { id: string; title: string } | null;
+							}
+						) => ({
+							id: item.id,
+							title: item.title,
+							state: item.state,
+							parentVersion: item.parentVersion && {
+								id: item.parentVersion.id,
+								title: item.parentVersion.title,
+							},
+							createdAt: item.createdAt,
+							updatedAt: item.updatedAt,
+						})
+				  )
+				: []
 		);
 	}
 }
