@@ -9,6 +9,7 @@ import { Input } from "@components/ui/common/input";
 import { Button } from "@components/ui/common/button";
 import { X, Plus, ChevronDown, ChevronRight } from "lucide-react";
 import { useUI } from "@components/ui/context";
+import cn from "clsx";
 
 interface DiagramaEstructuraEntidadesProps {
   sessionToken?: string;
@@ -242,12 +243,20 @@ const DiagramaDinamicaEntidadesComponent = ({
                   key={field.id}
                   className="bg-gray-50 rounded-lg border"
                 >
-                  {/* Header with name input and controls */}
-                  <div className="flex items-center gap-3 p-3">
-                    <div className="flex-1">
-                      <div className="space-y-2">
+                  {/* Collapsible Header */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => toggleEntityCollapse(field._id)}
+                      className="flex-1 flex items-center gap-3 p-3 text-left hover:bg-gray-100 transition-colors duration-200 rounded-l-lg"
+                    >
+                      {isCollapsed ? (
+                        <ChevronRight className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                      )}
+                      <div className="flex-1 space-y-2">
                         <label className="block text-sm font-medium text-gray-700">
-                         {index + 1}. Nombre de la entidad
+                          {index + 1}. Nombre de la entidad
                         </label>
                         <Input
                           {...customRegisterField({
@@ -256,20 +265,13 @@ const DiagramaDinamicaEntidadesComponent = ({
                           })}
                           placeholder="Nombre de la entidad..."
                           className="border-2 border-gray-200 focus:border-purple-400"
+                          onClick={(e) => e.stopPropagation()}
                         />
                       </div>
-                    </div>
+                    </button>
                     
-                    {/* Control buttons */}
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleEntityCollapse(field._id)}
-                        className="text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                      >
-                        {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                      </Button>
+                    {/* Delete button */}
+                    <div className="pr-3">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -287,8 +289,13 @@ const DiagramaDinamicaEntidadesComponent = ({
                     </div>
                   </div>
 
-                  {/* Collapsible content */}
-                  {!isCollapsed && (
+                  {/* Collapsible Content with smooth transition */}
+                  <div
+                    className={cn(
+                      "overflow-hidden transition-all duration-300 ease-in-out",
+                      isCollapsed ? "max-h-0 opacity-0" : "max-h-[1000px] opacity-100"
+                    )}
+                  >
                     <div className="px-3 pb-3">
                       {/** TODO: Actualizar para cada entidades */}
                       <DiagramImageUpload
@@ -297,7 +304,7 @@ const DiagramaDinamicaEntidadesComponent = ({
                         diagramPropertyPath={`entities:${field._id}.dynamicDiagram`}
                       />
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             })}
