@@ -18,13 +18,13 @@ const revisionSchema = new Schema(
 			ref: "Version",
 			required: [true, "Una revisión debe tener asociado una versión."],
 		},
-		finalReview: String,
+		finalReview: String, //devolucion final de la revision
 		state: {
 			type: String,
 			enum: ["PENDIENTE", "EN CURSO", "FINALIZADA"],
 			default: "PENDIENTE",
 		},
-		conceptualModel: [correctionSchema],
+		corrections: [correctionSchema],
 	},
 	{ timestamps: true }
 );
