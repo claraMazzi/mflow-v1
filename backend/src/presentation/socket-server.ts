@@ -654,8 +654,6 @@ export class SocketServer {
 		});
 	}
 
-	
-
 	private async handlePlantTextGetImage(
 		socket: Socket,
 		payload: PlantTextGetImagePayload

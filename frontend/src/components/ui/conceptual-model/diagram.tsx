@@ -435,7 +435,6 @@ const DiagramImageUploadComponent = ({
       return;
     }
 
-    // Decide: new upload or replace existing
     if (file) {
       replaceFileOnServer(selectedFile);
     } else {
@@ -450,11 +449,6 @@ const DiagramImageUploadComponent = ({
     // Also clear uploadState.error so the useEffect doesn't re-set the error
     setUploadState(prev => ({ ...prev, error: undefined }));
   };
-
-  useEffect(() => {
-    // no-op placeholder to react to url changes if needed later
-    return () => {};
-  }, [plantTextImageUrl]);
 
   // Include optimisticFile in the check - after upload, file might not be set yet
   // but optimisticFile will have the uploaded image data

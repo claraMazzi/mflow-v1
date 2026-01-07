@@ -175,7 +175,7 @@ const VersionBar = ({
           </Button>
 
           <Button onClick={handleExport}>
-            Exportar
+            EXPORTAR
           </Button>
 
           <Button
