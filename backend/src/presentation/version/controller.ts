@@ -40,4 +40,27 @@ export class VersionController {
 			return this.handleError(error, res);
 		}
 	};
+
+	deleteVersion = async (req: Request, res: Response) => {
+		try {
+			const userId = req.session?.userId;
+			if (!userId) {
+				return res.status(401).json({ error: "Debe iniciar sesión para eliminar una versión." });
+			}
+
+			const { versionId } = req.params;
+			if (!versionId) {
+				return res.status(400).json({ error: "El identificador de la versión es obligatorio." });
+			}
+
+			const result = await this.versionService.deleteVersion({
+				versionId,
+				userId,
+			});
+
+			return res.json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
 }

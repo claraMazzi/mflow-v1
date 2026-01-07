@@ -6,6 +6,11 @@ export type UseVersionsOfProjectProps = {
 	projectId: string;
 };
 
+export type DeleteVersionResult = {
+	success: boolean;
+	error?: string;
+};
+
 export const useVersionsOfProject = ({
 	projectId,
 }: UseVersionsOfProjectProps) => {
@@ -43,6 +48,30 @@ export const useVersionsOfProject = ({
 		}
 	}, [projectId, session?.auth]);
 
+	const deleteVersion = useCallback(
+		async (versionId: string): Promise<DeleteVersionResult> => {
+			if (!session?.auth) {
+				return {
+					success: false,
+					error: "Debe estar logueado para eliminar una versión.",
+				};
+			}
+
+			const response = await deleteVersionRequest({
+				sessionToken: session.auth,
+				versionId,
+			});
+
+			if (response.success) {
+				// Refresh the versions list after successful deletion
+				await fetchVersions();
+			}
+
+			return response;
+		},
+		[session?.auth, fetchVersions]
+	);
+
 	useEffect(() => {
 		if (session?.auth) {
 			fetchVersions();
@@ -54,6 +83,7 @@ export const useVersionsOfProject = ({
 		isLoading,
 		error,
 		refreshVersions: fetchVersions,
+		deleteVersion,
 	};
 };
 
@@ -97,6 +127,44 @@ async function getVersionsOfPoject({
 		return {
 			success: false,
 			error: "Error al obtener las versiones desde el servidor.",
+		};
+	}
+}
+
+async function deleteVersionRequest({
+	versionId,
+	sessionToken,
+}: {
+	versionId: string;
+	sessionToken: string;
+}): Promise<DeleteVersionResult> {
+	try {
+		const response = await fetch(
+			`${process.env.NEXT_PUBLIC_API_URL}/api/versions/${versionId}`,
+			{
+				method: "DELETE",
+				headers: {
+					Authorization: `Bearer ${sessionToken}`,
+				},
+			}
+		);
+
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			return {
+				success: false,
+				error:
+					errorData.error ||
+					"Se ha producido un error, por favor inténtelo de nuevo más tarde.",
+			};
+		}
+
+		return { success: true };
+	} catch (error) {
+		console.error(`Unexpected error during version deletion: ${versionId}`, error);
+		return {
+			success: false,
+			error: "Se ha producido un error, por favor inténtelo de nuevo más tarde.",
 		};
 	}
 }

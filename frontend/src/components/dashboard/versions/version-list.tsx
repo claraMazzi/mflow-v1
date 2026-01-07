@@ -1,15 +1,47 @@
 "use client";
 
 import { Button } from "@components/ui/common/button";
-import React, { ReactNode } from "react";
+import React, { ReactNode, useState } from "react";
 import ContentCard from "@components/ui/Cards/ContentCard";
 import { Skeleton } from "@components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { useUI } from "@components/ui/context";
 import { VersionEntity } from "#types/version";
 import { CreateVersionForm } from "./forms/create-version-form";
-// import { useSession } from "next-auth/react";
+import { DeleteVersionResult } from "@src/hooks/use-versions";
 import cn from "clsx";
+
+// Modal content component for delete confirmation
+const DeleteVersionModalContent = ({
+	version,
+	onCancel,
+	onConfirm,
+	isDeleting,
+}: {
+	version: VersionEntity;
+	onCancel: () => void;
+	onConfirm: () => void;
+	isDeleting: boolean;
+}) => {
+	return (
+		<div className="flex max-w-md flex-col mx-auto justify-center items-center p-4 space-y-4">
+			<p className="text-base text-center">
+				<span>¿Está seguro de que desea eliminar la versión </span>
+				<span className="font-bold">{version.title}</span>
+				<span>?</span>
+			</p>
+
+			<div className="flex justify-center space-x-3 mt-3 w-full">
+				<Button variant="outline" size="sm" onClick={onCancel} disabled={isDeleting}>
+					Cancelar
+				</Button>
+				<Button size="sm" onClick={onConfirm} disabled={isDeleting}>
+					{isDeleting ? "Eliminando..." : "Eliminar"}
+				</Button>
+			</div>
+		</div>
+	);
+};
 
 const getVersionDecorators = (version: VersionEntity) => {
 	const decorators: ReactNode[] = [];
@@ -45,6 +77,8 @@ interface VersionListProps {
 	refreshVersions: () => void;
 	isLoading: boolean;
 	projectId: string;
+	isOwner: boolean;
+	deleteVersion: (versionId: string) => Promise<DeleteVersionResult>;
 }
 
 const VersionList = ({
@@ -52,10 +86,12 @@ const VersionList = ({
 	refreshVersions,
 	isLoading,
 	projectId,
+	isOwner,
+	deleteVersion,
 }: VersionListProps) => {
 	const router = useRouter();
 	const { openModal, closeModal } = useUI();
-	// const { data: session } = useSession();
+	const [isDeleting, setIsDeleting] = useState(false);
 
 	const handleCreateNewVersion = () => {
 		openModal({
@@ -168,39 +204,59 @@ const VersionList = ({
 		});
 	};
 
+	const showErrorModal = (errorMessage: string) => {
+		openModal({
+			name: "fullscreen-modal",
+			title: "Error",
+			size: "md",
+			showCloseButton: false,
+			content: (
+				<div className="flex max-w-md flex-col mx-auto justify-center items-center p-4 space-y-4">
+					<p className="text-base text-center ">{errorMessage}</p>
+					<div className="flex justify-center mt-3 w-full">
+						<Button size="sm" onClick={closeModal}>
+							Aceptar
+						</Button>
+					</div>
+				</div>
+			),
+		});
+	};
+
 	const handleDeleteVersion = (version: VersionEntity) => {
+		// Check if version state allows deletion
+		if (version.state !== "EN EDICION") {
+			showErrorModal(`Sólo se puede eliminar una versión que se encuentra en estado "EN EDICIÓN"`);
+			return;
+		}
+
 		openModal({
 			name: "fullscreen-modal",
 			title: "Eliminar versión",
 			size: "md",
 			showCloseButton: false,
 			content: (
-				<div className="flex max-w-md flex-col mx-auto justify-center items-center p-4 space-y-4">
-					<p className="text-base text-center">
-						<span>¿Está seguro que desea eliminar la versión </span>
-						<span className="font-bold">{version.title}</span>
-						<span>?</span>
-						<span className="font-bold text-red-600">
-							Esta operación no es reversible.
-						</span>
-					</p>
-					<div className="w-full space-y-2">
-						<label className="text-sm font-medium">Motivo (opcional)</label>
-						<textarea
-							className="w-full p-2 border rounded"
-							rows={4}
-							placeholder="Ingrese el motivo de la eliminación..."
-						/>
-					</div>
-					<div className="flex justify-center space-x-3 mt-3 w-full">
-						<Button variant="outline" size="sm" onClick={closeModal}>
-							Cancelar
-						</Button>
-						<Button size="sm" onClick={closeModal}>
-							Eliminar
-						</Button>
-					</div>
-				</div>
+				<DeleteVersionModalContent
+					version={version}
+					onCancel={closeModal}
+					onConfirm={async () => {
+						setIsDeleting(true);
+						const result = await deleteVersion(version.id);
+						setIsDeleting(false);
+
+						if (result.success) {
+							closeModal();
+						} else {
+							closeModal();
+							// Show error modal with the specific error or generic message
+							showErrorModal(
+								result.error ||
+									"Se ha producido un error, por favor inténtelo de nuevo más tarde."
+							);
+						}
+					}}
+					isDeleting={isDeleting}
+				/>
 			),
 		});
 	};
@@ -249,16 +305,21 @@ const VersionList = ({
 									</Button>
 								),
 							},
-							{
-								content: (
-									<Button
-										variant={"optionList"}
-										onClick={() => handleDeleteVersion(version)}
-									>
-										Eliminar Versión
-									</Button>
-								),
-							},
+							// Only show delete option if user is the project owner
+							...(isOwner
+								? [
+										{
+											content: (
+												<Button
+													variant={"optionList"}
+													onClick={() => handleDeleteVersion(version)}
+												>
+													Eliminar Versión
+												</Button>
+											),
+										},
+								  ]
+								: []),
 						];
 
 						return (
