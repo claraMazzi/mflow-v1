@@ -56,11 +56,6 @@ interface DiagramaEstructuraEntidadesProps {
     listPropertyPath: string;
     itemId: string;
   }) => void;
-  socket?: {
-		emit: (event: string, payload: Record<string, unknown>) => void;
-		on: (event: string, handler: (...args: unknown[]) => void) => void;
-		off: (event: string, handler: (...args: unknown[]) => void) => void;
-	};
   register?: (config: {
 		name: Path<ConceptualModel>;
 		propertyPath?: string;
@@ -79,22 +74,10 @@ const DiagramaDinamicaEntidadesComponent = ({
   customRegisterField,
   handleAddItemToList,
   handleRemoveItemFromList,
-  socket,
 }: DiagramaEstructuraEntidadesProps) => {
   const [collapsedEntities, setCollapsedEntities] = useState<Set<string>>(new Set());
   const { openModal, closeModal } = useUI();
   
-  // Memoize entitiesList.fields to prevent unnecessary re-renders
-  const memoizedEntitiesFields = useMemo(() => entitiesList.fields, [entitiesList.fields]);
-
-
-                        // watch={watch}
-                        // namePathPrefix={`entities.${index}.dynamicDiagram`}
-                        // diagramPropertyPath={`entities:${field._id}.dynamicDiagram`}
-
-
-
-
   const toggleEntityCollapse = useCallback((entityId: string) => {
     setCollapsedEntities(prev => {
       const newSet = new Set(prev);
@@ -205,9 +188,8 @@ const DiagramaDinamicaEntidadesComponent = ({
     title: "Diagrama de Dinamica de la entidad",
     watch,
     control,
-    socket,
     register: customRegisterField,
-  }), [sessionToken, versionId, hasEditingRights, imageInfos, watch, control, socket, customRegisterField]);
+  }), [sessionToken, versionId, hasEditingRights, imageInfos, watch, control, customRegisterField]);
 
   return (
     <div className="flex flex-col gap-6 p-6 bg-white rounded-lg shadow-sm">
@@ -233,9 +215,9 @@ const DiagramaDinamicaEntidadesComponent = ({
           </Button>
         </div>
 
-        {memoizedEntitiesFields.length > 0 ? (
+        {entitiesList.fields.length > 0 ? (
           <div className="space-y-3">
-            {memoizedEntitiesFields.map((field, index) => {
+            {entitiesList.fields.map((field, index) => {
               const isCollapsed = collapsedEntities.has(field._id);
               
               return (

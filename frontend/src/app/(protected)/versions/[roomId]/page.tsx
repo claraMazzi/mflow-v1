@@ -74,9 +74,8 @@ export default function Page({
     socket,
     sessionToken: session?.auth,
   });
-  const { roomId } = React.use(params); // ✅ unwrap the promise
+  const { roomId } = React.use(params); 
 
-  // const [roomId, setRoomId] = useState(versionId); //esta hardcodeado -agregar el id a la ruta roomID y versionId son lo mismo
   const [currentTab, setCurrentTab] = useState("descripcion-sistema");
   const [isModelInitialized, setIsModelInitialized] = useState(false);
   const [title, setTitle] = useState("");
@@ -91,8 +90,6 @@ export default function Page({
   
   // Track pending field updates for debounced auto-save
   const pendingUpdatesRef = useRef<Map<string, { value: any; timerId: NodeJS.Timeout }>>(new Map());
-  // Track the last synced values to detect actual changes
-  const lastSyncedValuesRef = useRef<Map<string, any>>(new Map());
   
   // Keep refs in sync with state
   useEffect(() => {
@@ -195,12 +192,7 @@ export default function Page({
         shouldTouch: true,
       });
 
-      /**
-       * The issue is that when you update a nested property like entities.0.name,
-       * React Hook Form doesn't automatically update the parent entities array reference,
-       * so components that depend on the entities array don't re-render.
-       */
-
+      //Handle the case when editing a property inside an entity
       if (parsedPath?.trim()) {
         const path = parsedPath.split(".");
         if (path.length > 0 && path[0] === "entities") {
@@ -526,10 +518,7 @@ export default function Page({
       clearTimeout(pending.timerId);
       pendingUpdatesRef.current.delete(propertyPath);
     }
-    
-    // Track the synced value
-    lastSyncedValuesRef.current.set(propertyPath, value);
-    
+        
     socket.emit("field-update", { roomId, propertyPath, value });
   }, [hasEditingRights, roomId]);
 
@@ -546,7 +535,6 @@ export default function Page({
     // Schedule new debounced update
     const timerId = setTimeout(() => {
       pendingUpdatesRef.current.delete(propertyPath);
-      lastSyncedValuesRef.current.set(propertyPath, value);
       socket.emit("field-update", { roomId, propertyPath, value });
     }, FIELD_UPDATE_DEBOUNCE_DELAY);
     
@@ -559,7 +547,6 @@ export default function Page({
     
     pendingUpdatesRef.current.forEach(({ value, timerId }, propertyPath) => {
       clearTimeout(timerId);
-      lastSyncedValuesRef.current.set(propertyPath, value);
       socket.emit("field-update", { roomId, propertyPath, value });
     });
     pendingUpdatesRef.current.clear();
@@ -918,7 +905,6 @@ export default function Page({
                 watch={watch}
                 control={control}
                 customRegisterField={customRegisterField}
-                socket={socket}
               />
             </TabsContent>
 
@@ -934,7 +920,6 @@ export default function Page({
                 customRegisterField={customRegisterField}
                 handleAddItemToList={handleAddItemToList}
                 handleRemoveItemFromList={handleRemoveItemFromList}
-                socket={socket}
               />
             </TabsContent>
 
@@ -980,7 +965,6 @@ export default function Page({
                 watch={watch}
                 control={control}
                 customRegisterField={customRegisterField}
-                socket={socket}
               />
             </TabsContent>
           </Tabs>

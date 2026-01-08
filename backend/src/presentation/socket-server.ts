@@ -86,7 +86,13 @@ export class SocketServer {
 	private activeCollaborationRooms: Map<string, CollaborationRoom>;
 	private versionService: VersionService;
 
-	constructor({ serverListener, frontEndURL }: { serverListener: Server, frontEndURL: string }) {
+	constructor({
+		serverListener,
+		frontEndURL,
+	}: {
+		serverListener: Server;
+		frontEndURL: string;
+	}) {
 		this.socketServer = new SocketIO(serverListener, {
 			cors: {
 				origin: frontEndURL,
@@ -184,7 +190,13 @@ export class SocketServer {
 			(payload: {
 				roomId: string;
 				listPropertyPath: string;
-				itemType: "assumption" | "simplification" | "entity" | "input" | "output" | "property";
+				itemType:
+					| "assumption"
+					| "simplification"
+					| "entity"
+					| "input"
+					| "output"
+					| "property";
 			}) => this.handleAddItemToList(socket, payload)
 		);
 
@@ -194,24 +206,22 @@ export class SocketServer {
 				this.handleRemoveItemFromList(socket, payload)
 		);
 
-		socket.on(
+/* 		socket.on(
 			CLIENT_WS_EVENT_TYPES.PLANT_TEXT_GET_IMAGE,
-			(payload: PlantTextGetImagePayload) => this.handlePlantTextGetImage(socket, payload)
+			(payload: PlantTextGetImagePayload) =>
+				this.handlePlantTextGetImage(socket, payload)
+		); */
+
+		socket.on("finalize-version", (payload: { roomId: string }) =>
+			this.handleFinalizeVersion(socket, payload)
 		);
 
-		socket.on(
-			"finalize-version",
-			(payload: { roomId: string }) => this.handleFinalizeVersion(socket, payload)
+		socket.on("finalize-version-confirm", (payload: { roomId: string }) =>
+			this.handleFinalizeVersionConfirm(socket, payload)
 		);
 
-		socket.on(
-			"finalize-version-confirm",
-			(payload: { roomId: string }) => this.handleFinalizeVersionConfirm(socket, payload)
-		);
-
-		socket.on(
-			"finalize-version-modal-close",
-			(payload: { roomId: string }) => this.handleFinalizeVersionModalClose(socket, payload)
+		socket.on("finalize-version-modal-close", (payload: { roomId: string }) =>
+			this.handleFinalizeVersionModalClose(socket, payload)
 		);
 
 		socket.on("disconnecting", () => this.handleDisconnecting(socket));
@@ -247,7 +257,7 @@ export class SocketServer {
 
 	// Event Handler Methods
 	private async handleJoinRoom(socket: Socket, payload: JoinRoomEventPayload) {
-		//TODO: ADD CHECK OF VALIDITY BEFORE ADDING THE SOCKET TO THE ROOM -- verificar que es colaborador del proyecto -- 
+		//TODO: ADD CHECK OF VALIDITY BEFORE ADDING THE SOCKET TO THE ROOM -- verificar que es colaborador del proyecto --
 		const { version } = await this.versionService.getVersionByIdWithImages(
 			payload.roomId
 		);
@@ -269,7 +279,7 @@ export class SocketServer {
 		await socket.join(payload.roomId);
 
 		console.info(`Collaborator Added: ${socket.id} - ${socket.data.userId}`);
-		//TODO: hacer el ADD colaborator si el usuario es colaboradora 
+		//TODO: hacer el ADD colaborator si el usuario es colaboradora
 		collabRoom.addCollaborator({
 			socketId: socket.id,
 			userInfo: socket.data,
@@ -296,7 +306,7 @@ export class SocketServer {
 		});
 	}
 
-	// TODO agregar un handler pare el text field de plantext change. 
+	// TODO agregar un handler pare el text field de plantext change.
 
 	/*
 	cuando el plantext code cambia el servidor es el encargado de generar la URL de la imagen plant text y enviarsela a todos los clientes para quee la actualice en el front. 
@@ -316,7 +326,8 @@ export class SocketServer {
 
 	*/
 
-	private async handleFieldUpdate( //funciona para todos los text fields 
+	private async handleFieldUpdate(
+		//funciona para todos los text fields
 		socket: Socket,
 		payload: {
 			propertyPath: string;
@@ -324,19 +335,20 @@ export class SocketServer {
 			roomId: string;
 		}
 	) {
-		console.log("----------handleFieldUpdate");
 		const { version } = await this.versionService.getVersionById(
 			payload.roomId
 		);
 
 		// Check if this is a plantTextCode field update
-		const isPlantTextCodeUpdate = payload.propertyPath.endsWith(".plantTextCode");
-		
+		const isPlantTextCodeUpdate =
+			payload.propertyPath.endsWith(".plantTextCode");
+
 		if (isPlantTextCodeUpdate) {
 			// Get the diagram object from the property path (remove .plantTextCode to get diagram path)
 			const diagramPath = payload.propertyPath.replace(/\.plantTextCode$/, "");
+			const plantTextTokenPath = diagramPath + ".plantTextToken";
 			const diagram = getProperty(version.conceptualModel, diagramPath);
-			
+
 			if (!diagram) {
 				console.error(`Diagram not found at property path: ${diagramPath}`);
 				return;
@@ -364,26 +376,30 @@ export class SocketServer {
 			// Generate token for the plantTextCode
 			const plantTextToken = plantumlEncoder.encode(payload.value);
 			console.log("plantTextToken", plantTextToken);
-			
+
 			// Update the diagram with new plantTextCode and token
 			diagram.plantTextCode = payload.value;
 			diagram.plantTextToken = plantTextToken;
-			
-			// Update the field value in the conceptual model (setValue updates the nested path)
-			setValue(version.conceptualModel, payload.propertyPath, payload.value);
-			
+
+			/* // Update the field value in the conceptual model (setValue updates the nested path)
+			setValue(version.conceptualModel, payload.propertyPath, payload.value); */
+
 			// Save the version
 			await version.save();
 
 			// Generate the image URL
-			const imageUrl = `http://www.plantuml.com/plantuml/img/${plantTextToken}`;
+			// const imageUrl = `http://www.plantuml.com/plantuml/img/${plantTextToken}`;
 
-			console.log("imageUrl", imageUrl);
+			// console.log("imageUrl", imageUrl);
 			// Emit the plantText image update to all clients in the room
-			this.emitPlantTextImageUpdate(payload.roomId, {
+			/* this.emitPlantTextImageUpdate(payload.roomId, {
 				propertyPath: diagramPath,
 				imageUrl,
 				plantTextToken,
+			}); */
+			this.emitFieldUpdate(payload.roomId, {
+				propertyPath: plantTextTokenPath,
+				value: plantTextToken,
 			});
 
 			// Also emit the field update for other clients
@@ -398,8 +414,7 @@ export class SocketServer {
 			setValue(version.conceptualModel, payload.propertyPath, payload.value);
 			// console.log("Version Conceptual Model: ", version.conceptualModel);
 			version.save();
-			//agregar try catch para manejar errores 
-			console.log("handleFieldUpdate payload", payload.propertyPath, payload.value);
+			//agregar try catch para manejar errores
 			this.emitFieldUpdate(payload.roomId, {
 				propertyPath: payload.propertyPath,
 				value: payload.value,
@@ -557,15 +572,21 @@ export class SocketServer {
 		payload: {
 			roomId: string;
 			listPropertyPath: string;
-			itemType: "assumption" | "simplification" | "entity" | "input" | "output" | "property";
+			itemType:
+				| "assumption"
+				| "simplification"
+				| "entity"
+				| "input"
+				| "output"
+				| "property";
 		}
 	) {
-		//add try catch 
-		//agregar que tipo de entidad agrego. 
+		//add try catch
+		//agregar que tipo de entidad agrego.
 
-		//va a tener problema cuando quiera agregar una propiedad dentro de una entidad 
-		// -- entidad1 y quiero agregar una entrada o una salida, para poder agregar esa entrada o salida voy a necesitar el id de la entidad sobre la que estoy aplicando y el tipo de dato que vas a agregar a esa lista, si es una entrada tiene otros atributos distintos a lo de la salida, depende de que quiero agregar 
-	
+		//va a tener problema cuando quiera agregar una propiedad dentro de una entidad
+		// -- entidad1 y quiero agregar una entrada o una salida, para poder agregar esa entrada o salida voy a necesitar el id de la entidad sobre la que estoy aplicando y el tipo de dato que vas a agregar a esa lista, si es una entrada tiene otros atributos distintos a lo de la salida, depende de que quiero agregar
+
 		const { version } = await this.versionService.getVersionById(
 			payload.roomId
 		);
@@ -595,7 +616,7 @@ export class SocketServer {
 				listField.push({ description: "", type: "PARAMETRO" });
 				break;
 			case "output":
-				listField.push({ description: "", entity: null});
+				listField.push({ description: "", entity: null });
 				break;
 			case "simplification":
 				listField.push({ description: "" });
@@ -641,7 +662,7 @@ export class SocketServer {
 			payload.listPropertyPath
 		);
 		console.log("List Field: ", listField);
-		const itemToDelete = listField.find((s: any) => 
+		const itemToDelete = listField.find((s: any) =>
 			s._id.equals(payload.itemId)
 		);
 		listField.remove(itemToDelete);
@@ -654,9 +675,7 @@ export class SocketServer {
 		});
 	}
 
-	
-
-	private async handlePlantTextGetImage(
+/* 	private async handlePlantTextGetImage(
 		socket: Socket,
 		payload: PlantTextGetImagePayload
 	) {
@@ -666,10 +685,15 @@ export class SocketServer {
 			);
 
 			// Get the diagram object from the property path
-			const diagram = getProperty(version.conceptualModel, payload.propertyPath);
-			
+			const diagram = getProperty(
+				version.conceptualModel,
+				payload.propertyPath
+			);
+
 			if (!diagram) {
-				console.error(`Diagram not found at property path: ${payload.propertyPath}`);
+				console.error(
+					`Diagram not found at property path: ${payload.propertyPath}`
+				);
 				return;
 			}
 
@@ -692,16 +716,15 @@ export class SocketServer {
 				timestamp: new Date(),
 			});
 
-			console.log(`PlantText existing image sent for property: ${payload.propertyPath}`);
+			console.log(
+				`PlantText existing image sent for property: ${payload.propertyPath}`
+			);
 		} catch (error) {
 			console.error("Error handling plantText get image:", error);
 		}
-	}
+	} */
 
-	private handleFinalizeVersion(
-		socket: Socket,
-		payload: { roomId: string }
-	) {
+	private handleFinalizeVersion(socket: Socket, payload: { roomId: string }) {
 		const collabRoom = this.activeCollaborationRooms.get(payload.roomId);
 
 		if (!collabRoom) {
@@ -748,9 +771,8 @@ export class SocketServer {
 		console.log("Finalizing version for room: ", payload.roomId);
 		try {
 			// Validate and finalize the version
-			const validationResult = await this.versionService.validateAndFinalizeVersion(
-				payload.roomId
-			);
+			const validationResult =
+				await this.versionService.validateAndFinalizeVersion(payload.roomId);
 			console.log("Validation result: ", validationResult);
 			// Emit the validation results to all users in the room
 			this.emitFinalizeVersionResult(payload.roomId, {
@@ -811,7 +833,7 @@ export class SocketServer {
 	}
 
 	public emitInitializeConceptualModel(
-		socket: Socket, 
+		socket: Socket,
 		{
 			version,
 			imageInfos,
@@ -958,18 +980,20 @@ export class SocketServer {
 		});
 	}
 
-	public emitPlantTextImageUpdate(
+/* 	public emitPlantTextImageUpdate(
 		roomId: string,
 		payload: { propertyPath: string; imageUrl: string; plantTextToken: string }
 	) {
-		this.socketServer.to(roomId).emit(SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE, {
-			type: SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE,
-			propertyPath: payload.propertyPath,
-			imageUrl: payload.imageUrl,
-			plantTextToken: payload.plantTextToken,
-			timestamp: new Date(),
-		} satisfies PlantTextImageUpdatePayload);
-	}
+		this.socketServer
+			.to(roomId)
+			.emit(SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE, {
+				type: SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE,
+				propertyPath: payload.propertyPath,
+				imageUrl: payload.imageUrl,
+				plantTextToken: payload.plantTextToken,
+				timestamp: new Date(),
+			} satisfies PlantTextImageUpdatePayload);
+	} */
 
 	public emitFinalizeVersionModal(
 		roomId: string,

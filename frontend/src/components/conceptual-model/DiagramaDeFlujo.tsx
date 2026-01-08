@@ -30,11 +30,6 @@ interface DiagramaFlujoProps {
     name: Path<ConceptualModel>;
     ref: (instance: HTMLInputElement | HTMLTextAreaElement | null) => void;
   };
-  socket?: {
-		emit: (event: string, payload: Record<string, unknown>) => void;
-		on: (event: string, handler: (...args: unknown[]) => void) => void;
-		off: (event: string, handler: (...args: unknown[]) => void) => void;
-	};
   register?: (config: {
 		name: Path<ConceptualModel>;
 		propertyPath?: string;
@@ -49,7 +44,6 @@ export default function DiagramaFlujo({
   imageInfos,
   watch,
   control,
-  socket,
   customRegisterField
   }: DiagramaFlujoProps) {
   return (
@@ -66,7 +60,6 @@ export default function DiagramaFlujo({
           control={control}
           namePathPrefix="flowDiagram"
           diagramPropertyPath="flowDiagram"
-          socket={socket}
           register={customRegisterField}
         />
       </div>

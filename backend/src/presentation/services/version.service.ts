@@ -218,65 +218,6 @@ export class VersionService {
 			{
 				$match: { _id: new mongoose.Types.ObjectId(id) },
 			},
-			// Populate conceptualModel.structureDiagram.imageFileId
-			{
-				$lookup: {
-					from: "versionimages",
-					localField:
-						"conceptualModel.structureDiagram.imageFileId",
-					foreignField: "_id",
-					as: "structureDiagramImage",
-					pipeline: [
-						{
-							$project: {
-								_id: 0,
-								id: { $toString: "$_id" },
-								url: 1,
-								sizeInBytes: 1,
-								originalFilename: 1,
-								createdAt: 1,
-							},
-						},
-					],
-				},
-			},
-			{
-				$set: {
-					"conceptualModel.structureDiagram.imageFileId": {
-						$first: "$structureDiagramImage",
-					},
-				},
-			},
-			{ $unset: "structureDiagramImage" },
-			// Populate conceptualModel.flowDiagram.imageFileId
-			{
-				$lookup: {
-					from: "versionimages",
-					localField: "conceptualModel.flowDiagram.imageFileId",
-					foreignField: "_id",
-					as: "flowDiagramImage",
-					pipeline: [
-						{
-							$project: {
-								_id: 0,
-								id: { $toString: "$_id" },
-								url: 1,
-								sizeInBytes: 1,
-								originalFilename: 1,
-								createdAt: 1,
-							},
-						},
-					],
-				},
-			},
-			{
-				$set: {
-					"conceptualModel.flowDiagram.imageFileId": {
-						$first: "$flowDiagramImage",
-					},
-				},
-			},
-			{ $unset: "flowDiagramImage" },
 			{
 				$lookup: {
 					from: "versionimages",
@@ -287,7 +228,7 @@ export class VersionService {
 						{
 							$project: {
 								_id: 0,
-								id: { $toString: "$_id" }, // Fixed: was "_id" (literal), now "$_id" (field reference)
+								id: { $toString: "$_id" }, 
 								url: 1,
 								sizeInBytes: 1,
 								originalFilename: 1,

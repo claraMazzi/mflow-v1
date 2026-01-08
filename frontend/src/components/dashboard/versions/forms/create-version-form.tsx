@@ -166,7 +166,7 @@ export const CreateVersionForm = ({
 				</Select>
 				{validParentVersions.length === 0 && (
 					<p className="text-sm text-gray-500">
-						No hay versiones disponibles para seleccionar como padre. Las versiones deben estar en estado FINALIZADA, PENDIENTE DE REVISION o REVISADA.
+						No hay versiones disponibles para seleccionar como padre. Una versión debe estar en estado FINALIZADA, PENDIENTE DE REVISION o REVISADA para poder seleccionada.
 					</p>
 				)}
 			</div>
