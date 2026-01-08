@@ -14,10 +14,12 @@ export class VersionRoutes {
 		// Create version
 		router.post("/", controller.createVersion);
 
+		// Delete version (soft delete - changes state to "ELIMINADA")
+		router.delete("/:versionId", controller.deleteVersion);
+
 		// TODO: Implement these routes
 		// router.get("/:versionId", controller.getVersionById);
 		// router.put("/:versionId", controller.updateVersion);
-		// router.delete("/:versionId", controller.deleteVersion);
 
 		return router;
 	}

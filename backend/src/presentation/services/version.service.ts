@@ -407,6 +407,65 @@ export class VersionService {
 		return false;
 	}
 
+	async deleteVersion({
+		versionId,
+		userId,
+	}: {
+		versionId: string;
+		userId: string;
+	}): Promise<{ message: string }> {
+		// Find the version
+		const version = await VersionModel.findById(versionId).exec();
+		if (!version) {
+			throw CustomError.notFound("La versión especificada no existe.");
+		}
+
+		// Check if version is already deleted
+		if (version.state === "ELIMINADA") {
+			throw CustomError.badRequest("La versión ya fue eliminada.");
+		}
+
+		// Check if version is in "EN EDICION" state
+		if (version.state !== "EN EDICION") {
+			throw CustomError.badRequest(
+				"Sólo se puede eliminar una versión que se encuentra en estado 'en edición'."
+			);
+		}
+
+		// Find the project that contains this version to verify ownership
+		const project = await ProjectModel.findOne({
+			versions: versionId,
+		}).exec();
+
+		if (!project) {
+			throw CustomError.notFound(
+				"No se encontró el proyecto asociado a esta versión."
+			);
+		}
+
+		// Check if the user is the project owner
+		if (!project.owner.equals(userId)) {
+			throw CustomError.forbidden(
+				"Solo el propietario del proyecto puede eliminar versiones."
+			);
+		}
+
+		try {
+			// Soft delete: update state to "ELIMINADA"
+			version.state = "ELIMINADA";
+			await version.save();
+
+			return {
+				message: "La versión fue eliminada exitosamente.",
+			};
+		} catch (error) {
+			console.error("Error deleting version:", error);
+			throw CustomError.internalServer(
+				"Se ha producido un error, por favor inténtelo de nuevo más tarde."
+			);
+		}
+	}
+
 	async validateAndFinalizeVersion(versionId: string): Promise<{
 		isValid: boolean;
 		errors: string[];

@@ -6,16 +6,54 @@ import { CreateVersionForm } from "@src/components/dashboard/versions/forms/crea
 import { Button } from "@src/components/ui/common/button";
 import { useUI } from "@src/components/ui/context";
 import { useVersionsOfProject } from "@src/hooks/use-versions";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import VersionList from "@src/components/dashboard/versions/version-list";
+import { useSession } from "next-auth/react";
 
 const Page = () => {
 	const params = useParams<{ projectId: string }>();
 	const { projectId } = params;
+	const { data: session } = useSession();
 
-	const { versions, isLoading, refreshVersions } = useVersionsOfProject({
+	const { versions, isLoading, refreshVersions, deleteVersion } = useVersionsOfProject({
 		projectId,
 	});
+
+	const [isOwner, setIsOwner] = useState(false);
+	const [isLoadingOwnership, setIsLoadingOwnership] = useState(true);
+
+	// Fetch project to check ownership
+	useEffect(() => {
+		const checkOwnership = async () => {
+			if (!session?.auth || !session?.user?.id) {
+				setIsLoadingOwnership(false);
+				return;
+			}
+
+			try {
+				const response = await fetch(
+					`${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}`,
+					{
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${session.auth}`,
+						},
+					}
+				);
+
+				if (response.ok) {
+					const data = await response.json();
+					setIsOwner(data.project?.owner === session.user.id);
+				}
+			} catch (error) {
+				console.error("Error checking project ownership:", error);
+			} finally {
+				setIsLoadingOwnership(false);
+			}
+		};
+
+		checkOwnership();
+	}, [projectId, session?.auth, session?.user?.id]);
 
 	const { openModal, closeModal } = useUI();
 
@@ -53,8 +91,10 @@ const Page = () => {
 			<VersionList
 				versions={versions}
 				refreshVersions={refreshVersions}
-				isLoading={isLoading}
+				isLoading={isLoading || isLoadingOwnership}
 				projectId={projectId}
+				isOwner={isOwner}
+				deleteVersion={deleteVersion}
 			/>
 		</div>
 	);
