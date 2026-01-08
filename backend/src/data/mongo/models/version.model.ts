@@ -21,8 +21,8 @@ const versionSchema = new Schema(
 			type: [Schema.Types.ObjectId],
 			ref: "User",
 		},
-		revisions: {
-			type: [Schema.Types.ObjectId],
+		revision: {
+			type: Schema.Types.ObjectId,
 			ref: "Revision",
 		},
 		todoItems: [todoItemSchema],

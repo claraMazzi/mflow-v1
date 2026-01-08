@@ -5,3 +5,4 @@ export * from './user.service';
 export * from './version.service';
 export * from './upload.service';
 export * from './deletion-request.service';
+export * from './revision.service';

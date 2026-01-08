@@ -168,6 +168,30 @@ export class UserService {
 	}
 	/** Esto actualizar y sacar la old password, esto es para un UPDATE PASSOWRD */
 
+	async getVerifiers() {
+		const verifiers = await UserModel.find({ 
+			roles: "VERIFICADOR", 
+			deletedAt: null 
+		});
+
+		if (!verifiers || verifiers.length === 0) {
+			return {
+				verifiers: [],
+				count: 0,
+			};
+		}
+
+		const verifiersEntity = verifiers.map((user) => {
+			const { password, ...userEntity } = UserEntity.fromObject(user);
+			return userEntity;
+		});
+
+		return {
+			verifiers: verifiersEntity,
+			count: verifiersEntity.length,
+		};
+	}
+
 	public passwordUpdate = async (recoverDto: PasswordUpdateDto) => {
 		//1. verificar que no exista ese correo en la BD
 		const user = await UserModel.findOne({

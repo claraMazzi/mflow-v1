@@ -652,7 +652,8 @@ export class VersionService {
 				}
 
 				//check if at least one entity from the list of entites has scopeDecision.include === true
-				if (model.entities.some((e: Entity) => e.scopeDecision?.include === true)) {
+				console.log("Entities: ", model.entities.some((e: Entity) => (e.scopeDecision?.include) as boolean === true));
+				if (model.entities.every((e: Entity) => e.scopeDecision?.include === false)) {
 					errors.push("Debe tener al menos una entidad incluída en el alcance del modelo.");
 				}
 

@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useUI } from "@components/ui/context";
 import { VersionEntity } from "#types/version";
 import { CreateVersionForm } from "./forms/create-version-form";
+import { RequestRevisionForm } from "./forms/request-revision-form";
 import { DeleteVersionResult } from "@src/hooks/use-versions";
 import cn from "clsx";
 
@@ -174,32 +175,17 @@ const VersionList = ({
 	const handleRequestVerification = (version: VersionEntity) => {
 		openModal({
 			name: "fullscreen-modal",
-			title: "Solicitar verificación",
+			title: "Solicitar Revisión",
 			size: "md",
 			showCloseButton: false,
 			content: (
-				<div className="flex max-w-md flex-col mx-auto justify-center items-center p-4 space-y-4">
-					<p className="text-base text-center">
-						Formulario para solicitar verificación de la versión:{" "}
-						<span className="font-bold">{version.title}</span>
-					</p>
-					<div className="w-full space-y-2">
-						<label className="text-sm font-medium">Comentarios (opcional)</label>
-						<textarea
-							className="w-full p-2 border rounded"
-							rows={4}
-							placeholder="Ingrese comentarios adicionales..."
-						/>
-					</div>
-					<div className="flex justify-center space-x-3 mt-3 w-full">
-						<Button variant="outline" size="sm" onClick={closeModal}>
-							Cancelar
-						</Button>
-						<Button size="sm" onClick={closeModal}>
-							Enviar solicitud
-						</Button>
-					</div>
-				</div>
+				<RequestRevisionForm
+					version={version}
+					onSuccess={() => {
+						refreshVersions();
+					}}
+					onClose={closeModal}
+				/>
 			),
 		});
 	};
@@ -273,54 +259,58 @@ const VersionList = ({
 							version.state === "PENDIENTE DE REVISION" || 
 							version.state === "REVISADA";
 
-						const popoverOptions = [
-							{
-								content: (
-									<Button
-										variant={"optionList"}
-										onClick={() => handleCreateNewVersion()}
-										className={cn({ hidden: !canCreateFromVersion })}
-									>
-										Crear Nueva Versión
-									</Button>
-								),
-							},
-							{
-								content: (
-									<Button
-										variant={"optionList"}
-										onClick={() => handleExportVersion(version)}
-									>
-										Exportar Versión
-									</Button>
-								),
-							},
-							{
-								content: (
-									<Button
-										variant={"optionList"}
-										onClick={() => handleRequestVerification(version)}
-									>
-										Solicitar Verificación
-									</Button>
-								),
-							},
-							// Only show delete option if user is the project owner
-							...(isOwner
-								? [
-										{
-											content: (
-												<Button
-													variant={"optionList"}
-													onClick={() => handleDeleteVersion(version)}
-												>
-													Eliminar Versión
-												</Button>
-											),
-										},
-								  ]
-								: []),
-						];
+					// Only show "Solicitar Revisión" button if version state is "FINALIZADA"
+					const canRequestRevision = version.state === "FINALIZADA";
+
+					const popoverOptions = [
+						{
+							content: (
+								<Button
+									variant={"optionList"}
+									onClick={() => handleCreateNewVersion()}
+									className={cn({ hidden: !canCreateFromVersion })}
+								>
+									Crear Nueva Versión
+								</Button>
+							),
+						},
+						{
+							content: (
+								<Button
+									variant={"optionList"}
+									onClick={() => handleExportVersion(version)}
+								>
+									Exportar Versión
+								</Button>
+							),
+						},
+						{
+							content: (
+								<Button
+									variant={"optionList"}
+									onClick={() => handleRequestVerification(version)}
+									className={cn({ hidden: !canRequestRevision })}
+								>
+									Solicitar Revisión
+								</Button>
+							),
+						},
+						// Only show delete option if user is the project owner
+						...(isOwner
+							? [
+									{
+										content: (
+											<Button
+												variant={"optionList"}
+												onClick={() => handleDeleteVersion(version)}
+											>
+												Eliminar Versión
+											</Button>
+										),
+									},
+							  ]
+							: []),
+					];
 
 						return (
 							<ContentCard

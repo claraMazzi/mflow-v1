@@ -72,6 +72,13 @@ export class UserController {
     throw Error("deleteUser to be implemented");
   };
 
+  getVerifiers = (req: Request, res: Response) => {
+    this.userService
+      .getVerifiers()
+      .then((result) => res.json(result))
+      .catch((error) => this.handleError(error, res));
+  };
+
   updateUserRolesById = (req: Request, res: Response) => {
     const { id: userId } = req.params;
     const userData = req.body;

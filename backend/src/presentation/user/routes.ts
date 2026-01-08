@@ -50,6 +50,7 @@ export class UserRoutes {
     // COMMON ROUTES
     router.get("/", controller.getLoggedUser);
     router.put("/", controller.updateUserById);
+    router.get("/verifiers", controller.getVerifiers);
     router.get("/:id", controller.getUserById);
 
     return router;
