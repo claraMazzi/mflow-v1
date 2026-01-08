@@ -335,7 +335,6 @@ export class SocketServer {
 			roomId: string;
 		}
 	) {
-		console.log("----------handleFieldUpdate");
 		const { version } = await this.versionService.getVersionById(
 			payload.roomId
 		);
@@ -416,11 +415,6 @@ export class SocketServer {
 			// console.log("Version Conceptual Model: ", version.conceptualModel);
 			version.save();
 			//agregar try catch para manejar errores
-			console.log(
-				"handleFieldUpdate payload",
-				payload.propertyPath,
-				payload.value
-			);
 			this.emitFieldUpdate(payload.roomId, {
 				propertyPath: payload.propertyPath,
 				value: payload.value,

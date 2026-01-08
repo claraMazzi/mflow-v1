@@ -916,7 +916,6 @@ export default function Page({
                 customRegisterField={customRegisterField}
                 handleAddItemToList={handleAddItemToList}
                 handleRemoveItemFromList={handleRemoveItemFromList}
-                socket={socket}
               />
             </TabsContent>
 
