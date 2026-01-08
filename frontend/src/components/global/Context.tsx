@@ -99,17 +99,29 @@ const LayoutProvider = ({ children }: { children: ReactElement }) => {
       }
       dispatch({ type: "setActiveRole", role: "MODELADOR" })
     } else if (status === "authenticated" && session?.user?.roles) {
-      // User logged in - validate stored role or set to MODELADOR
+      const userRoles = session.user.roles as string[]
+      
+      // If user only has one role, use that role
+      if (userRoles.length === 1) {
+        const singleRole = userRoles[0].toLowerCase()
+        localStorage.setItem("activeRole", singleRole)
+        dispatch({ type: "setActiveRole", role: singleRole })
+        return
+      }
+      
+      // User has multiple roles - validate stored role or set default
       const storedRole = localStorage.getItem("activeRole")
-      const userHasStoredRole = session.user.roles.find((role: string) => role.toUpperCase() === storedRole?.toUpperCase())
+      const userHasStoredRole = userRoles.find((role: string) => role.toUpperCase() === storedRole?.toUpperCase())
       
       if (userHasStoredRole) {
         // User has the stored role, keep it
         dispatch({ type: "setActiveRole", role: storedRole })
       } else {
-        // User doesn't have stored role or no stored role, set to MODELADOR
-        localStorage.setItem("activeRole", "MODELADOR")
-        dispatch({ type: "setActiveRole", role: "MODELADOR" })
+        // User doesn't have stored role - use MODELADOR if they have it, otherwise first role
+        const hasModelador = userRoles.find((role: string) => role.toUpperCase() === "MODELADOR")
+        const defaultRole = hasModelador ? "modelador" : userRoles[0].toLowerCase()
+        localStorage.setItem("activeRole", defaultRole)
+        dispatch({ type: "setActiveRole", role: defaultRole })
       }
     }
   }, [session, status])

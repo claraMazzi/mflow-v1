@@ -15,6 +15,32 @@ export class RevisionController {
 		return res.status(500).json({ error: "Ocurrió un error interno en el servidor." });
 	};
 
+	getRevisionsByState = async (req: Request, res: Response) => {
+		try {
+			const userId = req.session?.userId;
+			if (!userId) {
+				return res.status(401).json({ error: "Debe iniciar sesión para ver las revisiones." });
+			}
+
+			const { state } = req.params;
+			const validStates = ["PENDIENTE", "EN CURSO", "FINALIZADA"];
+			
+			if (!state || !validStates.includes(state.toUpperCase())) {
+				return res.status(400).json({ 
+					error: "El estado debe ser uno de: PENDIENTE, EN CURSO, FINALIZADA." 
+				});
+			}
+
+			const result = await this.revisionService.getRevisionsByState(
+				userId, 
+				state.toUpperCase() as "PENDIENTE" | "EN CURSO" | "FINALIZADA"
+			);
+			return res.status(200).json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
+
 	requestRevision = async (req: Request, res: Response) => {
 		try {
 			const userId = req.session?.userId;
