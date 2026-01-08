@@ -1,6 +1,7 @@
 "use client";
 
-import { startTransition, useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@src/components/ui/common/button";
 import { Checkbox } from "@src/components/ui/common/checkbox";
 import {
@@ -36,6 +37,7 @@ export const RequestRevisionForm = ({
 	onSuccess,
 	onClose,
 }: RequestRevisionFormProps) => {
+	const { data: session } = useSession();
 	const [state, formAction, isPending] = useActionState(
 		requestRevision,
 		initialState
@@ -48,6 +50,12 @@ export const RequestRevisionForm = ({
 	const [assignRandomVerifier, setAssignRandomVerifier] = useState(false);
 	const [selectedVerifierId, setSelectedVerifierId] = useState<string>("");
 	const [validationError, setValidationError] = useState<string | null>(null);
+
+	// Filter out the current user from the verifiers list
+	const availableVerifiers = useMemo(() => {
+		if (!session?.user?.id) return verifiers;
+		return verifiers.filter((verifier) => verifier.id !== session.user.id);
+	}, [verifiers, session?.user?.id]);
 
 	// Fetch verifiers on mount
 	useEffect(() => {
@@ -132,7 +140,7 @@ export const RequestRevisionForm = ({
 	if (state?.success) {
 		return (
 			<div className="flex flex-col gap-4 justify-center p-2 items-center">
-				<h2 className="font-medium text-green-600">
+				<h2 className="font-medium">
 					¡La solicitud de revisión fue creada exitosamente!
 				</h2>
 				<Button className="uppercase" onClick={onClose}>
@@ -199,14 +207,14 @@ export const RequestRevisionForm = ({
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value="none">-- Ninguno --</SelectItem>
-								{verifiers.map((verifier) => (
+								{availableVerifiers.map((verifier) => (
 									<SelectItem key={verifier.id} value={verifier.id}>
 										{verifier.name} {verifier.lastName} ({verifier.email})
 									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
-						{verifiers.length === 0 && (
+						{availableVerifiers.length === 0 && (
 							<p className="text-sm text-gray-500">
 								No hay verificadores disponibles en el sistema.
 							</p>

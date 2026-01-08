@@ -462,17 +462,21 @@ export default function Page({
       closeModal(); // Close any open modal first
       
       if (payload.isValid) {
-        toast.success("Revisión finalizada exitosamente", {
+        toast.success("Versión finalizada exitosamente", {
           description: payload.warnings.length > 0 
             ? `${payload.warnings.length} advertencia(s) encontrada(s)`
             : "El modelo conceptual ha sido validado correctamente.",
-          duration: 5000,
+          duration: 2000,
         });
+        // Reload the page after toast to show the disabled view of a finalized version
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
       } else {
         // Show error modal with details
         openModal({
           name: "finalize-version-result-modal",
-          title: "Error al Finalizar Revisión",
+          title: "Error al Finalizar Versión",
           size: "md",
           showCloseButton: false,
           content: (
