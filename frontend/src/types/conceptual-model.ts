@@ -1,5 +1,5 @@
 export type ImageInfo = {
-	filename: string;
+	originalFilename: string;
 	uploadedAt: Date;
 	sizeInBytes: number;
 	url: string;

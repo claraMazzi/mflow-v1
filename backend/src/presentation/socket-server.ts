@@ -206,7 +206,7 @@ export class SocketServer {
 				this.handleRemoveItemFromList(socket, payload)
 		);
 
-/* 		socket.on(
+		/* 		socket.on(
 			CLIENT_WS_EVENT_TYPES.PLANT_TEXT_GET_IMAGE,
 			(payload: PlantTextGetImagePayload) =>
 				this.handlePlantTextGetImage(socket, payload)
@@ -661,7 +661,7 @@ export class SocketServer {
 			version.conceptualModel,
 			payload.listPropertyPath
 		);
-		console.log("List Field: ", listField);
+
 		const itemToDelete = listField.find((s: any) =>
 			s._id.equals(payload.itemId)
 		);
@@ -675,7 +675,7 @@ export class SocketServer {
 		});
 	}
 
-/* 	private async handlePlantTextGetImage(
+	/* 	private async handlePlantTextGetImage(
 		socket: Socket,
 		payload: PlantTextGetImagePayload
 	) {
@@ -858,8 +858,9 @@ export class SocketServer {
 
 	public emitImageFileAdded(
 		roomId: string,
-		imageInfo: Pick<VersionImage, "originalFilename" | "url"> & {
+		imageInfo: Pick<VersionImage, "originalFilename" | "url" | "sizeInBytes"> & {
 			id: string;
+			uploadedAt: Date;
 		}
 	) {
 		this.socketServer.to(roomId).emit("image-added", {
@@ -980,7 +981,7 @@ export class SocketServer {
 		});
 	}
 
-/* 	public emitPlantTextImageUpdate(
+	/* 	public emitPlantTextImageUpdate(
 		roomId: string,
 		payload: { propertyPath: string; imageUrl: string; plantTextToken: string }
 	) {

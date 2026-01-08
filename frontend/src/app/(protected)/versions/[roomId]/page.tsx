@@ -321,17 +321,14 @@ export default function Page({
       const newImageInfos = new Map<string, ImageInfo>();
       imageInfos
         .map((i) => {
-          // Handle both 'id' and '_id' from server (MongoDB uses _id)
-          const imageId = i.id ?? (i as unknown as { _id?: string })._id;
           return {
-            id: imageId,
+            id: i.id,
             sizeInBytes: i.sizeInBytes,
             url: i.url,
             uploadedAt: new Date(i.createdAt),
-            filename: i.originalFilename,
+            originalFilename: i.originalFilename,
           };
         })
-        .filter((i): i is typeof i & { id: string } => !!i.id) // Only add images with valid IDs
         .forEach((i) => newImageInfos.set(i.id, i));
       setImageInfos(newImageInfos);
       setIsModelInitialized(true);
@@ -378,20 +375,23 @@ export default function Page({
     }
 
     socket.on("field-update", onFieldUpdate);
+    
     function onImageAdded(payload: {
-      imageInfo: { id: string; url: string; originalFilename?: string };
+      imageInfo: Omit<ImageInfo, "uploadedAt"> & {uploadedAt: string};
     }) {
       setImageInfos((prev) => {
         const next = new Map(prev);
         next.set(payload.imageInfo.id, {
           id: payload.imageInfo.id,
           url: payload.imageInfo.url,
-          filename: payload.imageInfo.originalFilename || "image",
-          uploadedAt: new Date(),
+          originalFilename: payload.imageInfo.originalFilename,
+          sizeInBytes: payload.imageInfo.sizeInBytes,
+          uploadedAt: new Date(payload.imageInfo.uploadedAt),
         } as ImageInfo);
         return next;
       });
     }
+
     function onImageRemoved(payload: { imageId: string }) {
       setImageInfos((prev) => {
         const next = new Map(prev);
@@ -676,7 +676,7 @@ export default function Page({
 
         const target = e.target;
         const isCheckbox = target.type === 'checkbox';
-        const isSelect = target.tagName === 'SELECT';
+        const isSelectBox = target.tagName === 'SELECT';
         
         // Capture field name synchronously - React synthetic events are pooled
         // and e.currentTarget becomes null after the handler returns
@@ -691,7 +691,7 @@ export default function Page({
           return getValues(fieldName as Path<ConceptualModel>);
         };
 
-        if (propagateUpdateOnChange || isSelect) {
+        if (propagateUpdateOnChange || isSelectBox) {
           // For selects and fields that need immediate propagation,
           // send update immediately (selects don't have "typing in progress" state)
           setTimeout(() => {
@@ -713,11 +713,11 @@ export default function Page({
         
         const target = e.target;
         const isCheckbox = target.type === 'checkbox';
-        const isSelect = target.tagName === 'SELECT';
+        const isSelectBox = target.tagName === 'SELECT';
         
         // For selects with propagateUpdateOnChange, they already updated on change
         // Skip redundant blur update
-        if (isSelect && propagateUpdateOnChange) {
+        if (isSelectBox && propagateUpdateOnChange) {
           return;
         }
         

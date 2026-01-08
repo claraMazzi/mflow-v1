@@ -35,29 +35,6 @@ export class UploadService {
 		this.socketServer = socketServer;
 	}
 
-	// async uploadVersionResource({
-	// 	versionId,
-	// 	propertyPath,
-	// 	file,
-	// }: {
-	// 	versionId: string;
-	// 	propertyPath: string;
-	// 	file: Buffer;
-	// }): Promise<string> {
-	// 	const filePath = `${this.baseUploadDirectory}/${versionId}/conceptual-model/${propertyPath}`;
-
-	// 	await fsPromises.mkdir(path.dirname(filePath), { recursive: true });
-
-	// 	await fsPromises.writeFile(filePath, file);
-
-	// 	await writeFile(filePath, file);
-
-	// 	const newFileUrl = `${this.uploadServiceBaseUrl}/${versionId}/conceptual-model/${propertyPath}`;
-
-	// 	return newFileUrl;
-	// }
-
-
 	async uploadImageToVersion(versionId: string, diagramPropertyPath: any, file: Express.Multer.File) {
 		
 		const version = await VersionModel.findById(versionId).exec();
@@ -109,6 +86,8 @@ export class UploadService {
 				id: newVersionImage.id,
 				url: newVersionImage.url,
 				originalFilename: newVersionImage.originalFilename,
+				sizeInBytes: newVersionImage.sizeInBytes,
+				uploadedAt: newVersionImage.createdAt
 			});
 			this.socketServer.emitFieldUpdate(versionId, {
 				value: newVersionImage.id,
@@ -134,11 +113,7 @@ export class UploadService {
 
 			if (!existsSync(imageInfo.path)) {
 				throw CustomError.notFound("Image file not found on server");
-					
 			}
-
-			
-			//res.setHeader("Cache-Control", "private, max-age=3600"); // Cache for 1 hour
 
 			return {
 				imageInfo: imageInfo,
@@ -206,6 +181,8 @@ export class UploadService {
 				id: newVersionImage.id,
 				url: newVersionImage.url,
 				originalFilename: newVersionImage.originalFilename,
+				sizeInBytes: newVersionImage.sizeInBytes,
+				uploadedAt: newVersionImage.createdAt
 			});
 			this.socketServer.emitFieldUpdate(versionId, {
 				value: newVersionImage.id,
