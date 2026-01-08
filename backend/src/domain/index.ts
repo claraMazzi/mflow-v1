@@ -6,3 +6,4 @@ export * from './dtos/user/update-user.dto';
 export * from './entities/user.entity';
 export * from './dtos/user/password-update.dto'
 export * from './dtos/version/create-version.dto'
+export * from './dtos/revision/request-revision.dto'
