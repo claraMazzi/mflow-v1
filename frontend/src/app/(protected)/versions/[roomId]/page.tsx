@@ -901,7 +901,6 @@ export default function Page({
                 watch={watch}
                 control={control}
                 customRegisterField={customRegisterField}
-                socket={socket}
               />
             </TabsContent>
 
@@ -963,7 +962,6 @@ export default function Page({
                 watch={watch}
                 control={control}
                 customRegisterField={customRegisterField}
-                socket={socket}
               />
             </TabsContent>
           </Tabs>

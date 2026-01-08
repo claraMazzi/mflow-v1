@@ -14,19 +14,16 @@ import { Path, Control, useWatch } from "react-hook-form";
 import { AlertCircle, ImageIcon, Loader2, Upload } from "lucide-react";
 import Image from "next/image";
 
-
 const DiagramImageUploadComponent = ({
   title,
   versionId,
   diagramPropertyPath, //path absoluto del servidor a la propiedad del diagrama
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  watch: _watch, //react hook forms para ver si un valor cambia (kept for backward compatibility, but using useWatch instead)
+  watch, //react hook forms para ver si un valor cambia (kept for backward compatibility, but using useWatch instead)
   control, //react hook forms control object for useWatch
   namePathPrefix, //path de react hookforms -- aca adentro voy a subscribir nuevas variables y necesito tener el prefijo hasta este momento. -- No pueod tener todo el path completo cuando tengo un elemento dentro de una lista porque necesito saber en que elemento me encuentro
   hasEditingRights,
   imageInfos,
   sessionToken,
-  socket,
   register,
 }: {
   sessionToken?: string;
@@ -38,11 +35,6 @@ const DiagramImageUploadComponent = ({
   watch: (name?: string) => unknown;
   control: Control<ConceptualModel>;
   namePathPrefix: Path<ConceptualModel>;
-  socket?: {
-    emit: (event: string, payload: Record<string, unknown>) => void;
-    on: (event: string, handler: (...args: unknown[]) => void) => void;
-    off: (event: string, handler: (...args: unknown[]) => void) => void;
-  };
   register?: (config: {
     name: Path<ConceptualModel>;
     propertyPath?: string;
@@ -57,10 +49,10 @@ const DiagramImageUploadComponent = ({
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [plantTextImageUrl, setPlantTextImageUrl] = useState<
+/*   const [plantTextImageUrl, setPlantTextImageUrl] = useState<
     string | undefined
-  >();
-  const [optimisticFile, setOptimisticFile] = useState<ImageInfo | null>(null);
+  >(); */
+  // const [optimisticFile, setOptimisticFile] = useState<ImageInfo | null>(null);
 
   // Only set error from uploadState when it changes (not when error changes)
   useEffect(() => {
@@ -76,141 +68,28 @@ const DiagramImageUploadComponent = ({
     name: `${namePathPrefix}.usesPlantText` as Path<ConceptualModel>,
   });
   const usesPlantText = Boolean(usesPlantTextValue);
-  const plantTextCodeValue = useWatch({
+  const plantTextToken = useWatch({
     control,
-    name: `${namePathPrefix}.plantTextCode` as Path<ConceptualModel>,
+    name: `${namePathPrefix}.plantTextToken` as Path<ConceptualModel>
   });
-
-  // Note: plantTextCode changes are now handled through the field-update event
-  // emitted by the register function, which triggers image generation on the server
-
-  // Get existing plantText image on component mount if there's existing code
-  const hasRequestedInitialImage = useRef(false);
-  useEffect(() => {
-    if (
-      usesPlantText &&
-      plantTextCodeValue &&
-      socket &&
-      versionId &&
-      !hasRequestedInitialImage.current
-    ) {
-      // Request existing image without generating a new one
-      hasRequestedInitialImage.current = true;
-      socket.emit("plant-text-get-image", {
-        type: "plant-text-get-image",
-        versionId,
-        propertyPath: diagramPropertyPath,
-        timestamp: new Date(),
-      });
-    }
-  }, [
-    usesPlantText,
-    plantTextCodeValue,
-    socket,
-    versionId,
-    diagramPropertyPath,
-  ]);
-
-  // Listen for plantText image updates from server
-  useEffect(() => {
-    if (!socket) return;
-
-    const handlePlantTextImageUpdate = (...args: unknown[]) => {
-      const payload = args[0] as {
-        propertyPath: string;
-        imageUrl: string;
-        plantTextToken: string;
-      };
-      // Check if this update is for our diagram
-      if (payload.propertyPath === diagramPropertyPath) {
-        setPlantTextImageUrl(payload.imageUrl);
-      }
-    };
-
-    socket.on("plant-text-image-update", handlePlantTextImageUpdate);
-
-    return () => {
-      socket.off("plant-text-image-update", handlePlantTextImageUpdate);
-    };
-  }, [socket, diagramPropertyPath]);
-
-  const imageFileField = useWatch({
+  const imageFileId = useWatch({
     control,
     name: `${namePathPrefix}.imageFileId` as Path<ConceptualModel>,
-  }) as unknown;
+  }) as string | null;
 
-  type PopulatedImageInfo = {
-    id?: string;
-    _id?: string;
-    url?: string;
-    sizeInBytes?: number;
-    originalFilename?: string;
-    filename?: string;
-    createdAt?: string | Date;
-  };
-
-  // Helper to find image in imageInfos by any matching ID
-  const findImageById = (id: string): ImageInfo | null => {
-    // Direct lookup first
-    const direct = imageInfos.get(id);
-    if (direct) return direct;
-    
-    // Search through all values in case key format differs
-    for (const img of imageInfos.values()) {
-      if (img.id === id) return img;
-    }
-    return null;
-  };
-
-  const file = useMemo(() => {
-    if (!imageFileField) return null;
-    
-    // If backend populated the image object directly (after aggregation) with url
-    if (
-      typeof imageFileField === "object" &&
-      imageFileField !== null &&
-      "url" in (imageFileField as Record<string, unknown>)
-    ) {
-      const populated = imageFileField as PopulatedImageInfo;
-      const createdAt = populated.createdAt;
-      const originalFilename = populated.originalFilename;
-      return {
-        id: populated.id ?? populated._id ?? "",
-        url: populated.url ?? "",
-        sizeInBytes: populated.sizeInBytes ?? 0,
-        filename: originalFilename || populated.filename || "image",
-        uploadedAt: createdAt ? new Date(createdAt) : new Date(),
-      } as ImageInfo;
-    }
-    
-    // If it's an object with _id but no url, try to look it up in imageInfos
-    if (
-      typeof imageFileField === "object" &&
-      imageFileField !== null
-    ) {
-      const obj = imageFileField as PopulatedImageInfo;
-      const id = obj.id ?? obj._id;
-      if (id && typeof id === "string") {
-        return findImageById(id);
-      }
-    }
-    
-    // If it's a string ID, resolve from the provided map
-    if (typeof imageFileField === "string") {
-      return findImageById(imageFileField);
-    }
-    
-    return null;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [imageFileField, imageInfos]);
+  const imageFileInfo = useMemo(() => {
+    if (!imageFileId) return null;
+            
+    return imageInfos.get(imageFileId);
+  }, [imageFileId, imageInfos]);
 
   // Clear optimistic preview when authoritative id changes
-  useEffect(() => {
-    if (optimisticFile && imageFileField) {
+/*   useEffect(() => {
+    if (optimisticFile && imageFileId) {
       setOptimisticFile(null);
     }
     return () => {};
-  }, [imageFileField, optimisticFile]);
+  }, [imageFileId, optimisticFile]); */
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
@@ -260,7 +139,7 @@ const DiagramImageUploadComponent = ({
           createdAt?: string;
         };
       } | null;
-      if (data && data.imageInfo) {
+/*       if (data && data.imageInfo) {
         setOptimisticFile({
           id: data.imageInfo.id,
           url: data.imageInfo.url,
@@ -270,16 +149,16 @@ const DiagramImageUploadComponent = ({
             ? new Date(data.imageInfo.createdAt)
             : new Date(),
         });
-      }
+      } */
 
       // Set usesPlantText to false when uploading an image
-      if (socket) {
+/*       if (socket) {
         socket.emit("field-update", {
           roomId: versionId,
           propertyPath: `${diagramPropertyPath}.usesPlantText`,
           value: false,
         });
-      }
+      } */
 
       setUploadState({ success: true });
     } catch (error) {
@@ -333,7 +212,7 @@ const DiagramImageUploadComponent = ({
           createdAt?: string;
         };
       } | null;
-      if (data && data.imageInfo) {
+/*       if (data && data.imageInfo) {
         setOptimisticFile({
           id: data.imageInfo.id,
           url: data.imageInfo.url,
@@ -343,16 +222,16 @@ const DiagramImageUploadComponent = ({
             ? new Date(data.imageInfo.createdAt)
             : new Date(),
         });
-      }
+      } */
 
       // Set usesPlantText to false when replacing with an image
-      if (socket) {
+/*       if (socket) {
         socket.emit("field-update", {
           roomId: versionId,
           propertyPath: `${diagramPropertyPath}.usesPlantText`,
           value: false,
         });
-      }
+      } */
 
       setUploadState({ success: true });
     } catch (error) {
@@ -386,7 +265,7 @@ const DiagramImageUploadComponent = ({
     e.preventDefault();
     setDragOver(false);
 
-    if (file || isUploadPending) return;
+    if (imageFileInfo || isUploadPending) return;
 
     if (!e.dataTransfer) return;
 
@@ -403,7 +282,7 @@ const DiagramImageUploadComponent = ({
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (!file && !isUploadPending) {
+    if (!imageFileInfo && !isUploadPending) {
       setDragOver(true);
     }
   };
@@ -435,7 +314,7 @@ const DiagramImageUploadComponent = ({
       return;
     }
 
-    if (file) {
+    if (imageFileInfo) {
       replaceFileOnServer(selectedFile);
     } else {
       uploadFileToServer(selectedFile);
@@ -452,7 +331,7 @@ const DiagramImageUploadComponent = ({
 
   // Include optimisticFile in the check - after upload, file might not be set yet
   // but optimisticFile will have the uploaded image data
-  const hasFile = !!file || !!optimisticFile;
+  const hasFile = !!imageFileInfo;
   const canUpload = !hasFile && !isUploadPending && hasEditingRights;
 
   const plantTextRegisterProps = register
@@ -533,16 +412,6 @@ const DiagramImageUploadComponent = ({
                       if (originalOnBlur) {
                         originalOnBlur(e);
                       }
-
-                      // Request existing image on blur to ensure the image is shown
-                      if (e.target.value && socket && versionId) {
-                        socket.emit("plant-text-get-image", {
-                          type: "plant-text-get-image",
-                          versionId,
-                          propertyPath: diagramPropertyPath,
-                          timestamp: new Date(),
-                        });
-                      }
                     }}
                     placeholder="Ingresa tu código PlantText aquí..."
                     className="w-full h-screen p-3 border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -553,14 +422,14 @@ const DiagramImageUploadComponent = ({
           )}
 
           {/* PlantText Image Display */}
-          {usesPlantText && plantTextImageUrl && (
+          {usesPlantText && plantTextToken && (
             <div className="space-y-2">
               <label className="text-sm font-medium">
                 Vista previa del diagrama:
               </label>
               <div className="relative overflow-hidden rounded-lg border h-screen">
                 <Image
-                  src={plantTextImageUrl}
+                  src={`http://www.plantuml.com/plantuml/img/${plantTextToken}`}
                   fill
                   alt="PlantText Diagram"
                   className="w-full h-full object-contain bg-white"
@@ -568,9 +437,8 @@ const DiagramImageUploadComponent = ({
                   onError={() => {
                     console.error(
                       "Failed to load PlantText image:",
-                      plantTextImageUrl
+                      `http://www.plantuml.com/plantuml/img/${plantTextToken}`
                     );
-                    // Image will show broken image icon, but won't crash
                   }}
                 />
               </div>
@@ -609,8 +477,6 @@ const DiagramImageUploadComponent = ({
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
               >
-                {canUpload && null}
-
                 {isUploadPending ? (
                   <div className="space-y-4">
                     <Loader2 className="mx-auto h-8 w-8 text-primary animate-spin" />
@@ -638,8 +504,8 @@ const DiagramImageUploadComponent = ({
                 {/* Image Preview */}
                 <div className="relative overflow-hidden rounded-lg border h-screen">
                   <Image
-                    src={optimisticFile?.url || file?.url || ''}
-                    alt={optimisticFile?.filename || file?.filename || 'Diagram'}
+                    src={imageFileInfo?.url || ''}
+                    alt={imageFileInfo?.filename || 'Diagram'}
                     fill
                     className="object-contain bg-white"
                   />
