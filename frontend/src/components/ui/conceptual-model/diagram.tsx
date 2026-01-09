@@ -477,7 +477,7 @@ const DiagramImageUploadComponent = ({
 								<div className="relative overflow-hidden rounded-lg border h-screen">
 									<Image
 										src={imageFileInfo?.url || ""}
-										alt={imageFileInfo?.filename || "Diagram"}
+										alt={imageFileInfo?.originalFilename || "Diagram"}
 										fill
 										className="object-contain bg-white"
 									/>
