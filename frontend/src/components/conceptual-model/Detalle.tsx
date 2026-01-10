@@ -21,25 +21,7 @@ import { Button } from "@components/ui/common/button";
 import { X, Plus } from "lucide-react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import cn from "clsx";
-
-// Type for the customRegisterField function - includes HTMLSelectElement for proper select handling
-type CustomRegisterFieldFn = ({
-  name,
-  propertyPath,
-  options,
-  propagateUpdateOnChange,
-}: {
-  name: Path<ConceptualModel>;
-  propertyPath?: string;
-  options?: RegisterOptions<ConceptualModel, Path<ConceptualModel>>;
-  propagateUpdateOnChange?: boolean;
-}) => {
-  onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
-  onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
-  readOnly: boolean;
-  name: Path<ConceptualModel>;
-  ref: (instance: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null) => void;
-};
+import { CustomRegisterFieldFn } from "@src/types/collaboration";
 
 // Type for handleRemoveItemFromList function
 type HandleRemoveItemFromListFn = ({

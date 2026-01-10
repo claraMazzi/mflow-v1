@@ -6,25 +6,7 @@ import { ConceptualModel } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
 import { Button } from "@components/ui/common/button";
 import { X, Plus } from "lucide-react";
-
-// Type for the customRegisterField function - includes HTMLSelectElement for proper select handling
-type CustomRegisterFieldFn = ({
-  name,
-  propertyPath,
-  options,
-  propagateUpdateOnChange,
-}: {
-  name: Path<ConceptualModel>;
-  propertyPath?: string;
-  options?: RegisterOptions<ConceptualModel, Path<ConceptualModel>>;
-  propagateUpdateOnChange?: boolean;
-}) => {
-  onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
-  onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
-  readOnly: boolean;
-  name: Path<ConceptualModel>;
-  ref: (instance: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null) => void;
-};
+import { CustomRegisterFieldFn } from "@src/types/collaboration";
 
 // Extracted OutputItem component to properly handle select registration
 interface OutputItemProps {

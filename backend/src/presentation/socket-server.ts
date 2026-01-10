@@ -21,25 +21,11 @@ type BaseSocketEventPayload = { type: string; timestamp: Date };
 
 enum CLIENT_WS_EVENT_TYPES {
 	JOIN_ROOM = "join-room",
-	PLANT_TEXT_GET_IMAGE = "plant-text-get-image",
 }
 
 type JoinRoomEventPayload = BaseSocketEventPayload & {
 	type: CLIENT_WS_EVENT_TYPES.JOIN_ROOM;
 	roomId: string;
-};
-
-// type PlantTextCodeChangePayload = BaseSocketEventPayload & {
-// 	type: CLIENT_WS_EVENT_TYPES.PLANT_TEXT_CODE_CHANGE;
-// 	versionId: string;
-// 	propertyPath: string;
-// 	plantTextCode: string;
-// };
-
-type PlantTextGetImagePayload = BaseSocketEventPayload & {
-	type: CLIENT_WS_EVENT_TYPES.PLANT_TEXT_GET_IMAGE;
-	versionId: string;
-	propertyPath: string;
 };
 
 type UsersInRoomChangePayload = BaseSocketEventPayload & {
@@ -68,17 +54,9 @@ type InitializeConceptualModelPayload = BaseSocketEventPayload & {
 	})[];
 };
 
-type PlantTextImageUpdatePayload = BaseSocketEventPayload & {
-	type: SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE;
-	propertyPath: string;
-	imageUrl: string;
-	plantTextToken: string;
-};
-
 enum SERVER_WS_EVENT_TYPES {
 	USERS_IN_ROOM_CHANGE = "users-in-room-change",
 	INITIALIZE_CONCEPTUAL_MODEL = "initialize-conceptual-model",
-	PLANT_TEXT_IMAGE_UPDATE = "plant-text-image-update",
 }
 
 export class SocketServer {
@@ -206,12 +184,6 @@ export class SocketServer {
 				this.handleRemoveItemFromList(socket, payload)
 		);
 
-		/* 		socket.on(
-			CLIENT_WS_EVENT_TYPES.PLANT_TEXT_GET_IMAGE,
-			(payload: PlantTextGetImagePayload) =>
-				this.handlePlantTextGetImage(socket, payload)
-		); */
-
 		socket.on("finalize-version", (payload: { roomId: string }) =>
 			this.handleFinalizeVersion(socket, payload)
 		);
@@ -306,26 +278,6 @@ export class SocketServer {
 		});
 	}
 
-	// TODO agregar un handler pare el text field de plantext change.
-
-	/*
-	cuando el plantext code cambia el servidor es el encargado de generar la URL de la imagen plant text y enviarsela a todos los clientes para quee la actualice en el front. 
-	Ahora se esta generando en el front directamente. 
-
-
-
-	ahora todos reciben el texto -- generan el token, llaman al encoder y muestran la imagen 
-
-	desintalar el encoder del front 
-	instalarlo en el back
-	escuchar por el evento del field de plant text 
-	generar el token
-	guardar el cambio que hubo en el plant text field y guardar el token para no vovler a generarlo.-- diagramSchema
-
-	generar el link 
-
-	*/
-
 	private async handleFieldUpdate(
 		//funciona para todos los text fields
 		socket: Socket,
@@ -387,16 +339,7 @@ export class SocketServer {
 			// Save the version
 			await version.save();
 
-			// Generate the image URL
-			// const imageUrl = `http://www.plantuml.com/plantuml/img/${plantTextToken}`;
-
-			// console.log("imageUrl", imageUrl);
 			// Emit the plantText image update to all clients in the room
-			/* this.emitPlantTextImageUpdate(payload.roomId, {
-				propertyPath: diagramPath,
-				imageUrl,
-				plantTextToken,
-			}); */
 			this.emitFieldUpdate(payload.roomId, {
 				propertyPath: plantTextTokenPath,
 				value: plantTextToken,
@@ -675,55 +618,6 @@ export class SocketServer {
 		});
 	}
 
-	/* 	private async handlePlantTextGetImage(
-		socket: Socket,
-		payload: PlantTextGetImagePayload
-	) {
-		try {
-			const { version } = await this.versionService.getVersionById(
-				payload.versionId
-			);
-
-			// Get the diagram object from the property path
-			const diagram = getProperty(
-				version.conceptualModel,
-				payload.propertyPath
-			);
-
-			if (!diagram) {
-				console.error(
-					`Diagram not found at property path: ${payload.propertyPath}`
-				);
-				return;
-			}
-
-			// Check if we have existing plantTextCode and token
-			if (!diagram.plantTextCode || !diagram.plantTextToken) {
-				console.log("No existing plantTextCode or token found");
-				return;
-			}
-
-			// Generate the image URL from existing token
-			const imageUrl = `http://www.plantuml.com/plantuml/img/${diagram.plantTextToken}`;
-
-			console.log("Sending existing imageUrl", imageUrl);
-			// Emit the plantText image update to the requesting client only
-			socket.emit(SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE, {
-				type: SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE,
-				propertyPath: payload.propertyPath,
-				imageUrl,
-				plantTextToken: diagram.plantTextToken,
-				timestamp: new Date(),
-			});
-
-			console.log(
-				`PlantText existing image sent for property: ${payload.propertyPath}`
-			);
-		} catch (error) {
-			console.error("Error handling plantText get image:", error);
-		}
-	} */
-
 	private handleFinalizeVersion(socket: Socket, payload: { roomId: string }) {
 		const collabRoom = this.activeCollaborationRooms.get(payload.roomId);
 
@@ -980,21 +874,6 @@ export class SocketServer {
 			itemId: payload.itemId,
 		});
 	}
-
-	/* 	public emitPlantTextImageUpdate(
-		roomId: string,
-		payload: { propertyPath: string; imageUrl: string; plantTextToken: string }
-	) {
-		this.socketServer
-			.to(roomId)
-			.emit(SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE, {
-				type: SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE,
-				propertyPath: payload.propertyPath,
-				imageUrl: payload.imageUrl,
-				plantTextToken: payload.plantTextToken,
-				timestamp: new Date(),
-			} satisfies PlantTextImageUpdatePayload);
-	} */
 
 	public emitFinalizeVersionModal(
 		roomId: string,

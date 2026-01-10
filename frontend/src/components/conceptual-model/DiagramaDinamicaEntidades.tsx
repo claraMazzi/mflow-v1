@@ -56,11 +56,6 @@ interface DiagramaEstructuraEntidadesProps {
     listPropertyPath: string;
     itemId: string;
   }) => void;
-  register?: (config: {
-		name: Path<ConceptualModel>;
-		propertyPath?: string;
-		propagateUpdateOnChange?: boolean;
-	}) => Record<string, unknown>;
 }
 
 const DiagramaDinamicaEntidadesComponent = ({
