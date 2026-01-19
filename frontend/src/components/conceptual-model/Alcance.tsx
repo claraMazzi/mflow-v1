@@ -54,7 +54,7 @@ function EntityScopeEditor({
           {...includeFieldRegistration}
           className={cn(
             "w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none",
-            !hasEditingRights && "bg-gray-100 cursor-not-allowed"
+            !hasEditingRights? "bg-gray-100 cursor-not-allowed" : "bg-white"
           )}
           disabled={!hasEditingRights}
           value={String(includeValue ?? entity.scopeDecision?.include ?? true)}
@@ -85,7 +85,7 @@ function EntityScopeEditor({
           {...argumentTypeFieldRegistration}
           className={cn(
             "w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none",
-            !hasEditingRights && "bg-gray-100 cursor-not-allowed"
+            !hasEditingRights?"bg-gray-100 cursor-not-allowed" : "bg-white"
           )}
           disabled={!hasEditingRights}
           value={(argumentTypeValue as string) ?? entity.scopeDecision?.argumentType ?? "SALIDA"}

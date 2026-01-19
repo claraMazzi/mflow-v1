@@ -83,7 +83,7 @@ function OutputItem({
         <select
           {...entityFieldRegistration}
           className={`w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none ${
-            !hasEditingRights ? "bg-gray-100 cursor-not-allowed" : ""
+            !hasEditingRights ? "bg-gray-100 cursor-not-allowed" : "bg-white"
           }`}
           disabled={!hasEditingRights}
         >
@@ -153,7 +153,7 @@ function InputItem({
         <select
           {...typeFieldRegistration}
           className={`w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none ${
-            !hasEditingRights ? "bg-gray-100 cursor-not-allowed" : ""
+            !hasEditingRights ? "bg-gray-50 cursor-not-allowed" : "bg-white"
           }`}
           disabled={!hasEditingRights}
         >
