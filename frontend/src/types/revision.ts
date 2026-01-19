@@ -53,6 +53,15 @@ export type RevisionResponse = {
   revisions: Revision[];
 };
 
+// Server response image info (different field names than client ImageInfo)
+export type ServerImageInfo = {
+  id: string;
+  url: string;
+  originalFilename: string;
+  sizeInBytes: number;
+  createdAt: string;
+};
+
 // Full revision details with conceptual model data
 export type RevisionDetails = {
   id: string;
@@ -81,7 +90,7 @@ export type RevisionDetails = {
       email: string;
     };
   } | null;
-  imageInfos: ImageInfo[];
+  imageInfos?: ServerImageInfo[];
 };
 
 // Tab page mapping for corrections

@@ -7,8 +7,7 @@ import {
   useMemo,
   useCallback,
 } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
-import { ConceptualModel, ImageInfo } from "#types/conceptual-model";
+import { ImageInfo } from "#types/conceptual-model";
 import {
   Tabs,
   TabsContent,
@@ -16,14 +15,7 @@ import {
   TabsTrigger,
 } from "@components/ui/tabs/tabs";
 import { useSession } from "next-auth/react";
-import DescripcionDelSistema from "@components/conceptual-model/DescripcionDelSistema";
 import React from "react";
-import DiagramaEstructura from "@components/conceptual-model/DiagramaEstructura";
-import DiagramaDinamicaEntidades from "@components/conceptual-model/DiagramaDinamicaEntidades";
-import ObjetivosEntradasSalidas from "@components/conceptual-model/ObjetivosEntradasSalidas";
-import Alcance from "@components/conceptual-model/Alcance";
-import Detalle from "@components/conceptual-model/Detalle";
-import DiagramaFlujo from "@components/conceptual-model/DiagramaDeFlujo";
 import { toast } from "sonner";
 import { Correction, RevisionDetails, REVISION_TAB_PAGES, RevisionTabKey } from "#types/revision";
 import {
@@ -37,6 +29,17 @@ import {
   AddCorrectionOverlay,
 } from "@components/revisions/CorrectionBubble";
 import { Loader2 } from "lucide-react";
+
+// Import new revision-specific components
+import {
+  RevisionDescripcionDelSistema,
+  RevisionDiagramaEstructura,
+  RevisionDiagramaDinamicaEntidades,
+  RevisionObjetivosEntradasSalidas,
+  RevisionAlcance,
+  RevisionDetalle,
+  RevisionDiagramaFlujo,
+} from "@components/revisions/conceptual-model";
 
 // Generate a temporary client-side ID for new corrections
 const generateTempId = () => `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -55,41 +58,13 @@ export default function Page({
   const [corrections, setCorrections] = useState<Correction[]>([]);
   const [originalCorrections, setOriginalCorrections] = useState<Correction[]>([]);
   const [selectedCorrectionId, setSelectedCorrectionId] = useState<string | null>(null);
-  const [newCorrectionIds, setNewCorrectionIds] = useState<Set<string>>(new Set()); // Track newly created corrections
+  const [newCorrectionIds, setNewCorrectionIds] = useState<Set<string>>(new Set());
   const [isAddingCorrection, setIsAddingCorrection] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const [imageInfos, setImageInfos] = useState<Map<string, ImageInfo>>(new Map());
-
-  const { register, control, setValue, watch, reset } =
-    useForm<ConceptualModel>();
-
-  const simplificationList = useFieldArray({
-    name: "simplifications",
-    control,
-  });
-
-  const assumptionList = useFieldArray({
-    name: "assumptions",
-    control,
-  });
-
-  const inputList = useFieldArray({
-    name: "inputs",
-    control,
-  });
-
-  const outputList = useFieldArray({
-    name: "outputs",
-    control,
-  });
-
-  const entitiesList = useFieldArray({
-    name: "entities",
-    control,
-  });
 
   // Check if there are unsaved changes
   const hasUnsavedChanges = useMemo(() => {
@@ -145,24 +120,21 @@ export default function Page({
           }
         }
 
-        // Load conceptual model into form
-        reset(revisionData.version.conceptualModel);
-
         // Load corrections
         const loadedCorrections = revisionData.corrections || [];
         setCorrections(loadedCorrections);
         setOriginalCorrections(loadedCorrections);
 
-        // Load image infos
+        // Load image infos - convert server format to client format
         const newImageInfos = new Map<string, ImageInfo>();
-        revisionData.imageInfos?.forEach((i) => {
-          if (i.id) {
-            newImageInfos.set(i.id, {
-              id: i.id,
-              sizeInBytes: i.sizeInBytes || 0,
-              url: i.url,
-              uploadedAt: new Date(i.createdAt),
-              filename: i.originalFilename || "image",
+        revisionData.imageInfos?.forEach((serverImg) => {
+          if (serverImg.id) {
+            newImageInfos.set(serverImg.id, {
+              id: serverImg.id,
+              sizeInBytes: serverImg.sizeInBytes || 0,
+              url: serverImg.url,
+              uploadedAt: new Date(serverImg.createdAt),
+              filename: serverImg.originalFilename || "image",
             });
           }
         });
@@ -173,7 +145,7 @@ export default function Page({
     }
 
     loadRevision();
-  }, [revisionId, session?.user, reset]);
+  }, [revisionId, session?.user]);
 
   // Get current page number from tab
   const currentPageNumber = useMemo(() => {
@@ -188,8 +160,8 @@ export default function Page({
   // Handle tab change
   const handleCurrentTabChange = (newTab: string) => {
     setCurrentTab(newTab as RevisionTabKey);
-    setSelectedCorrectionId(null); // Deselect when changing tabs
-    setIsAddingCorrection(false); // Cancel adding mode
+    setSelectedCorrectionId(null);
+    setIsAddingCorrection(false);
   };
 
   // Handle correction selection
@@ -201,16 +173,13 @@ export default function Page({
   }, []);
 
   // Handle save corrections - accepts optional corrections list for immediate saves
-  // NOTE: Must be defined before handleUpdateCorrection which uses it
   const handleSaveCorrections = useCallback(async (correctionsToUse?: Correction[], showToast = true) => {
     if (!revision) return;
 
     setIsSaving(true);
     
-    // Use provided corrections or current state
     const correctionsList = correctionsToUse ?? corrections;
     
-    // Prepare corrections for saving (remove temp IDs)
     const correctionsPayload = correctionsList.map((c) => ({
       description: c.description,
       location: c.location,
@@ -229,11 +198,9 @@ export default function Page({
           description: "Los cambios han sido guardados exitosamente.",
         });
       }
-      // Update corrections with server-assigned IDs
       if (result.data?.corrections) {
         setCorrections(result.data.corrections);
         setOriginalCorrections(result.data.corrections);
-        // Clear new correction tracking since they now have server IDs
         setNewCorrectionIds(new Set());
       }
     }
@@ -243,12 +210,10 @@ export default function Page({
 
   // Handle correction update with auto-save
   const handleUpdateCorrection = useCallback((updatedCorrection: Correction) => {
-    // Compute the new corrections list
     const newCorrectionsList = corrections.map((c) =>
       c._id === updatedCorrection._id ? updatedCorrection : c
     );
     
-    // Update local state
     setCorrections(newCorrectionsList);
     
     // Auto-save immediately (silently)
@@ -257,14 +222,18 @@ export default function Page({
 
   // Handle correction delete
   const handleDeleteCorrection = useCallback((correctionId: string) => {
-    setCorrections((prev) => prev.filter((c) => c._id !== correctionId));
+    const newCorrectionsList = corrections.filter((c) => c._id !== correctionId);
+    setCorrections(newCorrectionsList);
     setNewCorrectionIds((prev) => {
       const next = new Set(prev);
       next.delete(correctionId);
       return next;
     });
     setSelectedCorrectionId(null);
-  }, []);
+    
+    // Auto-save after delete
+    handleSaveCorrections(newCorrectionsList, false);
+  }, [corrections, handleSaveCorrections]);
 
   // Handle closing a correction bubble (deselect)
   const handleCloseCorrection = useCallback(() => {
@@ -279,7 +248,6 @@ export default function Page({
         _id: generateTempId(),
       };
       
-      // Update local state only - save happens when user clicks check icon
       setCorrections((prev) => [...prev, correctionWithId]);
       setSelectedCorrectionId(correctionWithId._id!);
       setNewCorrectionIds((prev) => new Set(prev).add(correctionWithId._id!));
@@ -290,37 +258,10 @@ export default function Page({
 
   // Click outside to deselect
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
-    // Only deselect if clicking directly on the container (not on a bubble or content)
     if (e.target === e.currentTarget) {
       setSelectedCorrectionId(null);
     }
   }, []);
-
-  // Read-only register function - all fields are disabled in revision view
-  const customRegisterField = useCallback(
-    ({
-      name,
-    }: {
-      name: any;
-      propertyPath?: string;
-      options?: any;
-      propagateUpdateOnChange?: boolean;
-    }) => {
-      const registerResult = register(name);
-      return {
-        ...registerResult,
-        onChange: registerResult.onChange,
-        onBlur: registerResult.onBlur,
-        readOnly: true,
-        disabled: true,
-      };
-    },
-    [register]
-  );
-
-  // Dummy handlers for read-only mode
-  const handleAddItemToList = useCallback(() => {}, []);
-  const handleRemoveItemFromList = useCallback(() => {}, []);
 
   if (isLoading) {
     return (
@@ -345,6 +286,8 @@ export default function Page({
       </div>
     );
   }
+
+  const conceptualModel = revision.version.conceptualModel;
 
   return (
     <div
@@ -373,8 +316,7 @@ export default function Page({
         />
 
         {/* Correction bubbles for current page */}
-        {currentPageCorrections.map((correction, index) => {
-          // Calculate the global index for numbering
+        {currentPageCorrections.map((correction) => {
           const globalIndex = corrections.findIndex(
             (c) => c._id === correction._id
           );
@@ -398,20 +340,13 @@ export default function Page({
           );
         })}
 
-        <form
-          onSubmit={(e) => e.preventDefault()}
-          className="flex flex-col overflow-hidden relative"
-        >
-          {/* Read-only overlay */}
-          <div className="absolute inset-0 bg-gray-500/5 z-10 pointer-events-none" />
-          
+        <div className="flex flex-col overflow-hidden relative">
           <br />
           <Tabs
             value={currentTab}
             onValueChange={handleCurrentTabChange}
             defaultValue="descripcion-sistema"
             orientation="vertical"
-            className="opacity-90"
           >
             <TabsList className="h-full flex">
               <TabsTrigger value="descripcion-sistema" className="word-break">
@@ -473,91 +408,43 @@ export default function Page({
             </TabsList>
 
             <TabsContent value="descripcion-sistema">
-              <DescripcionDelSistema
-                hasEditingRights={false}
-                assumptionList={assumptionList}
-                simplificationList={simplificationList}
-                watch={watch}
-                customRegisterField={customRegisterField}
-                handleAddItemToList={handleAddItemToList}
-                handleRemoveItemFromList={handleRemoveItemFromList}
-              />
+              <RevisionDescripcionDelSistema conceptualModel={conceptualModel} />
             </TabsContent>
 
             <TabsContent value="diagrama-estructura">
-              <DiagramaEstructura
-                sessionToken={session?.auth}
-                versionId={revision.version.id}
-                hasEditingRights={false}
+              <RevisionDiagramaEstructura
+                conceptualModel={conceptualModel}
                 imageInfos={imageInfos}
-                watch={watch}
-                control={control}
-                customRegisterField={customRegisterField}
               />
             </TabsContent>
 
             <TabsContent value="diagrama-dinamica-entidades">
-              <DiagramaDinamicaEntidades
-                sessionToken={session?.auth}
-                versionId={revision.version.id}
-                hasEditingRights={false}
+              <RevisionDiagramaDinamicaEntidades
+                conceptualModel={conceptualModel}
                 imageInfos={imageInfos}
-                watch={watch}
-                control={control}
-                entitiesList={entitiesList}
-                customRegisterField={customRegisterField}
-                handleAddItemToList={handleAddItemToList}
-                handleRemoveItemFromList={handleRemoveItemFromList}
               />
             </TabsContent>
 
             <TabsContent value="objetivos-entradas-salidas">
-              <ObjetivosEntradasSalidas
-                hasEditingRights={false}
-                inputList={inputList}
-                outputList={outputList}
-                entitiesList={entitiesList}
-                watch={watch}
-                customRegisterField={customRegisterField}
-                handleAddItemToList={handleAddItemToList}
-                handleRemoveItemFromList={handleRemoveItemFromList}
-              />
+              <RevisionObjetivosEntradasSalidas conceptualModel={conceptualModel} />
             </TabsContent>
 
             <TabsContent value="alcance">
-              <Alcance
-                hasEditingRights={false}
-                entitiesList={entitiesList}
-                customRegisterField={customRegisterField}
-                watch={watch}
-              />
+              <RevisionAlcance conceptualModel={conceptualModel} />
             </TabsContent>
 
             <TabsContent value="detalle">
-              <Detalle
-                hasEditingRights={false}
-                entitiesList={entitiesList}
-                control={control}
-                customRegisterField={customRegisterField}
-                handleAddItemToList={handleAddItemToList}
-                handleRemoveItemFromList={handleRemoveItemFromList}
-                watch={watch}
-              />
+              <RevisionDetalle conceptualModel={conceptualModel} />
             </TabsContent>
 
             <TabsContent value="flujo">
-              <DiagramaFlujo
-                sessionToken={session?.auth}
-                versionId={revision.version.id}
-                hasEditingRights={false}
+              <RevisionDiagramaFlujo
+                conceptualModel={conceptualModel}
                 imageInfos={imageInfos}
-                watch={watch}
-                control={control}
-                customRegisterField={customRegisterField}
               />
             </TabsContent>
           </Tabs>
-        </form>
+        </div>
       </div>
     </div>
   );
