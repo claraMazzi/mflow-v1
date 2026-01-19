@@ -1,15 +1,12 @@
 "use client";
 
 import { ChangeEvent, useState, useMemo } from "react";
-import { useFieldArray, RegisterOptions, Path, FieldArrayWithId } from "react-hook-form";
+import { useFieldArray, RegisterOptions, Path, FieldArrayWithId, UseFormReturn } from "react-hook-form";
 import { ConceptualModel } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import cn from "clsx";
 import { CustomRegisterFieldFn } from "@src/types/collaboration";
-
-// Type for watch function
-type WatchFn = (name?: string) => unknown;
 
 // Extracted component to prevent infinite re-renders from inline customRegisterField calls
 interface EntityScopeEditorProps {
@@ -17,7 +14,7 @@ interface EntityScopeEditorProps {
   index: number;
   hasEditingRights: boolean;
   customRegisterField: CustomRegisterFieldFn;
-  watch: WatchFn;
+  watch: UseFormReturn<ConceptualModel>["watch"];
 }
 
 function EntityScopeEditor({
@@ -109,7 +106,7 @@ interface AlcanceProps {
   hasEditingRights: boolean;
   entitiesList: ReturnType<typeof useFieldArray<ConceptualModel, "entities">>;
   customRegisterField: CustomRegisterFieldFn;
-  watch: WatchFn;
+  watch: UseFormReturn<ConceptualModel>["watch"];
 }
 
 export default function Alcance({

@@ -1,7 +1,7 @@
 "use client";
 
 import { MouseEvent, ChangeEvent, useEffect, useRef, useMemo } from "react";
-import { useFieldArray, RegisterOptions, Path, FieldArrayWithId } from "react-hook-form";
+import { useFieldArray, RegisterOptions, Path, FieldArrayWithId, UseFormReturn } from "react-hook-form";
 import { ConceptualModel } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
 import { Button } from "@components/ui/common/button";
@@ -185,7 +185,7 @@ interface ObjetivosEntradasSalidasProps {
   inputList: ReturnType<typeof useFieldArray<ConceptualModel, "inputs">>;
   outputList: ReturnType<typeof useFieldArray<ConceptualModel, "outputs">>;
   entitiesList: ReturnType<typeof useFieldArray<ConceptualModel, "entities">>;
-  watch: (name?: Path<ConceptualModel>) => unknown;
+  watch: UseFormReturn<ConceptualModel>["watch"];
   customRegisterField: CustomRegisterFieldFn;
   handleAddItemToList: ({
     e,

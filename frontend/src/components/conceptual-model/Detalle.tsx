@@ -14,6 +14,7 @@ import {
   Path,
   Control,
   FieldArrayWithId,
+  UseFormReturn,
 } from "react-hook-form";
 import { ConceptualModel } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
@@ -269,7 +270,7 @@ interface DetalleProps {
   customRegisterField: CustomRegisterFieldFn;
   handleAddItemToList: HandleAddItemToListFn;
   handleRemoveItemFromList: HandleRemoveItemFromListFn;
-  watch: (name?: Path<ConceptualModel>) => unknown;
+  watch: UseFormReturn<ConceptualModel>["watch"];
 }
 
 export default function Detalle({

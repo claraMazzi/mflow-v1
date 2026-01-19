@@ -737,7 +737,7 @@ export default function Page({
 	}, [collaborators, currentTab, session?.user.id]);
 
 	// Auto-scroll to followed user
-	React.useEffect(() => {
+	useEffect(() => {
 		if (!followingUserId || !containerRef.current) return;
 
 		const collaborator = collaborators.get(followingUserId);
@@ -778,7 +778,7 @@ export default function Page({
 	return (
 		<div
 			ref={containerRef}
-			className="flex-grow bg-grey-0 relative"
+			className="bg-grey-0 relative"
 			onMouseMove={handleMouseMove}
 		>
 			{/* Remote cursors */}

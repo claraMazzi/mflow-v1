@@ -1,7 +1,7 @@
 "use client";
 
 import { MouseEvent, ChangeEvent, useEffect, useRef } from "react";
-import { useFieldArray, RegisterOptions, Path } from "react-hook-form";
+import { useFieldArray, RegisterOptions, Path, UseFormReturn } from "react-hook-form";
 import { ConceptualModel } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
 import { Button } from "@components/ui/common/button";
@@ -16,7 +16,7 @@ interface DescripcionDelSistemaProps {
   simplificationList: ReturnType<
     typeof useFieldArray<ConceptualModel, "simplifications">
   >;
-  watch: (name?: Path<ConceptualModel>) => unknown;
+  watch: UseFormReturn<ConceptualModel>["watch"];
   customRegisterField: ({
     name,
     propertyPath,
