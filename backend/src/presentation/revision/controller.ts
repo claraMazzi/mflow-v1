@@ -156,5 +156,52 @@ export class RevisionController {
 			return this.handleError(error, res);
 		}
 	};
+
+	finalizeRevision = async (req: Request, res: Response) => {
+		try {
+			const userId = req.session?.userId;
+			if (!userId) {
+				return res.status(401).json({ error: "Debe iniciar sesión para finalizar la revisión." });
+			}
+
+			const { revisionId } = req.params;
+			if (!revisionId) {
+				return res.status(400).json({ error: "El identificador de la revisión es obligatorio." });
+			}
+
+			const { corrections, finalReview } = req.body;
+			if (!Array.isArray(corrections)) {
+				return res.status(400).json({ error: "Las correcciones deben ser un arreglo." });
+			}
+
+			// Validate each correction
+			for (let i = 0; i < corrections.length; i++) {
+				const correction = corrections[i];
+				if (!correction.description || typeof correction.description !== "string") {
+					return res.status(400).json({ 
+						error: `La corrección ${i + 1} debe tener una descripción válida.` 
+					});
+				}
+				if (!correction.location || 
+					typeof correction.location.x !== "number" || 
+					typeof correction.location.y !== "number" ||
+					typeof correction.location.page !== "number") {
+					return res.status(400).json({ 
+						error: `La corrección ${i + 1} debe tener una ubicación válida (x, y, page).` 
+					});
+				}
+			}
+
+			const result = await this.revisionService.finalizeRevision(
+				revisionId, 
+				userId, 
+				corrections as Correction[],
+				finalReview
+			);
+			return res.status(200).json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
 }
 

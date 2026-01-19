@@ -123,3 +123,54 @@ export const saveCorrections = async (
     };
   }
 };
+
+export type FinalizeRevisionState = {
+  data?: { 
+    message: string; 
+    revision: { 
+      id: string; 
+      state: string; 
+      finalReview: string;
+      corrections: Correction[];
+    } 
+  };
+  error?: string;
+};
+
+export const finalizeRevision = async (
+  revisionId: string,
+  corrections: Correction[],
+  finalReview?: string
+): Promise<FinalizeRevisionState> => {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return { error: "Not authenticated" };
+    }
+
+    const response = await fetch(
+      `${process.env.API_URL}/api/revisions/${revisionId}/finalize`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.auth}`,
+        },
+        body: JSON.stringify({ corrections, finalReview }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { error: errorData.error || "Failed to finalize revision" };
+    }
+
+    const data = await response.json();
+    return { data };
+  } catch (error) {
+    console.error("Error finalizing revision:", error);
+    return {
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+};

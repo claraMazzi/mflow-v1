@@ -21,6 +21,9 @@ export class RevisionRoutes {
 		// Save corrections for a revision
 		router.put("/:revisionId/corrections", controller.saveCorrections);
 
+		// Finalize a revision
+		router.post("/:revisionId/finalize", controller.finalizeRevision);
+
 		// Request revision for a version
 		router.post("/request/:versionId", controller.requestRevision);
 

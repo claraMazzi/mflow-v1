@@ -43,7 +43,7 @@ export function RevisionDiagramImage({
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = imageFileInfo?.filename || `${title.replace(/\s+/g, "_")}.png`;
+      link.download = imageFileInfo?.originalFilename || `${title.replace(/\s+/g, "_")}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

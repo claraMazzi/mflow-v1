@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button } from "@components/ui/common/button";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { RevisionDetails, RevisionState, Correction } from "#types/revision";
 import { cn } from "@lib/utils";
@@ -13,6 +13,7 @@ interface RevisionBarProps {
   hasUnsavedChanges: boolean;
   isSaving: boolean;
   onSave: () => void;
+  onFinalize: () => void;
 }
 
 const RevisionBar = ({
@@ -21,6 +22,7 @@ const RevisionBar = ({
   hasUnsavedChanges,
   isSaving,
   onSave,
+  onFinalize,
 }: RevisionBarProps) => {
   const router = useRouter();
 
@@ -48,6 +50,8 @@ const RevisionBar = ({
         return null;
     }
   };
+
+  const canFinalize = revision.state === "EN CURSO";
 
   return (
     <div className="bg-amber-50 h-16 flex justify-between items-center px-4 border-b border-amber-200">
@@ -100,6 +104,17 @@ const RevisionBar = ({
             <Save className="h-4 w-4" />
             {isSaving ? "Guardando..." : "Guardar"}
           </Button>
+
+          {/* Finalize button */}
+          {canFinalize && (
+            <Button
+              onClick={onFinalize}
+              className="gap-2 bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircle className="h-4 w-4" />
+              Finalizar revisión
+            </Button>
+          )}
         </div>
       </div>
     </div>

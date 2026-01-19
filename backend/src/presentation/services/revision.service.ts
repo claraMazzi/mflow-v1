@@ -356,5 +356,87 @@ export class RevisionService {
 			);
 		}
 	}
+
+	async finalizeRevision(
+		revisionId: string,
+		userId: string,
+		corrections: Correction[],
+		finalReview?: string
+	) {
+		try {
+			const revision = await RevisionModel.findById(revisionId);
+
+			if (!revision) {
+				throw CustomError.notFound("La revisión especificada no existe.");
+			}
+
+			// Check if the user is the verifier
+			if (!revision.verifier.equals(userId)) {
+				throw CustomError.forbidden(
+					"No tiene permisos para finalizar esta revisión."
+				);
+			}
+
+			// Only allow finalization if revision is EN CURSO
+			if (revision.state !== "EN CURSO") {
+				throw CustomError.badRequest(
+					"Solo se puede finalizar una revisión que está 'EN CURSO'."
+				);
+			}
+
+			// Update revision with corrections, finalReview and state
+			const updatedRevision = await RevisionModel.findByIdAndUpdate(
+				revisionId,
+				{
+					$set: {
+						corrections: corrections.map((c) => ({
+							description: c.description,
+							location: {
+								x: c.location.x,
+								y: c.location.y,
+								page: c.location.page,
+							},
+							multimediaFilePath: c.multimediaFilePath,
+						})),
+						finalReview: finalReview || "",
+						state: "FINALIZADA",
+					},
+				},
+				{ new: true }
+			);
+
+			if (!updatedRevision) {
+				throw CustomError.internalServer("Error al finalizar la revisión.");
+			}
+
+			// Update the version state to "REVISADA"
+			await VersionModel.findByIdAndUpdate(revision.version, {
+				$set: { state: "REVISADA" },
+			});
+
+			return {
+				message: "La revisión ha sido finalizada exitosamente.",
+				revision: {
+					id: updatedRevision._id.toString(),
+					state: updatedRevision.state,
+					finalReview: updatedRevision.finalReview,
+					corrections: updatedRevision.corrections.map((c: any) => ({
+						_id: c._id?.toString(),
+						description: c.description,
+						location: c.location,
+						multimediaFilePath: c.multimediaFilePath,
+					})),
+				},
+			};
+		} catch (error) {
+			if (error instanceof CustomError) {
+				throw error;
+			}
+			console.error("Error finalizing revision:", error);
+			throw CustomError.internalServer(
+				"Se ha producido un error al finalizar la revisión."
+			);
+		}
+	}
 }
 

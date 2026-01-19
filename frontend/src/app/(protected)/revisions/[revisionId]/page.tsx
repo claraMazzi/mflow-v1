@@ -22,6 +22,7 @@ import {
   getRevisionById,
   saveCorrections,
   startRevision,
+  finalizeRevision,
 } from "@components/dashboard/revisions/actions/revision-actions";
 import RevisionBar from "@components/revisions/RevisionBar";
 import {
@@ -29,7 +30,10 @@ import {
   AddCorrectionOverlay,
 } from "@components/revisions/CorrectionBubble";
 import { FloatingAddCorrectionButton } from "@components/revisions/FloatingAddCorrectionButton";
+import { FinalizeRevisionModal } from "@components/revisions/FinalizeRevisionModal";
+import { useUI } from "@components/ui/context";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 // Import new revision-specific components
 import {
@@ -52,6 +56,8 @@ export default function Page({
 }) {
   const { data: session } = useSession();
   const { revisionId } = React.use(params);
+  const router = useRouter();
+  const { openModal, closeModal } = useUI();
 
   const [currentTab, setCurrentTab] = useState<RevisionTabKey>("descripcion-sistema");
   const [isLoading, setIsLoading] = useState(true);
@@ -135,7 +141,7 @@ export default function Page({
               sizeInBytes: serverImg.sizeInBytes || 0,
               url: serverImg.url,
               uploadedAt: new Date(serverImg.createdAt),
-              filename: serverImg.originalFilename || "image",
+              originalFilename: serverImg.originalFilename || "image",
             });
           }
         });
@@ -278,6 +284,38 @@ export default function Page({
     }
   }, [selectedCorrectionId, newCorrectionIds]);
 
+  // Handle finalize revision
+  const handleOpenFinalizeModal = useCallback(() => {
+    openModal({
+      name: "finalize-revision-modal",
+      title: "Finalizar revisión",
+      size: "md",
+      showCloseButton: false,
+      content: (
+        <FinalizeRevisionModal
+          corrections={corrections}
+          onCancel={closeModal}
+          onFinalize={async (finalReview: string) => {
+            const result = await finalizeRevision(revisionId, corrections, finalReview);
+            
+            if (result.error) {
+              toast.error("Error al finalizar", {
+                description: result.error,
+              });
+              return;
+            }
+
+            toast.success("Revisión finalizada", {
+              description: "La revisión ha sido finalizada exitosamente.",
+            });
+            closeModal();
+            router.push("/dashboard/revision/finalized");
+          }}
+        />
+      ),
+    });
+  }, [openModal, closeModal, corrections, revisionId, router]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -316,6 +354,7 @@ export default function Page({
         hasUnsavedChanges={hasUnsavedChanges}
         isSaving={isSaving}
         onSave={handleSaveCorrections}
+        onFinalize={handleOpenFinalizeModal}
       />
 
       {/* Floating action button for adding corrections */}

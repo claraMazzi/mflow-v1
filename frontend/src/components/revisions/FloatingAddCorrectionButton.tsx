@@ -13,7 +13,6 @@ export function FloatingAddCorrectionButton({
   isAddingCorrection,
   onToggleAddCorrection,
 }: FloatingAddCorrectionButtonProps) {
-  const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -22,7 +21,6 @@ export function FloatingAddCorrectionButton({
   const dragStartPos = useRef({ x: 0, y: 0 });
   const dragStartButtonPos = useRef({ x: 0, y: 0 });
   const hasMoved = useRef(false);
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize position on mount (bottom-right corner)
   useEffect(() => {
@@ -54,24 +52,14 @@ export function FloatingAddCorrectionButton({
     }
   }, [position, hasInteracted]);
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-      }
-    };
-  }, []);
-
   // Constrain position within viewport
   const constrainPosition = useCallback((x: number, y: number) => {
-    const buttonWidth = 48;
-    const buttonHeight = 48;
+    const buttonSize = 48;
     const padding = 16;
     
     return {
-      x: Math.max(padding, Math.min(x, window.innerWidth - buttonWidth - padding)),
-      y: Math.max(padding, Math.min(y, window.innerHeight - buttonHeight - padding)),
+      x: Math.max(padding, Math.min(x, window.innerWidth - buttonSize - padding)),
+      y: Math.max(padding, Math.min(y, window.innerHeight - buttonSize - padding)),
     };
   }, []);
 
@@ -143,81 +131,33 @@ export function FloatingAddCorrectionButton({
     }
   }, [isDragging, onToggleAddCorrection]);
 
-  // Debounced hover handlers to prevent flickering
-  const handleMouseEnter = useCallback(() => {
-    if (isDragging) return;
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    setIsHovered(true);
-  }, [isDragging]);
-
-  const handleMouseLeave = useCallback(() => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    // Small delay before closing to prevent flicker
-    hoverTimeoutRef.current = setTimeout(() => {
-      setIsHovered(false);
-    }, 100);
-  }, []);
-
-  // Check if there's enough space to expand
-  // Expanded button is ~190px wide, collapsed is 48px
-  const EXPANDED_WIDTH = 190;
-  const EDGE_PADDING = 20;
-  
-  const hasSpaceToExpand = 
-    typeof window !== "undefined" &&
-    // Check right edge: position.x + expanded width shouldn't exceed viewport
-    position.x + EXPANDED_WIDTH <= window.innerWidth - EDGE_PADDING &&
-    // Check left edge: button shouldn't be too close to left (text could clip)
-    position.x >= EDGE_PADDING;
-
-  const isExpanded = isHovered && !isDragging && hasSpaceToExpand;
-
   return (
     <button
       ref={buttonRef}
       className={cn(
         "fixed z-50 flex items-center justify-center rounded-full shadow-lg select-none",
         "focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2",
-        "transition-all duration-300 ease-out",
-        isDragging ? "cursor-grabbing scale-110" : "cursor-grab",
+        "transition-all duration-200 ease-out",
+        "h-12 w-12",
+        isDragging ? "cursor-grabbing scale-110 shadow-xl" : "cursor-grab hover:scale-105 hover:shadow-xl",
         isAddingCorrection
           ? "bg-gray-600 hover:bg-gray-700"
-          : "bg-amber-500 hover:bg-amber-600",
-        // Size: circle when collapsed, pill when expanded
-        isExpanded ? "h-12 pl-4 pr-3 gap-2" : "h-12 w-12"
+          : "bg-amber-500 hover:bg-amber-600"
       )}
       style={{
         left: position.x,
         top: position.y,
-        // Disable all transitions during drag for responsiveness
+        // Disable transitions during drag for responsiveness
         transition: isDragging ? "none" : undefined,
       }}
       onMouseDown={handleMouseDown}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
       onClick={handleClick}
       aria-label={isAddingCorrection ? "Cancelar agregar corrección" : "Agregar corrección"}
     >
-      {/* Text - appears on the left of the icon */}
+      {/* Icon */}
       <span
         className={cn(
-          "whitespace-nowrap text-white font-medium text-xs transition-all duration-300 ease-out overflow-hidden",
-          isExpanded
-            ? "max-w-[130px] opacity-100"
-            : "max-w-0 opacity-0"
-        )}
-      >
-        {isAddingCorrection ? "Cancelar" : "Agregar corrección"}
-      </span>
-
-      {/* Icon - on the right */}
-      <span
-        className={cn(
-          "flex items-center justify-center flex-shrink-0 transition-transform duration-200",
+          "flex items-center justify-center transition-transform duration-200",
           isAddingCorrection && "rotate-45"
         )}
       >
