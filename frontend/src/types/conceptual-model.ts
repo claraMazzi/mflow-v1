@@ -1,5 +1,5 @@
 export type ImageInfo = {
-	filename: string;
+	originalFilename: string;
 	uploadedAt: Date;
 	sizeInBytes: number;
 	url: string;
@@ -7,7 +7,7 @@ export type ImageInfo = {
 };
 
 type Diagram = {
-	usesPlantText: boolean;
+	usePlantText: boolean;
 	plantTextCode: string;
 	plantTextToken: string;
 	imageFileId: string;

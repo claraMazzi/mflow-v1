@@ -14,6 +14,7 @@ import {
   Path,
   Control,
   FieldArrayWithId,
+  UseFormReturn,
 } from "react-hook-form";
 import { ConceptualModel } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
@@ -21,25 +22,7 @@ import { Button } from "@components/ui/common/button";
 import { X, Plus } from "lucide-react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import cn from "clsx";
-
-// Type for the customRegisterField function - includes HTMLSelectElement for proper select handling
-type CustomRegisterFieldFn = ({
-  name,
-  propertyPath,
-  options,
-  propagateUpdateOnChange,
-}: {
-  name: Path<ConceptualModel>;
-  propertyPath?: string;
-  options?: RegisterOptions<ConceptualModel, Path<ConceptualModel>>;
-  propagateUpdateOnChange?: boolean;
-}) => {
-  onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
-  onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
-  readOnly: boolean;
-  name: Path<ConceptualModel>;
-  ref: (instance: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null) => void;
-};
+import { CustomRegisterFieldFn } from "@src/types/collaboration";
 
 // Type for handleRemoveItemFromList function
 type HandleRemoveItemFromListFn = ({
@@ -144,7 +127,7 @@ function PropertyEditor({
             {...includeFieldRegistration}
             className={cn(
               "w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none",
-              !hasEditingRights && "bg-gray-100 cursor-not-allowed"
+              !hasEditingRights? "bg-gray-100 cursor-not-allowed" : "bg-white"
             )}
             disabled={!hasEditingRights}
           >
@@ -174,7 +157,7 @@ function PropertyEditor({
             {...argumentTypeFieldRegistration}
             className={cn(
               "w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none",
-              !hasEditingRights && "bg-gray-100 cursor-not-allowed"
+              !hasEditingRights? "bg-gray-100 cursor-not-allowed" : "bg-white"
             )}
             disabled={!hasEditingRights}
           >
@@ -287,7 +270,7 @@ interface DetalleProps {
   customRegisterField: CustomRegisterFieldFn;
   handleAddItemToList: HandleAddItemToListFn;
   handleRemoveItemFromList: HandleRemoveItemFromListFn;
-  watch: (name?: Path<ConceptualModel>) => unknown;
+  watch: UseFormReturn<ConceptualModel>["watch"];
 }
 
 export default function Detalle({

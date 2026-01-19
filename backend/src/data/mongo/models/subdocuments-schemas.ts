@@ -2,9 +2,18 @@ import { InferSchemaType, Schema, SchemaType } from "mongoose";
 
 export const diagramSchema = new Schema(
 	{
-		usesPlantText: Boolean,
-		plantTextCode: String,
-		plantTextToken: String,
+		usePlantText: {
+			type: Boolean,
+			default: true,
+		},
+		plantTextCode: { 
+			type: String,
+			default: ""
+		},
+		plantTextToken: {
+			type: String,
+			default: "0m00"
+		},
 		imageFileId: {
 			type: Schema.Types.ObjectId,
 			ref: "VersionImage",

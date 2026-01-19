@@ -1,35 +1,12 @@
 "use client";
 
 import { ChangeEvent, useState, useMemo } from "react";
-import { useFieldArray, RegisterOptions, Path, FieldArrayWithId } from "react-hook-form";
+import { useFieldArray, RegisterOptions, Path, FieldArrayWithId, UseFormReturn } from "react-hook-form";
 import { ConceptualModel } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import cn from "clsx";
-
-// Type for the customRegisterField function - includes HTMLSelectElement for proper select handling
-type CustomRegisterFieldFn = ({
-  name,
-  propertyPath,
-  options,
-  propagateUpdateOnChange,
-}: {
-  name: Path<ConceptualModel>;
-  propertyPath?: string;
-  options?: RegisterOptions<ConceptualModel, Path<ConceptualModel>>;
-  propagateUpdateOnChange?: boolean;
-}) => {
-  onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
-  onBlur: (
-    e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => void;
-  readOnly: boolean;
-  name: Path<ConceptualModel>;
-  ref: (instance: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null) => void;
-};
-
-// Type for watch function
-type WatchFn = (name?: string) => unknown;
+import { CustomRegisterFieldFn } from "@src/types/collaboration";
 
 // Extracted component to prevent infinite re-renders from inline customRegisterField calls
 interface EntityScopeEditorProps {
@@ -37,7 +14,7 @@ interface EntityScopeEditorProps {
   index: number;
   hasEditingRights: boolean;
   customRegisterField: CustomRegisterFieldFn;
-  watch: WatchFn;
+  watch: UseFormReturn<ConceptualModel>["watch"];
 }
 
 function EntityScopeEditor({
@@ -77,7 +54,7 @@ function EntityScopeEditor({
           {...includeFieldRegistration}
           className={cn(
             "w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none",
-            !hasEditingRights && "bg-gray-100 cursor-not-allowed"
+            !hasEditingRights? "bg-gray-100 cursor-not-allowed" : "bg-white"
           )}
           disabled={!hasEditingRights}
           value={String(includeValue ?? entity.scopeDecision?.include ?? true)}
@@ -108,7 +85,7 @@ function EntityScopeEditor({
           {...argumentTypeFieldRegistration}
           className={cn(
             "w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none",
-            !hasEditingRights && "bg-gray-100 cursor-not-allowed"
+            !hasEditingRights?"bg-gray-100 cursor-not-allowed" : "bg-white"
           )}
           disabled={!hasEditingRights}
           value={(argumentTypeValue as string) ?? entity.scopeDecision?.argumentType ?? "SALIDA"}
@@ -129,7 +106,7 @@ interface AlcanceProps {
   hasEditingRights: boolean;
   entitiesList: ReturnType<typeof useFieldArray<ConceptualModel, "entities">>;
   customRegisterField: CustomRegisterFieldFn;
-  watch: WatchFn;
+  watch: UseFormReturn<ConceptualModel>["watch"];
 }
 
 export default function Alcance({

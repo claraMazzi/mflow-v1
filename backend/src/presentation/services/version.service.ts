@@ -1,16 +1,24 @@
 import mongoose from "mongoose";
 import { ProjectModel, Version, VersionModel } from "../../data";
-import {
-	CreateVersionDto,
-	CustomError,
-} from "../../domain";
+import { CreateVersionDto, CustomError } from "../../domain";
 import { VersionImage } from "../../data/mongo/models/version-image.model";
-import { Assumption, Input, Simplification, Output, Entity, ConceptualModel } from "../../data/mongo/models/subdocuments-schemas";
+import {
+	Assumption,
+	Input,
+	Simplification,
+	Output,
+	Entity,
+	ConceptualModel,
+} from "../../data/mongo/models/subdocuments-schemas";
 
 const plantumlEncoder = require("plantuml-encoder");
 
 // Valid states for parent versions
-const VALID_PARENT_VERSION_STATES = ["FINALIZADA", "PENDIENTE DE REVISION", "REVISADA"];
+const VALID_PARENT_VERSION_STATES = [
+	"FINALIZADA",
+	"PENDIENTE DE REVISION",
+	"REVISADA",
+];
 
 export class VersionService {
 	// private projectService: ProjectService;
@@ -30,12 +38,12 @@ export class VersionService {
 		const existingVersions = await VersionModel.find({
 			_id: { $in: project.versions },
 			title: createDto.title,
-			state: { $ne: "ELIMINADA" }
+			state: { $ne: "ELIMINADA" },
 		}).exec();
 
 		if (existingVersions.length > 0) {
 			throw CustomError.badRequest(
-				"Ya existe una versión con el mismo nombre en este proyecto."
+				"Ya existe una versión con el mismo nombre en este proyecto.",
 			);
 		}
 
@@ -61,27 +69,33 @@ export class VersionService {
 					revisions: [],
 					conceptualModel: this.createBlankConceptualModel(),
 				};
-			} 
+			}
 			// Path 2: Create version from parent
 			else {
-				const parentVersion = await VersionModel.findById(createDto.parentVersionId).exec();
-				
+				const parentVersion = await VersionModel.findById(
+					createDto.parentVersionId,
+				).exec();
+
 				if (!parentVersion) {
-					throw CustomError.notFound("La versión padre especificada no existe.");
+					throw CustomError.notFound(
+						"La versión padre especificada no existe.",
+					);
 				}
 
 				// Validate parent version state
 				if (!VALID_PARENT_VERSION_STATES.includes(parentVersion.state)) {
 					throw CustomError.badRequest(
-						`La versión padre debe estar en estado ${VALID_PARENT_VERSION_STATES.join(", ")}. Estado actual: ${parentVersion.state}`
+						`La versión padre debe estar en estado ${VALID_PARENT_VERSION_STATES.join(", ")}. Estado actual: ${parentVersion.state}`,
 					);
 				}
 
 				// Deep copy of conceptual model (without _id to let mongoose generate new ones)
-				const copiedConceptualModel = this.deepCopyConceptualModel(parentVersion.conceptualModel);
+				const copiedConceptualModel = this.deepCopyConceptualModel(
+					parentVersion.conceptualModel,
+				);
 
 				// Copy todo items if checkbox was checked
-				const todoItems = createDto.migrateTodoItems 
+				const todoItems = createDto.migrateTodoItems
 					? this.deepCopyTodoItems(parentVersion.todoItems)
 					: [];
 
@@ -101,20 +115,21 @@ export class VersionService {
 			await newVersion.save();
 
 			// Add version to project's versions array
-			await ProjectModel.findByIdAndUpdate(
-				createDto.projectId,
-				{ $push: { versions: newVersion._id } }
-			).exec();
+			await ProjectModel.findByIdAndUpdate(createDto.projectId, {
+				$push: { versions: newVersion._id },
+			}).exec();
 
 			return {
 				version: {
 					id: newVersion._id.toString(),
 					title: newVersion.title,
 					state: newVersion.state,
-					parentVersion: newVersion.parentVersion ? {
-						id: newVersion.parentVersion.toString(),
-					} : null,
-				}
+					parentVersion: newVersion.parentVersion
+						? {
+								id: newVersion.parentVersion.toString(),
+							}
+						: null,
+				},
 			};
 		} catch (error) {
 			if (error instanceof CustomError) {
@@ -131,18 +146,8 @@ export class VersionService {
 			description: "",
 			simplifications: [],
 			assumptions: [],
-			structureDiagram: {
-				usesPlantText: undefined,
-				plantTextCode: "",
-				plantTextToken: "",
-				imageFileId: null,
-			},
-			flowDiagram: {
-				usesPlantText: undefined,
-				plantTextCode: "",
-				plantTextToken: "",
-				imageFileId: null,
-			},
+			structureDiagram: {},
+			flowDiagram: {},
 			inputs: [],
 			outputs: [],
 			entities: [],
@@ -156,13 +161,13 @@ export class VersionService {
 
 		// Convert to plain object and back to remove mongoose internals and generate new _ids
 		const plainObject = JSON.parse(JSON.stringify(original));
-		
+
 		// Remove all _id fields to let mongoose generate new ones
 		this.removeIds(plainObject);
-		
+
 		// Note: imageFileId references are preserved as they point to existing images
 		// The images themselves are not duplicated
-		
+
 		return plainObject;
 	}
 
@@ -174,20 +179,20 @@ export class VersionService {
 		// Deep copy and remove _ids to generate new ones
 		const copiedItems = JSON.parse(JSON.stringify(todoItems));
 		copiedItems.forEach((item: any) => this.removeIds(item));
-		
+
 		return copiedItems;
 	}
 
 	private removeIds(obj: any): void {
-		if (!obj || typeof obj !== 'object') return;
-		
+		if (!obj || typeof obj !== "object") return;
+
 		if (Array.isArray(obj)) {
-			obj.forEach(item => this.removeIds(item));
+			obj.forEach((item) => this.removeIds(item));
 		} else {
 			delete obj._id;
 			delete obj.id;
-			Object.values(obj).forEach(value => {
-				if (typeof value === 'object' && value !== null) {
+			Object.values(obj).forEach((value) => {
+				if (typeof value === "object" && value !== null) {
 					this.removeIds(value);
 				}
 			});
@@ -228,7 +233,7 @@ export class VersionService {
 						{
 							$project: {
 								_id: 0,
-								id: { $toString: "$_id" }, 
+								id: { $toString: "$_id" },
 								url: 1,
 								sizeInBytes: 1,
 								originalFilename: 1,
@@ -339,21 +344,21 @@ export class VersionService {
 		}
 
 		const isCollaborator = usersWithAccess.project.collaborators.some((c) =>
-			c.equals(userId)
+			c.equals(userId),
 		);
 		if (isCollaborator) {
 			return true;
 		}
 
 		const isReader = usersWithAccess.sharedWithReaders.some((r) =>
-			r.equals(userId)
+			r.equals(userId),
 		);
 		if (isReader) {
 			return true;
 		}
 
 		const isVerifier = usersWithAccess.revisions.some((r) =>
-			r.verifier.equals(userId)
+			r.verifier.equals(userId),
 		);
 		if (isVerifier) {
 			return true;
@@ -398,7 +403,7 @@ export class VersionService {
 		}
 
 		const isCollaborator = usersWithAccess.collaborators.some((c) =>
-			c.equals(userId)
+			c.equals(userId),
 		);
 		if (isCollaborator) {
 			return true;
@@ -428,7 +433,7 @@ export class VersionService {
 		// Check if version is in "EN EDICION" state
 		if (version.state !== "EN EDICION") {
 			throw CustomError.badRequest(
-				"Sólo se puede eliminar una versión que se encuentra en estado 'en edición'."
+				"Sólo se puede eliminar una versión que se encuentra en estado 'en edición'.",
 			);
 		}
 
@@ -439,14 +444,14 @@ export class VersionService {
 
 		if (!project) {
 			throw CustomError.notFound(
-				"No se encontró el proyecto asociado a esta versión."
+				"No se encontró el proyecto asociado a esta versión.",
 			);
 		}
 
 		// Check if the user is the project owner
 		if (!project.owner.equals(userId)) {
 			throw CustomError.forbidden(
-				"Solo el propietario del proyecto puede eliminar versiones."
+				"Solo el propietario del proyecto puede eliminar versiones.",
 			);
 		}
 
@@ -461,7 +466,7 @@ export class VersionService {
 		} catch (error) {
 			console.error("Error deleting version:", error);
 			throw CustomError.internalServer(
-				"Se ha producido un error, por favor inténtelo de nuevo más tarde."
+				"Se ha producido un error, por favor inténtelo de nuevo más tarde.",
 			);
 		}
 	}
@@ -493,11 +498,18 @@ export class VersionService {
 
 		// Validate simplifications
 		if (model.simplifications) {
-			model.simplifications.forEach((simplification: Simplification, index: number) => {
-				if (!simplification.description || simplification.description.trim() === "") {
-					errors.push(`La simplificación ${index + 1} debe tener una descripción.`);
-				}
-			});
+			model.simplifications.forEach(
+				(simplification: Simplification, index: number) => {
+					if (
+						!simplification.description ||
+						simplification.description.trim() === ""
+					) {
+						errors.push(
+							`La simplificación ${index + 1} debe tener una descripción.`,
+						);
+					}
+				},
+			);
 		}
 
 		// Validate assumptions
@@ -510,25 +522,35 @@ export class VersionService {
 		}
 
 		// Helper function to validate PlantUML code by calling the PlantUML server
-		const validatePlantUMLCode = async (plantTextCode: string): Promise<{ isValid: boolean; error?: string }> => {
+		const validatePlantUMLCode = async (
+			plantTextCode: string,
+		): Promise<{ isValid: boolean; error?: string }> => {
 			try {
 				const encoded = plantumlEncoder.encode(plantTextCode);
 				// Use the /txt/ endpoint to get text output - errors are clearly indicated in the response
-				const response = await fetch(`http://www.plantuml.com/plantuml/txt/${encoded}`);
-				
+				const response = await fetch(
+					`http://www.plantuml.com/plantuml/txt/${encoded}`,
+				);
+
 				if (!response.ok) {
-					return { isValid: false, error: "No se pudo validar el código PlantText con el servidor." };
+					return {
+						isValid: false,
+						error: "No se pudo validar el código PlantText con el servidor.",
+					};
 				}
-				
+
 				const textOutput = await response.text();
-				
+
 				// Check for common error indicators in PlantUML text output
-				if (textOutput.includes("Syntax Error") || 
-					textOutput.includes("@startuml") === false && textOutput.includes("Error") ||
-					textOutput.includes("Not valid")) {
+				if (
+					textOutput.includes("Syntax Error") ||
+					(textOutput.includes("@startuml") === false &&
+						textOutput.includes("Error")) ||
+					textOutput.includes("Not valid")
+				) {
 					return { isValid: false, error: textOutput.trim() };
 				}
-				
+
 				return { isValid: true };
 			} catch (error) {
 				console.error("Error validating PlantUML code:", error);
@@ -538,43 +560,52 @@ export class VersionService {
 		};
 
 		// Validate diagramSchema fields (structureDiagram and flowDiagram)
-		const validateDiagram = async (
-			diagram: any,
-			diagramName: string
-		) => {
+		const validateDiagram = async (diagram: any, diagramName: string) => {
 			if (!diagram) {
 				errors.push(`El diagrama ${diagramName} no puede estar vacío.`);
 				return;
 			}
 
-			// Check if usesPlantText is explicitly set
-			if (diagram.usesPlantText === true) {
+			// Check if usePlantText is explicitly set
+			if (diagram.usePlantText === true) {
 				console.log("Diagram uses PlantText: ", diagram.plantTextCode);
 				if (!diagram.plantTextCode || diagram.plantTextCode.trim() === "") {
-					errors.push(`El código PlantText del diagrama ${diagramName} no puede estar vacío cuando usesPlantText está activado.`);
+					errors.push(
+						`El código PlantText del diagrama ${diagramName} no puede estar vacío cuando usePlantText está activado.`,
+					);
 				} else {
 					// Validate that the plantTextCode is valid by calling PlantUML server
 					const validation = await validatePlantUMLCode(diagram.plantTextCode);
 					if (!validation.isValid) {
-						errors.push(`El código PlantText del diagrama ${diagramName} contiene errores de sintaxis: ${validation.error || "código inválido"}`);
+						errors.push(
+							`El código PlantText del diagrama ${diagramName} contiene errores de sintaxis: ${validation.error || "código inválido"}`,
+						);
 					}
 				}
-				
+
 				// Check if there's an image and add warning
 				if (diagram.imageFileId && diagram.imageFileId !== null) {
-					warnings.push(`Se eliminará la imagen del diagrama ${diagramName} ya que se está usando PlantText.`);
+					warnings.push(
+						`Se eliminará la imagen del diagrama ${diagramName} ya que se está usando PlantText.`,
+					);
 					// Remove the image
 					diagram.imageFileId = null;
 				}
-			} else if (diagram.usesPlantText === false) {
-				console.log("Diagram does not use PlantText, imageFileId: ", diagram.imageFileId);
+			} else if (diagram.usePlantText === false) {
+				console.log(
+					"Diagram does not use PlantText, imageFileId: ",
+					diagram.imageFileId,
+				);
 				if (!diagram.imageFileId || diagram.imageFileId === null) {
-					errors.push(`El diagrama ${diagramName} debe tener una imagen cuando usesPlantText está desactivado.`);
+					errors.push(
+						`El diagrama ${diagramName} debe tener una imagen cuando usePlantText está desactivado.`,
+					);
 				}
-				
 			} else {
-				// usesPlantText is undefined - diagram is not properly configured
-				errors.push(`El diagrama ${diagramName} debe especificar si usa PlantText o una imagen.`);
+				// usePlantText is undefined - diagram is not properly configured
+				errors.push(
+					`El diagrama ${diagramName} debe especificar si usa PlantText o una imagen.`,
+				);
 			}
 		};
 
@@ -593,8 +624,7 @@ export class VersionService {
 		// Validate inputs
 		if (model.inputs.length === 0) {
 			errors.push("Debe tener al menos una entrada.");
-		}
-		else if (model.inputs && model.inputs.length > 0) {
+		} else if (model.inputs && model.inputs.length > 0) {
 			model.inputs.forEach((input: Input, index: number) => {
 				if (!input.description || input.description.trim() === "") {
 					errors.push(`La entrada ${index + 1} debe tener una descripción.`);
@@ -605,25 +635,30 @@ export class VersionService {
 		// Validate outputs
 		if (model.outputs.length === 0) {
 			errors.push("Debe tener al menos una salida.");
-		}
-		else if (model.outputs && model.outputs.length > 0) {
+		} else if (model.outputs && model.outputs.length > 0) {
 			model.outputs.forEach((output: Output, index: number) => {
 				if (!output.description || output.description.trim() === "") {
 					errors.push(`La salida ${index + 1} debe tener una descripción.`);
 				}
 				if (!output.entity || output.entity.trim() === "") {
-					errors.push(`La salida ${index + 1} debe tener una entidad asignada.`);
+					errors.push(
+						`La salida ${index + 1} debe tener una entidad asignada.`,
+					);
 				}
 			});
 		}
 
 		if (!model.entities || !model.entities.length) {
-			errors.push('El modelo debe tener al menos una entidad definida.')
+			errors.push("El modelo debe tener al menos una entidad definida.");
 		}
 
 		// Validate entities
 		if (model.entities) {
-			for (let entityIndex = 0; entityIndex < model.entities.length; entityIndex++) {
+			for (
+				let entityIndex = 0;
+				entityIndex < model.entities.length;
+				entityIndex++
+			) {
 				const entity: Entity = model.entities[entityIndex];
 				const entityName = entity.name || `Entidad ${entityIndex + 1}`;
 
@@ -631,36 +666,59 @@ export class VersionService {
 				// An entity can't have an empty dynamicDiagram
 				if (
 					!entity.dynamicDiagram ||
-					(entity.dynamicDiagram.usesPlantText === undefined &&
+					(entity.dynamicDiagram.usePlantText === undefined &&
 						!entity.dynamicDiagram.imageFileId &&
-						(!entity.dynamicDiagram.plantTextCode || entity.dynamicDiagram.plantTextCode.trim() === ""))
+						(!entity.dynamicDiagram.plantTextCode ||
+							entity.dynamicDiagram.plantTextCode.trim() === ""))
 				) {
-					errors.push(`La entidad "${entityName}" no puede tener un diagrama de dinamica vacío.`);
+					errors.push(
+						`La entidad "${entityName}" no puede tener un diagrama de dinamica vacío.`,
+					);
 				}
 
 				// Validate dynamicDiagram if it exists and has content
-				if (entity.dynamicDiagram && (
-					entity.dynamicDiagram.usesPlantText !== undefined ||
-					entity.dynamicDiagram.imageFileId ||
-					(entity.dynamicDiagram.plantTextCode && entity.dynamicDiagram.plantTextCode.trim() !== "")
-				)) {
-					await validateDiagram(entity.dynamicDiagram, `de dinamica de la entidad "${entityName}"`);
+				if (
+					entity.dynamicDiagram &&
+					(entity.dynamicDiagram.usePlantText !== undefined ||
+						entity.dynamicDiagram.imageFileId ||
+						(entity.dynamicDiagram.plantTextCode &&
+							entity.dynamicDiagram.plantTextCode.trim() !== ""))
+				) {
+					await validateDiagram(
+						entity.dynamicDiagram,
+						`de dinamica de la entidad "${entityName}"`,
+					);
 				}
 
 				if (entity.scopeDecision === undefined) {
-					errors.push(`La entidad "${entityName}" debe marcarse como incluida o excluida del modelo.`);
+					errors.push(
+						`La entidad "${entityName}" debe marcarse como incluida o excluida del modelo.`,
+					);
 				}
 
 				//check if at least one entity from the list of entites has scopeDecision.include === true
-				console.log("Entities: ", model.entities.some((e: Entity) => (e.scopeDecision?.include) as boolean === true));
-				if (model.entities.every((e: Entity) => e.scopeDecision?.include === false)) {
-					errors.push("Debe tener al menos una entidad incluída en el alcance del modelo.");
+				console.log(
+					"Entities: ",
+					model.entities.some(
+						(e: Entity) => (e.scopeDecision?.include as boolean) === true,
+					),
+				);
+				if (
+					model.entities.every(
+						(e: Entity) => e.scopeDecision?.include === false,
+					)
+				) {
+					errors.push(
+						"Debe tener al menos una entidad incluída en el alcance del modelo.",
+					);
 				}
 
-				if (entity.scopeDecision?.include === false ) {
+				if (entity.scopeDecision?.include === false) {
 					// If include is false, shouldn't have properties
 					if (entity.properties && entity.properties.length > 0) {
-						warnings.push(`La entidad "${entityName}" no se encuentra incluída en el alcance por lo que no puede tener propiedades asignadas.`);
+						warnings.push(
+							`La entidad "${entityName}" no se encuentra incluída en el alcance por lo que no puede tener propiedades asignadas.`,
+						);
 					}
 				} else if (entity.scopeDecision?.include === true) {
 					// If include is true, validate argumentType
@@ -669,32 +727,42 @@ export class VersionService {
 						entity.scopeDecision.argumentType === "SIMPLIFICACION"
 					) {
 						errors.push(
-							`La entidad "${entityName}" se encuentra incluída en el alcance por lo que no puede tener como tipo de argumento los valores "NO VINCULADO A OBJETIVOS" ni "SIMPLIFICACION".`
+							`La entidad "${entityName}" se encuentra incluída en el alcance por lo que no puede tener como tipo de argumento los valores "NO VINCULADO A OBJETIVOS" ni "SIMPLIFICACION".`,
 						);
 					}
 
 					// Must have at least one property
 					if (!entity.properties || entity.properties.length === 0) {
-						errors.push(`La entidad "${entityName}" debe tener al menos una propiedad cuando scopeDecision.include es true.`);
+						errors.push(
+							`La entidad "${entityName}" debe tener al menos una propiedad cuando scopeDecision.include es true.`,
+						);
 					} else {
 						// Validate each property
-						for (let propIndex = 0; propIndex < entity.properties.length; propIndex++) {
+						for (
+							let propIndex = 0;
+							propIndex < entity.properties.length;
+							propIndex++
+						) {
 							const property = entity.properties[propIndex];
 							if (!property.name || property.name.trim() === "") {
-								errors.push(`La propiedad ${propIndex + 1} de la entidad "${entityName}" debe tener un nombre.`);
+								errors.push(
+									`La propiedad ${propIndex + 1} de la entidad "${entityName}" debe tener un nombre.`,
+								);
 							}
 							if (
 								!property.detailLevelDecision?.justification ||
 								property.detailLevelDecision.justification.trim() === ""
 							) {
 								errors.push(
-									`La propiedad ${propIndex + 1} de la entidad "${entityName}" no puede tener una justificación vacía.`
+									`La propiedad ${propIndex + 1} de la entidad "${entityName}" no puede tener una justificación vacía.`,
 								);
 							}
 							if (property.detailLevelDecision?.include === true) {
-								if (property.detailLevelDecision.argumentType === "SIMPLIFICACION") {
+								if (
+									property.detailLevelDecision.argumentType === "SIMPLIFICACION"
+								) {
 									errors.push(
-										`La propiedad ${propIndex + 1} de la entidad "${entityName}" está incluída en el alcance por lo que no puede tener como tipo de argumento el valor "SIMPLIFICACION".`
+										`La propiedad ${propIndex + 1} de la entidad "${entityName}" está incluída en el alcance por lo que no puede tener como tipo de argumento el valor "SIMPLIFICACION".`,
 									);
 								}
 							}

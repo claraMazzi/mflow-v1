@@ -21,25 +21,11 @@ type BaseSocketEventPayload = { type: string; timestamp: Date };
 
 enum CLIENT_WS_EVENT_TYPES {
 	JOIN_ROOM = "join-room",
-	PLANT_TEXT_GET_IMAGE = "plant-text-get-image",
 }
 
 type JoinRoomEventPayload = BaseSocketEventPayload & {
 	type: CLIENT_WS_EVENT_TYPES.JOIN_ROOM;
 	roomId: string;
-};
-
-// type PlantTextCodeChangePayload = BaseSocketEventPayload & {
-// 	type: CLIENT_WS_EVENT_TYPES.PLANT_TEXT_CODE_CHANGE;
-// 	versionId: string;
-// 	propertyPath: string;
-// 	plantTextCode: string;
-// };
-
-type PlantTextGetImagePayload = BaseSocketEventPayload & {
-	type: CLIENT_WS_EVENT_TYPES.PLANT_TEXT_GET_IMAGE;
-	versionId: string;
-	propertyPath: string;
 };
 
 type UsersInRoomChangePayload = BaseSocketEventPayload & {
@@ -68,17 +54,9 @@ type InitializeConceptualModelPayload = BaseSocketEventPayload & {
 	})[];
 };
 
-type PlantTextImageUpdatePayload = BaseSocketEventPayload & {
-	type: SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE;
-	propertyPath: string;
-	imageUrl: string;
-	plantTextToken: string;
-};
-
 enum SERVER_WS_EVENT_TYPES {
 	USERS_IN_ROOM_CHANGE = "users-in-room-change",
 	INITIALIZE_CONCEPTUAL_MODEL = "initialize-conceptual-model",
-	PLANT_TEXT_IMAGE_UPDATE = "plant-text-image-update",
 }
 
 export class SocketServer {
@@ -114,7 +92,7 @@ export class SocketServer {
 
 			try {
 				const payload = await jwtAdapter.validateToken<{ id: string }>(
-					sessionToken
+					sessionToken,
 				);
 				if (!payload) return next(new Error("Invalid token"));
 
@@ -138,7 +116,7 @@ export class SocketServer {
 	private setupConnectionHandlers() {
 		this.socketServer.on("connection", async (socket) => {
 			console.info(
-				`New Socket Connection: ${socket.id} - User: ${socket.data.userId}`
+				`New Socket Connection: ${socket.id} - User: ${socket.data.userId}`,
 			);
 
 			// Individual room for the user
@@ -151,7 +129,7 @@ export class SocketServer {
 	private setupSocketEventHandlers(socket: Socket) {
 		socket.on(
 			CLIENT_WS_EVENT_TYPES.JOIN_ROOM,
-			(payload: JoinRoomEventPayload) => this.handleJoinRoom(socket, payload)
+			(payload: JoinRoomEventPayload) => this.handleJoinRoom(socket, payload),
 		);
 
 		socket.on(
@@ -160,29 +138,29 @@ export class SocketServer {
 				roomId: string;
 				currentTab: string;
 				mousePosition?: { relativeX: number; relativeY: number };
-			}) => this.handleVolatileBroadcast(socket, payload)
+			}) => this.handleVolatileBroadcast(socket, payload),
 		);
 
 		socket.on(
 			"field-update",
 			(payload: { propertyPath: string; value: any; roomId: string }) =>
-				this.handleFieldUpdate(socket, payload)
+				this.handleFieldUpdate(socket, payload),
 		);
 
 		socket.on("request-editing-privilege", (payload: { roomId: string }) =>
-			this.handleRequestEditingPrivilege(socket, payload)
+			this.handleRequestEditingPrivilege(socket, payload),
 		);
 
 		socket.on(
 			"accept-editing-request",
 			(payload: { roomId: string; requestId: string }) =>
-				this.handleAcceptEditingRequest(socket, payload)
+				this.handleAcceptEditingRequest(socket, payload),
 		);
 
 		socket.on(
 			"decline-editing-request",
 			(payload: { roomId: string; requestId: string }) =>
-				this.handleDeclineEditingRequest(socket, payload)
+				this.handleDeclineEditingRequest(socket, payload),
 		);
 
 		socket.on(
@@ -197,31 +175,25 @@ export class SocketServer {
 					| "input"
 					| "output"
 					| "property";
-			}) => this.handleAddItemToList(socket, payload)
+			}) => this.handleAddItemToList(socket, payload),
 		);
 
 		socket.on(
 			"remove-item-from-list",
 			(payload: { roomId: string; listPropertyPath: string; itemId: string }) =>
-				this.handleRemoveItemFromList(socket, payload)
+				this.handleRemoveItemFromList(socket, payload),
 		);
 
-/* 		socket.on(
-			CLIENT_WS_EVENT_TYPES.PLANT_TEXT_GET_IMAGE,
-			(payload: PlantTextGetImagePayload) =>
-				this.handlePlantTextGetImage(socket, payload)
-		); */
-
 		socket.on("finalize-version", (payload: { roomId: string }) =>
-			this.handleFinalizeVersion(socket, payload)
+			this.handleFinalizeVersion(socket, payload),
 		);
 
 		socket.on("finalize-version-confirm", (payload: { roomId: string }) =>
-			this.handleFinalizeVersionConfirm(socket, payload)
+			this.handleFinalizeVersionConfirm(socket, payload),
 		);
 
 		socket.on("finalize-version-modal-close", (payload: { roomId: string }) =>
-			this.handleFinalizeVersionModalClose(socket, payload)
+			this.handleFinalizeVersionModalClose(socket, payload),
 		);
 
 		socket.on("disconnecting", () => this.handleDisconnecting(socket));
@@ -259,14 +231,14 @@ export class SocketServer {
 	private async handleJoinRoom(socket: Socket, payload: JoinRoomEventPayload) {
 		//TODO: ADD CHECK OF VALIDITY BEFORE ADDING THE SOCKET TO THE ROOM -- verificar que es colaborador del proyecto --
 		const { version } = await this.versionService.getVersionByIdWithImages(
-			payload.roomId
+			payload.roomId,
 		);
 
 		if (!this.activeCollaborationRooms.has(version.id)) {
 			console.info("New collaboration room created:", version.id);
 			this.activeCollaborationRooms.set(
 				version.id,
-				new CollaborationRoom(version.id)
+				new CollaborationRoom(version.id),
 			);
 		}
 		const collabRoom = this.activeCollaborationRooms.get(version.id)!;
@@ -296,7 +268,7 @@ export class SocketServer {
 			roomId: string;
 			currentTab: string;
 			mousePosition?: { relativeX: number; relativeY: number };
-		}
+		},
 	) {
 		socket.to(payload.roomId).emit("server-volatile-broadcast", {
 			socketId: socket.id,
@@ -306,26 +278,6 @@ export class SocketServer {
 		});
 	}
 
-	// TODO agregar un handler pare el text field de plantext change.
-
-	/*
-	cuando el plantext code cambia el servidor es el encargado de generar la URL de la imagen plant text y enviarsela a todos los clientes para quee la actualice en el front. 
-	Ahora se esta generando en el front directamente. 
-
-
-
-	ahora todos reciben el texto -- generan el token, llaman al encoder y muestran la imagen 
-
-	desintalar el encoder del front 
-	instalarlo en el back
-	escuchar por el evento del field de plant text 
-	generar el token
-	guardar el cambio que hubo en el plant text field y guardar el token para no vovler a generarlo.-- diagramSchema
-
-	generar el link 
-
-	*/
-
 	private async handleFieldUpdate(
 		//funciona para todos los text fields
 		socket: Socket,
@@ -333,10 +285,10 @@ export class SocketServer {
 			propertyPath: string;
 			value: any;
 			roomId: string;
-		}
+		},
 	) {
 		const { version } = await this.versionService.getVersionById(
-			payload.roomId
+			payload.roomId,
 		);
 
 		// Check if this is a plantTextCode field update
@@ -387,16 +339,7 @@ export class SocketServer {
 			// Save the version
 			await version.save();
 
-			// Generate the image URL
-			// const imageUrl = `http://www.plantuml.com/plantuml/img/${plantTextToken}`;
-
-			// console.log("imageUrl", imageUrl);
 			// Emit the plantText image update to all clients in the room
-			/* this.emitPlantTextImageUpdate(payload.roomId, {
-				propertyPath: diagramPath,
-				imageUrl,
-				plantTextToken,
-			}); */
 			this.emitFieldUpdate(payload.roomId, {
 				propertyPath: plantTextTokenPath,
 				value: plantTextToken,
@@ -424,13 +367,13 @@ export class SocketServer {
 
 	private handleRequestEditingPrivilege(
 		socket: Socket,
-		payload: { roomId: string }
+		payload: { roomId: string },
 	) {
 		const collabRoom = this.activeCollaborationRooms.get(payload.roomId);
 
 		if (!collabRoom) {
 			console.info(
-				`An Editing Request was ignored for Room: ${payload.roomId} - Requester UserId: ${socket.data.userId}`
+				`An Editing Request was ignored for Room: ${payload.roomId} - Requester UserId: ${socket.data.userId}`,
 			);
 			return;
 		}
@@ -462,7 +405,7 @@ export class SocketServer {
 				this.emitEditingRequestCreationRefused(socket);
 			} else {
 				console.error(
-					`Unexpected error during Editing Request Creation: ${error}`
+					`Unexpected error during Editing Request Creation: ${error}`,
 				);
 				throw error;
 			}
@@ -474,13 +417,13 @@ export class SocketServer {
 		payload: {
 			roomId: string;
 			requestId: string;
-		}
+		},
 	) {
 		const collabRoom = this.activeCollaborationRooms.get(payload.roomId);
 
 		if (!collabRoom) {
 			console.debug(
-				`The approval of an editing request was skipped because the specified room ${payload.roomId} didn't exist.`
+				`The approval of an editing request was skipped because the specified room ${payload.roomId} didn't exist.`,
 			);
 			return;
 		}
@@ -492,7 +435,7 @@ export class SocketServer {
 			});
 
 			console.debug(
-				`The approval of the editing request: ${payload.requestId} in the room: ${payload.roomId} was successful.`
+				`The approval of the editing request: ${payload.requestId} in the room: ${payload.roomId} was successful.`,
 			);
 
 			this.emitEditingRequestApproved(payload.roomId, {
@@ -512,7 +455,7 @@ export class SocketServer {
 				});
 			} else {
 				console.error(
-					`Unexpected error during Editing Request Approval: ${error}`
+					`Unexpected error during Editing Request Approval: ${error}`,
 				);
 				throw error;
 			}
@@ -524,13 +467,13 @@ export class SocketServer {
 		payload: {
 			roomId: string;
 			requestId: string;
-		}
+		},
 	) {
 		const collabRoom = this.activeCollaborationRooms.get(payload.roomId);
 
 		if (!collabRoom) {
 			console.info(
-				`The refusal of an editing request was skipped because the specified room ${payload.roomId} didn't exist.`
+				`The refusal of an editing request was skipped because the specified room ${payload.roomId} didn't exist.`,
 			);
 			return;
 		}
@@ -542,7 +485,7 @@ export class SocketServer {
 			});
 
 			console.debug(
-				`The refusal of the editing request: ${payload.requestId} in the room: ${payload.roomId} was successful.`
+				`The refusal of the editing request: ${payload.requestId} in the room: ${payload.roomId} was successful.`,
 			);
 
 			this.emitEditingRequestDeclined(payload.roomId, {
@@ -560,7 +503,7 @@ export class SocketServer {
 				});
 			} else {
 				console.error(
-					`Unexpected error during Editing Request Refusal: ${error}`
+					`Unexpected error during Editing Request Refusal: ${error}`,
 				);
 				throw error;
 			}
@@ -579,7 +522,7 @@ export class SocketServer {
 				| "input"
 				| "output"
 				| "property";
-		}
+		},
 	) {
 		//add try catch
 		//agregar que tipo de entidad agrego.
@@ -588,12 +531,12 @@ export class SocketServer {
 		// -- entidad1 y quiero agregar una entrada o una salida, para poder agregar esa entrada o salida voy a necesitar el id de la entidad sobre la que estoy aplicando y el tipo de dato que vas a agregar a esa lista, si es una entrada tiene otros atributos distintos a lo de la salida, depende de que quiero agregar
 
 		const { version } = await this.versionService.getVersionById(
-			payload.roomId
+			payload.roomId,
 		);
 
 		let listField = getProperty(
 			version.conceptualModel,
-			payload.listPropertyPath
+			payload.listPropertyPath,
 		);
 
 		switch (payload.itemType) {
@@ -651,19 +594,19 @@ export class SocketServer {
 			roomId: string;
 			listPropertyPath: string;
 			itemId: string;
-		}
+		},
 	) {
 		const { version } = await this.versionService.getVersionById(
-			payload.roomId
+			payload.roomId,
 		);
 
 		const listField = getProperty(
 			version.conceptualModel,
-			payload.listPropertyPath
+			payload.listPropertyPath,
 		);
-		console.log("List Field: ", listField);
+
 		const itemToDelete = listField.find((s: any) =>
-			s._id.equals(payload.itemId)
+			s._id.equals(payload.itemId),
 		);
 		listField.remove(itemToDelete);
 
@@ -675,61 +618,12 @@ export class SocketServer {
 		});
 	}
 
-/* 	private async handlePlantTextGetImage(
-		socket: Socket,
-		payload: PlantTextGetImagePayload
-	) {
-		try {
-			const { version } = await this.versionService.getVersionById(
-				payload.versionId
-			);
-
-			// Get the diagram object from the property path
-			const diagram = getProperty(
-				version.conceptualModel,
-				payload.propertyPath
-			);
-
-			if (!diagram) {
-				console.error(
-					`Diagram not found at property path: ${payload.propertyPath}`
-				);
-				return;
-			}
-
-			// Check if we have existing plantTextCode and token
-			if (!diagram.plantTextCode || !diagram.plantTextToken) {
-				console.log("No existing plantTextCode or token found");
-				return;
-			}
-
-			// Generate the image URL from existing token
-			const imageUrl = `http://www.plantuml.com/plantuml/img/${diagram.plantTextToken}`;
-
-			console.log("Sending existing imageUrl", imageUrl);
-			// Emit the plantText image update to the requesting client only
-			socket.emit(SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE, {
-				type: SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE,
-				propertyPath: payload.propertyPath,
-				imageUrl,
-				plantTextToken: diagram.plantTextToken,
-				timestamp: new Date(),
-			});
-
-			console.log(
-				`PlantText existing image sent for property: ${payload.propertyPath}`
-			);
-		} catch (error) {
-			console.error("Error handling plantText get image:", error);
-		}
-	} */
-
 	private handleFinalizeVersion(socket: Socket, payload: { roomId: string }) {
 		const collabRoom = this.activeCollaborationRooms.get(payload.roomId);
 
 		if (!collabRoom) {
 			console.info(
-				`Finalize version request was ignored for Room: ${payload.roomId} - UserId: ${socket.data.userId}`
+				`Finalize version request was ignored for Room: ${payload.roomId} - UserId: ${socket.data.userId}`,
 			);
 			return;
 		}
@@ -737,7 +631,7 @@ export class SocketServer {
 		// Check if user has editing rights
 		if (collabRoom.getCurrentEditingUser() !== socket.data.userId) {
 			console.info(
-				`Finalize version request was refused - User ${socket.data.userId} does not have editing rights`
+				`Finalize version request was refused - User ${socket.data.userId} does not have editing rights`,
 			);
 			return;
 		}
@@ -750,13 +644,13 @@ export class SocketServer {
 
 	private async handleFinalizeVersionConfirm(
 		socket: Socket,
-		payload: { roomId: string }
+		payload: { roomId: string },
 	) {
 		const collabRoom = this.activeCollaborationRooms.get(payload.roomId);
 
 		if (!collabRoom) {
 			console.info(
-				`Finalize version confirm was ignored for Room: ${payload.roomId} - UserId: ${socket.data.userId}`
+				`Finalize version confirm was ignored for Room: ${payload.roomId} - UserId: ${socket.data.userId}`,
 			);
 			return;
 		}
@@ -764,7 +658,7 @@ export class SocketServer {
 		// Check if user has editing rights
 		if (collabRoom.getCurrentEditingUser() !== socket.data.userId) {
 			console.info(
-				`Finalize version confirm was refused - User ${socket.data.userId} does not have editing rights`
+				`Finalize version confirm was refused - User ${socket.data.userId} does not have editing rights`,
 			);
 			return;
 		}
@@ -799,7 +693,7 @@ export class SocketServer {
 			if (!collabRoom) continue;
 
 			console.info(
-				`Collaborator Removed: ${socket.id} - ${socket.data.userId}`
+				`Collaborator Removed: ${socket.id} - ${socket.data.userId}`,
 			);
 			collabRoom.removeCollaborator({
 				socketId: socket.id,
@@ -821,7 +715,7 @@ export class SocketServer {
 			collabRoom,
 		}: {
 			collabRoom: CollaborationRoom;
-		}
+		},
 	) {
 		this.socketServer
 			.to(roomId) //sends to all sockets inside the room - includingm me
@@ -845,7 +739,7 @@ export class SocketServer {
 			> & {
 				id: string;
 			})[];
-		}
+		},
 	) {
 		//socket.to(roomId) mandaria a todos en la room menos a mi
 		socket.emit(SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL, {
@@ -858,9 +752,13 @@ export class SocketServer {
 
 	public emitImageFileAdded(
 		roomId: string,
-		imageInfo: Pick<VersionImage, "originalFilename" | "url"> & {
+		imageInfo: Pick<
+			VersionImage,
+			"originalFilename" | "url" | "sizeInBytes"
+		> & {
 			id: string;
-		}
+			uploadedAt: Date;
+		},
 	) {
 		this.socketServer.to(roomId).emit("image-added", {
 			type: "image-added",
@@ -871,7 +769,7 @@ export class SocketServer {
 
 	public emitImageFileRemoved(
 		roomId: string,
-		{ imageId }: { imageId: string }
+		{ imageId }: { imageId: string },
 	) {
 		this.socketServer.to(roomId).emit("image-removed", {
 			type: "image-removed",
@@ -882,7 +780,7 @@ export class SocketServer {
 
 	public emitFieldUpdate(
 		roomId: string,
-		payload: { propertyPath: string; value: any }
+		payload: { propertyPath: string; value: any },
 	) {
 		this.socketServer.to(roomId).emit("field-update", {
 			propertyPath: payload.propertyPath,
@@ -897,7 +795,7 @@ export class SocketServer {
 			editorUserId: string;
 			timeoutStartTimestamp: any;
 			requesterUserId: string;
-		}
+		},
 	) {
 		this.socketServer.to(roomId).emit("editing-request-started", {
 			type: "editing-request-started",
@@ -911,7 +809,7 @@ export class SocketServer {
 
 	public emitEditingRequestApproved(
 		roomId: string,
-		payload: { requestId: string }
+		payload: { requestId: string },
 	) {
 		this.socketServer.to(roomId).emit("editing-request-approved", {
 			type: "editing-request-approved",
@@ -922,7 +820,7 @@ export class SocketServer {
 
 	public emitEditingRequestDeclined(
 		roomId: string,
-		payload: { requestId: string }
+		payload: { requestId: string },
 	) {
 		this.socketServer.to(roomId).emit("editing-request-declined", {
 			type: "editing-request-declined",
@@ -940,7 +838,7 @@ export class SocketServer {
 
 	public emitEditingRequestApprovalFailed(
 		socket: Socket,
-		payload: { requestId: string }
+		payload: { requestId: string },
 	) {
 		socket.emit("editing-request-approval-failed", {
 			requestId: payload.requestId,
@@ -951,7 +849,7 @@ export class SocketServer {
 
 	public emitEditingRequestRefusalFailed(
 		socket: Socket,
-		payload: { requestId: string }
+		payload: { requestId: string },
 	) {
 		socket.emit("editing-request-refusal-failed", {
 			requestId: payload.requestId,
@@ -962,7 +860,7 @@ export class SocketServer {
 
 	public emitItemAddedToList(
 		roomId: string,
-		payload: { listPropertyPath: string; newItem: any }
+		payload: { listPropertyPath: string; newItem: any },
 	) {
 		this.socketServer.to(roomId).emit("item-added-to-list", {
 			listPropertyPath: payload.listPropertyPath,
@@ -972,7 +870,7 @@ export class SocketServer {
 
 	public emitItemRemovedFromList(
 		roomId: string,
-		payload: { listPropertyPath: string; itemId: string }
+		payload: { listPropertyPath: string; itemId: string },
 	) {
 		this.socketServer.to(roomId).emit("item-removed-from-list", {
 			listPropertyPath: payload.listPropertyPath,
@@ -980,24 +878,9 @@ export class SocketServer {
 		});
 	}
 
-/* 	public emitPlantTextImageUpdate(
-		roomId: string,
-		payload: { propertyPath: string; imageUrl: string; plantTextToken: string }
-	) {
-		this.socketServer
-			.to(roomId)
-			.emit(SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE, {
-				type: SERVER_WS_EVENT_TYPES.PLANT_TEXT_IMAGE_UPDATE,
-				propertyPath: payload.propertyPath,
-				imageUrl: payload.imageUrl,
-				plantTextToken: payload.plantTextToken,
-				timestamp: new Date(),
-			} satisfies PlantTextImageUpdatePayload);
-	} */
-
 	public emitFinalizeVersionModal(
 		roomId: string,
-		payload: { initiatedBy: string }
+		payload: { initiatedBy: string },
 	) {
 		this.socketServer.to(roomId).emit("finalize-version-modal", {
 			type: "finalize-version-modal",
@@ -1019,7 +902,7 @@ export class SocketServer {
 			isValid: boolean;
 			errors: string[];
 			warnings: string[];
-		}
+		},
 	) {
 		this.socketServer.to(roomId).emit("finalize-version-result", {
 			type: "finalize-version-result",
@@ -1032,7 +915,7 @@ export class SocketServer {
 
 	private handleFinalizeVersionModalClose(
 		socket: Socket,
-		payload: { roomId: string }
+		payload: { roomId: string },
 	) {
 		// Broadcast the close event to all users in the room
 		this.emitFinalizeVersionModalClose(payload.roomId);
