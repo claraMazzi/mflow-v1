@@ -86,11 +86,11 @@ async function convertSvgToHighResPng(
  * For PlantUML images, returns SVG URL for better quality
  */
 function getDiagramImageUrl(
-  diagram: { usesPlantText: boolean; plantTextToken?: string; imageFileId?: string | { url: string } },
+  diagram: { usePlantText: boolean; plantTextToken?: string; imageFileId?: string | { url: string } },
   imageInfos: Map<string, ImageInfo>,
   useSvg: boolean = false
 ): string | null {
-  if (diagram.usesPlantText) {
+  if (diagram.usePlantText) {
     // Generate PlantUML image URL
     if (diagram.plantTextToken) {
       // Use SVG format for high-quality rendering, PNG for regular display
@@ -205,7 +205,7 @@ export async function exportVersionToExcel({
   
   // Try to add the structure diagram image
   try {
-    const isPlantUMLDiagram = conceptualModel.structureDiagram?.usesPlantText;
+    const isPlantUMLDiagram = conceptualModel.structureDiagram?.usePlantText;
     // For PlantUML, use SVG for high quality; for uploaded images, use regular URL
     const imageUrl = getDiagramImageUrl(conceptualModel.structureDiagram, imageInfos, isPlantUMLDiagram);
     
@@ -277,7 +277,7 @@ export async function exportVersionToExcel({
       
       // Try to add the dynamic diagram image
       try {
-        const isPlantUMLDiagram = entity.dynamicDiagram?.usesPlantText;
+        const isPlantUMLDiagram = entity.dynamicDiagram?.usePlantText;
         // For PlantUML, use SVG for high quality; for uploaded images, use regular URL
         const imageUrl = getDiagramImageUrl(entity.dynamicDiagram, imageInfos, isPlantUMLDiagram);
         

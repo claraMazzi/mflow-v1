@@ -137,12 +137,12 @@ export class Server {
 				name: "",
 				description: "",
 				structureDiagram: {
-					usesPlantText: true,
+					usePlantText: true,
 					plantTextCode: "",
 					imageFilePath: "",
 				},
 				flowDiagram: {
-					usesPlantText: true,
+					usePlantText: true,
 					plantTextCode: "",
 					imageFilePath: "",
 				},

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { useEffect, useState } from "react";
 import { getUserColor } from "@lib/utils";
 import { Collaborator } from "#types/collaboration";
 
@@ -18,9 +18,9 @@ export const RemoteCursor: React.FC<RemoteCursorProps> = ({
   containerRef,
 }) => {
   const color = getUserColor(collaborator.userId);
-  const [position, setPosition] = React.useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
 
-  React.useEffect(() => {
+  useEffect(() => {
     const updatePosition = () => {
       if (!containerRef.current) return;
       
