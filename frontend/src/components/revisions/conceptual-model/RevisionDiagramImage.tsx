@@ -11,7 +11,7 @@ interface RevisionDiagramImageProps {
   imageInfos: Map<string, ImageInfo>;
   imageFileId?: string | null;
   plantTextToken?: string | null;
-  usesPlantText?: boolean;
+  usePlantText?: boolean;
 }
 
 export function RevisionDiagramImage({
@@ -19,7 +19,7 @@ export function RevisionDiagramImage({
   imageInfos,
   imageFileId,
   plantTextToken,
-  usesPlantText = false,
+  usePlantText = false,
 }: RevisionDiagramImageProps) {
   const imageFileInfo = useMemo(() => {
     if (!imageFileId) return null;
@@ -27,11 +27,11 @@ export function RevisionDiagramImage({
   }, [imageFileId, imageInfos]);
 
   const plantTextImageUrl = useMemo(() => {
-    if (usesPlantText && plantTextToken) {
+    if (usePlantText && plantTextToken) {
       return `http://www.plantuml.com/plantuml/img/${plantTextToken}`;
     }
     return null;
-  }, [usesPlantText, plantTextToken]);
+  }, [usePlantText, plantTextToken]);
 
   const handleDownload = async () => {
     const imageUrl = plantTextImageUrl || imageFileInfo?.url;
@@ -73,7 +73,7 @@ export function RevisionDiagramImage({
             <ImageIcon className="h-5 w-5" />
             {title}
           </div>
-          {usesPlantText && (
+          {usePlantText && (
             <span className="text-xs text-muted-foreground bg-blue-50 px-2 py-0.5 rounded">
               Generado con PlantText
             </span>

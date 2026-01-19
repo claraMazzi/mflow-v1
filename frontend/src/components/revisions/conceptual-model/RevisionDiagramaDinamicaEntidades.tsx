@@ -52,7 +52,7 @@ export function RevisionDiagramaDinamicaEntidades({
                   imageInfos={imageInfos}
                   imageFileId={entity.dynamicDiagram?.imageFileId}
                   plantTextToken={entity.dynamicDiagram?.plantTextToken}
-                  usesPlantText={entity.dynamicDiagram?.usesPlantText}
+                  usePlantText={entity.dynamicDiagram?.usePlantText}
                 />
               </div>
             </div>

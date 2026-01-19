@@ -21,7 +21,7 @@ export function RevisionDiagramaEstructura({
         imageInfos={imageInfos}
         imageFileId={structureDiagram?.imageFileId}
         plantTextToken={structureDiagram?.plantTextToken}
-        usesPlantText={structureDiagram?.usesPlantText}
+        usePlantText={structureDiagram?.usePlantText}
       />
     </div>
   );

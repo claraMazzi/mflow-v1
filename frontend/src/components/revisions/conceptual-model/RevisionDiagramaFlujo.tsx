@@ -21,7 +21,7 @@ export function RevisionDiagramaFlujo({
         imageInfos={imageInfos}
         imageFileId={flowDiagram?.imageFileId}
         plantTextToken={flowDiagram?.plantTextToken}
-        usesPlantText={flowDiagram?.usesPlantText}
+        usePlantText={flowDiagram?.usePlantText}
       />
     </div>
   );
