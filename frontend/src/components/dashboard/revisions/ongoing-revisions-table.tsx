@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@components/ui/table";
 import { ClipboardCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface OngoingRevisionsTableProps {
   revisions: Revision[];
@@ -22,6 +23,8 @@ export function OngoingRevisionsTable({
   revisions,
   refreshRevisions,
 }: OngoingRevisionsTableProps) {
+  const router = useRouter();
+
   const getStateBadgeVariant = (state: string): StaticColor => {
     switch (state) {
       case "PENDIENTE":
@@ -49,9 +52,7 @@ export function OngoingRevisionsTable({
   };
 
   const handleVerify = (revision: Revision) => {
-    // TODO: Implement verification action
-    console.log("Continue revision:", revision.id);
-    alert(`Continuar revisión del proyecto: ${revision.project?.name}`);
+    router.push(`/revisions/${revision.id}`);
   };
 
   if (!revisions || revisions.length === 0) {

@@ -12,6 +12,15 @@ export class RevisionRoutes {
 		// Get revisions by state (PENDIENTE, EN CURSO, FINALIZADA)
 		router.get("/state/:state", controller.getRevisionsByState);
 
+		// Get revision by ID with version data
+		router.get("/:revisionId", controller.getRevisionById);
+
+		// Start a revision (change state from PENDIENTE to EN CURSO)
+		router.post("/:revisionId/start", controller.startRevision);
+
+		// Save corrections for a revision
+		router.put("/:revisionId/corrections", controller.saveCorrections);
+
 		// Request revision for a version
 		router.post("/request/:versionId", controller.requestRevision);
 
