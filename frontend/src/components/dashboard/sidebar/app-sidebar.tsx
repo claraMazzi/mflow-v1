@@ -15,9 +15,10 @@ import { TooltipProvider } from "@components/ui/tooltip";
 import { useSession } from "next-auth/react";
 import { getActiveSidebarOption, getUserRolesItems } from "../navigation";
 import { useLayoutActions, useLayoutState } from "@components/global/Context";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Skeleton } from "@components/ui/common/skeleton";
-import { useRouter } from "@node_modules/next/navigation";
+import { useRouter } from "next/navigation";
+
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 
@@ -32,26 +33,38 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     setIsLoading(false);
   }, []);
 
+  // Memoize user data to prevent recalculations
+  const userData = useMemo(() => {
+    if (!session) return null;
+    return {
+      userName: `${session.user.name} ${session.user.lastName}`,
+      avatar:
+        session.user.name.charAt(0).toUpperCase() +
+        session.user.lastName.charAt(0).toUpperCase(),
+      roles: session.user.roles,
+      email: session.user.email,
+    };
+  }, [session]);
+
+  const userRoles = useMemo(() => {
+    if (!userData?.roles) return [];
+    return getUserRolesItems(userData.roles);
+  }, [userData?.roles]);
+
+  // Memoize role change handler to prevent re-renders
+  const handleRoleChange = useCallback((role: string) => {
+    setActiveRole(role);
+    setActiveSidebarOption(getActiveSidebarOption("", role));
+    router.push("/dashboard");
+  }, [setActiveRole, setActiveSidebarOption, router]);
+
   if (isLoading) {
     return <Skeleton className="h-screen w-64" />;
   }
 
-  if (!session) {
-    return <></>;
+  if (!session || !userData) {
+    return null;
   }
-
-  const userName = `${session?.user.name} ${session?.user.lastName}`;
-  const avatar =
-    session?.user.name.charAt(0).toUpperCase() +
-    session?.user.lastName.charAt(0).toUpperCase();
-  const roles = session?.user.roles;
-  const userRoles = getUserRolesItems(roles);
-
-  const handleRoleChange = (role: string) => {
-    setActiveRole(role);
-    setActiveSidebarOption(getActiveSidebarOption("", role));
-    router.push("/dashboard");
-  };
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -60,7 +73,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           {
             "--sidebar-width": SIDEBAR_WIDTH,
             "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
-            // ...style,
           } as React.CSSProperties
         }
         className="group/sidebar-wrapper flex min-h-svh has-[[data-variant=inset]]:bg-sidebar"
@@ -76,16 +88,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarHeader>
           <SidebarContent>
             <DynamicSidebarContent
-              userRoles={roles}
+              userRoles={userData.roles}
               activeRole={activeRole}
               activeSidebarOption={activeSidebarOption}
             />
           </SidebarContent>
           <SidebarFooter>
             <NavUser
-              name={userName}
-              email={session?.user.email}
-              avatar={avatar}
+              name={userData.userName}
+              email={userData.email}
+              avatar={userData.avatar}
             />
           </SidebarFooter>
           <SidebarRail />
