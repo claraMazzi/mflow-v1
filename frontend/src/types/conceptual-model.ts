@@ -7,7 +7,7 @@ export type ImageInfo = {
 };
 
 type Diagram = {
-	usesPlantText: boolean;
+	usePlantText: boolean;
 	plantTextCode: string;
 	plantTextToken: string;
 	imageFileId: string;

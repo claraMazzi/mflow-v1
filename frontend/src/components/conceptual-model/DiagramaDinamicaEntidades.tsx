@@ -1,6 +1,13 @@
 "use client";
 
-import { MouseEvent, ChangeEvent, useState, useCallback, useMemo, memo } from "react";
+import {
+	MouseEvent,
+	ChangeEvent,
+	useState,
+	useCallback,
+	useMemo,
+	memo,
+} from "react";
 import { DiagramImageUpload } from "@components/ui/conceptual-model/diagram";
 import { ImageInfo } from "#types/conceptual-model";
 import { useFieldArray, RegisterOptions, Path, Control } from "react-hook-form";
@@ -12,293 +19,307 @@ import { useUI } from "@components/ui/context";
 import cn from "clsx";
 
 interface DiagramaEstructuraEntidadesProps {
-  sessionToken?: string;
-  versionId: string;
-  hasEditingRights: boolean;
-  imageInfos: Map<string, ImageInfo>;
-  watch: (name?: string) => unknown;
-  control: Control<ConceptualModel>;
-  entitiesList: ReturnType<typeof useFieldArray<ConceptualModel, "entities">>;
-  customRegisterField: ({
-    name,
-    propertyPath,
-    options,
-    propagateUpdateOnChange,
-  }: {
-    name: Path<ConceptualModel>;
-    propertyPath?: string;
-    options?: RegisterOptions<ConceptualModel, Path<ConceptualModel>>;
-    propagateUpdateOnChange?: boolean;
-  }) => {
-    onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-    onBlur: (
-      e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
-    ) => void;
-    readOnly: boolean;
-    name: Path<ConceptualModel>;
-    ref: (instance: HTMLInputElement | HTMLTextAreaElement | null) => void;
-  };
-  handleAddItemToList: ({
-    e,
-    listPropertyPath,
-    itemType,
-  }: {
-    e: MouseEvent;
-    listPropertyPath: string;
-    itemType: "assumption" | "simplification" | "entity";
-  }) => void;
-  handleRemoveItemFromList: ({
-    e,
-    listPropertyPath,
-    itemId,
-  }: {
-    e: MouseEvent;
-    listPropertyPath: string;
-    itemId: string;
-  }) => void;
+	sessionToken?: string;
+	versionId: string;
+	hasEditingRights: boolean;
+	imageInfos: Map<string, ImageInfo>;
+	watch: (name?: string) => unknown;
+	control: Control<ConceptualModel>;
+	entitiesList: ReturnType<typeof useFieldArray<ConceptualModel, "entities">>;
+	customRegisterField: ({
+		name,
+		propertyPath,
+		options,
+		propagateUpdateOnChange,
+	}: {
+		name: Path<ConceptualModel>;
+		propertyPath?: string;
+		options?: RegisterOptions<ConceptualModel, Path<ConceptualModel>>;
+		propagateUpdateOnChange?: boolean;
+	}) => {
+		onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+		onBlur: (
+			e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
+		) => void;
+		readOnly: boolean;
+		name: Path<ConceptualModel>;
+		ref: (instance: HTMLInputElement | HTMLTextAreaElement | null) => void;
+	};
+	handleAddItemToList: ({
+		e,
+		listPropertyPath,
+		itemType,
+	}: {
+		e: MouseEvent;
+		listPropertyPath: string;
+		itemType: "assumption" | "simplification" | "entity";
+	}) => void;
+	handleRemoveItemFromList: ({
+		e,
+		listPropertyPath,
+		itemId,
+	}: {
+		e: MouseEvent;
+		listPropertyPath: string;
+		itemId: string;
+	}) => void;
 }
 
 const DiagramaDinamicaEntidadesComponent = ({
-  sessionToken,
-  versionId,
-  hasEditingRights,
-  imageInfos,
-  watch,
-  control,
-  entitiesList,
-  customRegisterField,
-  handleAddItemToList,
-  handleRemoveItemFromList,
+	sessionToken,
+	versionId,
+	hasEditingRights,
+	imageInfos,
+	watch,
+	control,
+	entitiesList,
+	customRegisterField,
+	handleAddItemToList,
+	handleRemoveItemFromList,
 }: DiagramaEstructuraEntidadesProps) => {
-  const [collapsedEntities, setCollapsedEntities] = useState<Set<string>>(new Set());
-  const { openModal, closeModal } = useUI();
-  
-  const toggleEntityCollapse = useCallback((entityId: string) => {
-    setCollapsedEntities(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(entityId)) {
-        newSet.delete(entityId);
-      } else {
-        newSet.add(entityId);
-      }
-      return newSet;
-    });
-  }, []);
+	const [collapsedEntities, setCollapsedEntities] = useState<Set<string>>(
+		new Set()
+	);
+	const { openModal, closeModal } = useUI();
 
-  const handleEntityRemoval = useCallback(({
-    e,
-    entityId,
-  }: {
-    e: MouseEvent;
-    entityId: string;
-  }) => {
-    const entities = watch("entities") as Entity[] | undefined;
-    const entity = entities?.find((ent) => ent._id === entityId);
-    
-    if (entity && entity.properties && entity.properties.length > 0) {
-      // Entity has properties, show confirmation modal
-      openModal({
-        name: "confirm-entity-deletion",
-        title: "Confirmar eliminación",
-        size: "md",
-        showCloseButton: false,
-        content: (
-          <div className="flex flex-col mx-auto justify-center items-center p-4 space-y-4">
-            <p className="text-base text-center">
-              Excluir una entidad provocará que se elimine la lista de propiedades asociadas a esa entidad, esta acción no es reversible.
-            </p>
-            <p className="text-base text-center font-semibold">
-              ¿Desea continuar?
-            </p>
-            <div className="flex justify-center space-x-3 mt-3 w-full">
-              <Button variant="outline" size="sm" onClick={closeModal}>
-                Cancelar
-              </Button>
-              <Button
-                size="sm"
-                className="bg-red-600 hover:bg-red-700 text-white"
-                onClick={(confirmE) => {
-                  handleRemoveItemFromList({
-                    e: confirmE,
-                    listPropertyPath: "entities",
-                    itemId: entityId,
-                  });
-                  closeModal();
-                }}
-              >
-                Aceptar
-              </Button>
-            </div>
-          </div>
-        ),
-      });
-    } else {
-      // No properties, remove directly
-      handleRemoveItemFromList({
-        e,
-        listPropertyPath: "entities",
-        itemId: entityId,
-      });
-    }
-  }, [watch, openModal, closeModal, handleRemoveItemFromList]);
+	const toggleEntityCollapse = useCallback((entityId: string) => {
+		setCollapsedEntities((prev) => {
+			const newSet = new Set(prev);
+			if (newSet.has(entityId)) {
+				newSet.delete(entityId);
+			} else {
+				newSet.add(entityId);
+			}
+			return newSet;
+		});
+	}, []);
 
-  const addItemToList = useCallback(({
-    listPropertyPath,
-    itemType,
-    e,
-  }: {
-    listPropertyPath: string;
-    itemType: "entity";
-    e: MouseEvent;
-  }) => {
-    // Get current form values instead of using assumptionList.fields
-    const currentEntities = (watch("entities") as { name?: string }[]) || [];
-    const firstEmptyIndex = currentEntities.findIndex(
-      (entity: { name?: string }) => !entity?.name || entity.name.trim() === ""
-    );
+	const handleEntityRemoval = useCallback(
+		({ e, entityId }: { e: MouseEvent; entityId: string }) => {
+			const entities = watch("entities") as Entity[] | undefined;
+			const entity = entities?.find((ent) => ent._id === entityId);
 
-    if (firstEmptyIndex !== -1) {
-      const input = document.querySelector<
-        HTMLInputElement | HTMLTextAreaElement
-      >(`[name="entities.${firstEmptyIndex}.name"]`);
-      if (input) {
-        input.focus();
-      }
-      return;
-    }
+			if (entity && entity.properties && entity.properties.length > 0) {
+				// Entity has properties, show confirmation modal
+				openModal({
+					name: "confirm-entity-deletion",
+					title: "Confirmar eliminación",
+					size: "md",
+					showCloseButton: false,
+					content: (
+						<div className="flex flex-col mx-auto justify-center items-center p-4 space-y-4">
+							<p className="text-base text-center">
+								Excluir una entidad provocará que se elimine la lista de
+								propiedades asociadas a esa entidad, esta acción no es
+								reversible.
+							</p>
+							<p className="text-base text-center font-semibold">
+								¿Desea continuar?
+							</p>
+							<div className="flex justify-center space-x-3 mt-3 w-full">
+								<Button variant="outline" size="sm" onClick={closeModal}>
+									Cancelar
+								</Button>
+								<Button
+									size="sm"
+									className="bg-red-600 hover:bg-red-700 text-white"
+									onClick={(confirmE) => {
+										handleRemoveItemFromList({
+											e: confirmE,
+											listPropertyPath: "entities",
+											itemId: entityId,
+										});
+										closeModal();
+									}}
+								>
+									Aceptar
+								</Button>
+							</div>
+						</div>
+					),
+				});
+			} else {
+				// No properties, remove directly
+				handleRemoveItemFromList({
+					e,
+					listPropertyPath: "entities",
+					itemId: entityId,
+				});
+			}
+		},
+		[watch, openModal, closeModal, handleRemoveItemFromList]
+	);
 
-    handleAddItemToList({
-      e: e,
-      listPropertyPath,
-      itemType,
-    });
-  }, [watch, handleAddItemToList]);
+	const addItemToList = useCallback(
+		({
+			listPropertyPath,
+			itemType,
+			e,
+		}: {
+			listPropertyPath: string;
+			itemType: "entity";
+			e: MouseEvent;
+		}) => {
+			// Get current form values instead of using assumptionList.fields
+			const currentEntities = (watch("entities") as { name?: string }[]) || [];
+			const firstEmptyIndex = currentEntities.findIndex(
+				(entity: { name?: string }) =>
+					!entity?.name || entity.name.trim() === ""
+			);
 
-  // Memoize DiagramImageUpload props to prevent unnecessary re-renders
-  const diagramImageUploadProps = useMemo(() => ({
-    sessionToken,
-    versionId,
-    hasEditingRights,
-    imageInfos,
-    title: "Diagrama de Dinamica de la entidad",
-    watch,
-    control,
-    register: customRegisterField,
-  }), [sessionToken, versionId, hasEditingRights, imageInfos, watch, control, customRegisterField]);
+			if (firstEmptyIndex !== -1) {
+				const input = document.querySelector<
+					HTMLInputElement | HTMLTextAreaElement
+				>(`[name="entities.${firstEmptyIndex}.name"]`);
+				if (input) {
+					input.focus();
+				}
+				return;
+			}
 
-  return (
-    <div className="flex flex-col gap-6 p-6 bg-white rounded-lg shadow-sm">
-      {/* Entities Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium text-gray-900">Entidades</h2>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!hasEditingRights}
-            onClick={(e) =>
-              addItemToList({
-                e,
-                listPropertyPath: "entities",
-                itemType: "entity",
-              })
-            }
-            className="flex items-center gap-2"
-          >
-            <Plus size={16} />
-            Agregar Entidad
-          </Button>
-        </div>
+			handleAddItemToList({
+				e: e,
+				listPropertyPath,
+				itemType,
+			});
+		},
+		[watch, handleAddItemToList]
+	);
 
-        {entitiesList.fields.length > 0 ? (
-          <div className="space-y-3">
-            {entitiesList.fields.map((field, index) => {
-              const isCollapsed = collapsedEntities.has(field._id);
-              
-              return (
-                <div
-                  key={field.id}
-                  className="bg-gray-50 rounded-lg border"
-                >
-                  {/* Collapsible Header */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => toggleEntityCollapse(field._id)}
-                      className="flex-1 flex items-center gap-3 p-3 text-left hover:bg-gray-100 transition-colors duration-200 rounded-l-lg"
-                    >
-                      {isCollapsed ? (
-                        <ChevronRight className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                      )}
-                      <div className="flex-1 space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                          {index + 1}. Nombre de la entidad
-                        </label>
-                        <Input
-                          {...customRegisterField({
-                            name: `entities.${index}.name`,
-                            propertyPath: `entities:${field._id}.name`,
-                          })}
-                          placeholder="Nombre de la entidad..."
-                          className="border-2 border-gray-200 focus:border-purple-400"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </div>
-                    </button>
-                    
-                    {/* Delete button */}
-                    <div className="pr-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={!hasEditingRights}
-                        onClick={(e) =>
-                          handleEntityRemoval({
-                            e,
-                            entityId: field._id,
-                          })
-                        }
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <X size={16} />
-                      </Button>
-                    </div>
-                  </div>
+	// Memoize DiagramImageUpload props to prevent unnecessary re-renders
+	const diagramImageUploadProps = useMemo(
+		() => ({
+			sessionToken,
+			versionId,
+			hasEditingRights,
+			imageInfos,
+			title: "Diagrama de Dinamica de la entidad",
+			watch,
+			control,
+			register: customRegisterField,
+		}),
+		[
+			sessionToken,
+			versionId,
+			hasEditingRights,
+			imageInfos,
+			watch,
+			control,
+			customRegisterField,
+		]
+	);
 
-                  {/* Collapsible Content with smooth transition */}
-                  <div
-                    className={cn(
-                      "overflow-hidden transition-all duration-300 ease-in-out",
-                      isCollapsed ? "max-h-0 opacity-0" : "max-h-[1000px] opacity-100"
-                    )}
-                  >
-                    <div className="px-3 pb-3">
-                      {/** TODO: Actualizar para cada entidades */}
-                      <DiagramImageUpload
-                        {...diagramImageUploadProps}
-                        namePathPrefix={`entities.${index}.dynamicDiagram`}
-                        diagramPropertyPath={`entities:${field._id}.dynamicDiagram`}
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-            <p>No hay entidades agregadas</p>
-            <p className="text-sm">
-              Haz clic en &quot;Agregar Entidad&quot; para comenzar
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+	return (
+		<div className="flex flex-col gap-6 p-6 bg-white rounded-lg shadow-sm">
+			{/* Entities Section */}
+			<div className="space-y-4">
+				<div className="flex items-center justify-between">
+					<h2 className="text-lg font-medium text-gray-900">Entidades</h2>
+					<Button
+						variant="outline"
+						size="sm"
+						disabled={!hasEditingRights}
+						onClick={(e) =>
+							addItemToList({
+								e,
+								listPropertyPath: "entities",
+								itemType: "entity",
+							})
+						}
+						className="flex items-center gap-2"
+					>
+						<Plus size={16} />
+						Agregar Entidad
+					</Button>
+				</div>
+
+				{entitiesList.fields.length > 0 ? (
+					<div className="space-y-3">
+						{entitiesList.fields.map((field, index) => {
+							const isCollapsed = collapsedEntities.has(field._id);
+
+							return (
+								<div key={field.id} className="bg-gray-50 rounded-lg border">
+									{/* Collapsible Header */}
+									<div className="flex items-center gap-2">
+										<button
+											onClick={() => toggleEntityCollapse(field._id)}
+											className="flex-1 flex items-center gap-3 p-3 text-left hover:bg-gray-100 transition-colors duration-200 rounded-l-lg"
+										>
+											{isCollapsed ? (
+												<ChevronRight className="w-5 h-5 text-gray-500 flex-shrink-0" />
+											) : (
+												<ChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0" />
+											)}
+											<div className="flex-1 space-y-2">
+												<label className="block text-sm font-medium text-gray-700">
+													{index + 1}. Nombre de la entidad
+												</label>
+												<Input
+													{...customRegisterField({
+														name: `entities.${index}.name`,
+														propertyPath: `entities:${field._id}.name`,
+													})}
+													placeholder="Nombre de la entidad..."
+													className="border-2 border-gray-200 focus:border-purple-400"
+													onClick={(e) => e.stopPropagation()}
+												/>
+											</div>
+										</button>
+
+										{/* Delete button */}
+										<div className="pr-3">
+											<Button
+												variant="ghost"
+												size="sm"
+												disabled={!hasEditingRights}
+												onClick={(e) =>
+													handleEntityRemoval({
+														e,
+														entityId: field._id,
+													})
+												}
+												className="text-red-500 hover:text-red-700 hover:bg-red-50"
+											>
+												<X size={16} />
+											</Button>
+										</div>
+									</div>
+
+									{/* Collapsible Content with smooth transition */}
+									<div
+										className={cn(
+											"transition-all duration-300 ease-in-out",
+											isCollapsed
+												? "max-h-0 opacity-0 overflow-hidden"
+												: "max-h-[1000px] overflow-y-auto opacity-100"
+										)}
+									>
+										<div className="px-3 pb-3">
+											<DiagramImageUpload
+												{...diagramImageUploadProps}
+												namePathPrefix={`entities.${index}.dynamicDiagram`}
+												diagramPropertyPath={`entities:${field._id}.dynamicDiagram`}
+											/>
+										</div>
+									</div>
+								</div>
+							);
+						})}
+					</div>
+				) : (
+					<div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+						<p>No hay entidades agregadas</p>
+						<p className="text-sm">
+							Haz clic en &quot;Agregar Entidad&quot; para comenzar
+						</p>
+					</div>
+				)}
+			</div>
+		</div>
+	);
 };
 
-DiagramaDinamicaEntidadesComponent.displayName = 'DiagramaDinamicaEntidades';
+DiagramaDinamicaEntidadesComponent.displayName = "DiagramaDinamicaEntidades";
 
 export default memo(DiagramaDinamicaEntidadesComponent);

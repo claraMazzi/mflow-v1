@@ -63,11 +63,11 @@ const DiagramImageUploadComponent = ({
 
 	// PlantText functionality
 	// Use useWatch to ensure re-renders when values change
-	const usesPlantTextValue = useWatch({
+	const usePlantTextValue = useWatch({
 		control,
-		name: `${namePathPrefix}.usesPlantText` as Path<ConceptualModel>,
+		name: `${namePathPrefix}.usePlantText` as Path<ConceptualModel>,
 	});
-	const usesPlantText = Boolean(usesPlantTextValue);
+	const usePlantText = Boolean(usePlantTextValue);
 	const plantTextToken = useWatch({
 		control,
 		name: `${namePathPrefix}.plantTextToken` as Path<ConceptualModel>,
@@ -151,11 +151,11 @@ const DiagramImageUploadComponent = ({
         });
       } */
 
-			// Set usesPlantText to false when uploading an image
+			// Set usePlantText to false when uploading an image
 			/*       if (socket) {
         socket.emit("field-update", {
           roomId: versionId,
-          propertyPath: `${diagramPropertyPath}.usesPlantText`,
+          propertyPath: `${diagramPropertyPath}.usePlantText`,
           value: false,
         });
       } */
@@ -224,11 +224,11 @@ const DiagramImageUploadComponent = ({
         });
       } */
 
-			// Set usesPlantText to false when replacing with an image
+			// Set usePlantText to false when replacing with an image
 			/*       if (socket) {
         socket.emit("field-update", {
           roomId: versionId,
-          propertyPath: `${diagramPropertyPath}.usesPlantText`,
+          propertyPath: `${diagramPropertyPath}.usePlantText`,
           value: false,
         });
       } */
@@ -335,7 +335,7 @@ const DiagramImageUploadComponent = ({
 	const canUpload = !hasFile && !isUploadPending && hasEditingRights;
 
 	return (
-		<div className="w-full space-y-4">
+		<div className="space-y-4">
 			{/* Hidden file input always available for upload/replace */}
 			<input
 				ref={fileInputRef}
@@ -363,8 +363,8 @@ const DiagramImageUploadComponent = ({
 						<input
 							type="checkbox"
 							{...register({
-								name: `${namePathPrefix}.usesPlantText` as Path<ConceptualModel>,
-								propertyPath: `${diagramPropertyPath}.usesPlantText`,
+								name: `${namePathPrefix}.usePlantText` as Path<ConceptualModel>,
+								propertyPath: `${diagramPropertyPath}.usePlantText`,
 								propagateUpdateOnChange: true,
 							})}
 							className="rounded border-gray-300"
@@ -373,46 +373,45 @@ const DiagramImageUploadComponent = ({
 					</label>
 				</div>
 
-				<div className="grid grid-cols-2 w-full h-full gap-4">
-					{/* PlantText Code Input */}
-					{usesPlantText && (
-						<div className="space-y-2 h-full">
+				{usePlantText && (
+					<div className="grid grid-cols-2 w-full h-full gap-4">
+						{/* PlantText Code Input */}
+						<div className="space-y-2 h-full flex-col flex">
 							<label className="text-sm font-medium">Código PlantText:</label>
-              <textarea
-										{...register({
-											name: `${namePathPrefix}.plantTextCode` as Path<ConceptualModel>,
-											propertyPath: `${diagramPropertyPath}.plantTextCode`,
-										})}
-										placeholder="Ingresa tu código PlantText aquí..."
-										className="w-full h-screen p-3 border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-									/>
+							<textarea
+								{...register({
+									name: `${namePathPrefix}.plantTextCode` as Path<ConceptualModel>,
+									propertyPath: `${diagramPropertyPath}.plantTextCode`,
+								})}
+								placeholder="Ingresa tu código PlantText aquí..."
+								className="w-full min-h-[500px] flex-1 p-3 border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							/>
 						</div>
-					)}
 
-					{/* PlantText Image Display */}
-					{usesPlantText && plantTextToken && (
+						{/* PlantText Image Display */}
 						<div className="space-y-2">
 							<label className="text-sm font-medium">
 								Vista previa del diagrama:
 							</label>
-							<div className="relative overflow-hidden rounded-lg border h-screen">
-								<Image
-									src={`http://www.plantuml.com/plantuml/img/${plantTextToken}`}
-									fill
-									alt="PlantText Diagram"
-									className="w-full h-full object-contain bg-white"
-									unoptimized
-									onError={() => {
-										console.error(
-											"Failed to load PlantText image:",
-											`http://www.plantuml.com/plantuml/img/${plantTextToken}`
-										);
-									}}
-								/>
-							</div>
+							{plantTextToken && (
+								<div className="overflow-hidden rounded-lg border">
+									<img
+										src={`http://www.plantuml.com/plantuml/img/${plantTextToken}`}
+										alt="PlantText Diagram"
+										className="w-full object-contain min-h-[500px] bg-white"
+										onError={() => {
+											console.error(
+												"Failed to load PlantText image:",
+												`http://www.plantuml.com/plantuml/img/${plantTextToken}`
+											);
+										}}
+									/>
+								</div>
+							)}
 						</div>
-					)}
-				</div>
+					</div>
+				)}
+
 				{/* Error Alert */}
 				{error && (
 					<div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
@@ -423,14 +422,14 @@ const DiagramImageUploadComponent = ({
 								onClick={clearError}
 								className="text-xs underline hover:no-underline ml-4"
 							>
-								Dismiss
+								Descartar
 							</button>
 						</div>
 					</div>
 				)}
 
 				{/* Upload Area or File Display */}
-				{!usesPlantText && (
+				{!usePlantText && (
 					<>
 						{!hasFile ? (
 							<div
@@ -474,12 +473,11 @@ const DiagramImageUploadComponent = ({
 							/* File Display */
 							<div className="space-y-4">
 								{/* Image Preview */}
-								<div className="relative overflow-hidden rounded-lg border h-screen">
-									<Image
+								<div className="overflow-hidden rounded-lg border">
+									<img
 										src={imageFileInfo?.url || ""}
 										alt={imageFileInfo?.originalFilename || "Diagram"}
-										fill
-										className="object-contain bg-white"
+										className="object-contain min-h-[500px] w-full bg-white"
 									/>
 								</div>
 							</div>

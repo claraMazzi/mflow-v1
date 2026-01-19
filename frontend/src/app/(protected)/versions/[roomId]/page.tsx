@@ -298,6 +298,7 @@ export default function Page({
 				shouldValidate: true,
 				shouldTouch: true,
 			});
+			// TODO: LOOK AT THE CAUSE
 			if (parsedPath?.startsWith("entities")) {
 				setValue("entities", [...getValues("entities")], { shouldDirty: true });
 			}
@@ -828,7 +829,7 @@ export default function Page({
 						value={currentTab}
 						onValueChange={handleCurrentTabChange}
 						defaultValue="descripcion-sistema"
-						orientation="vertical"
+						orientation="horizontal"
 						className={isFormReadOnly ? "opacity-75" : ""}
 					>
 						<TabsList className="h-full  flex ">
