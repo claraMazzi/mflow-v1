@@ -117,9 +117,9 @@ export function RevisionObjetivosEntradasSalidas({
             {outputs.map((output, index) => (
               <div
                 key={output._id || index}
-                className="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg border"
+                className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-gray-50 rounded-lg border"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 col-span-2">
                   <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {index + 1}. Descripción de la salida

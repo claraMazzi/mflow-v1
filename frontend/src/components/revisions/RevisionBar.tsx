@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button } from "@components/ui/common/button";
-import { ArrowLeft, Save, Plus, Eye } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { RevisionDetails, RevisionState, Correction } from "#types/revision";
 import { cn } from "@lib/utils";
@@ -12,9 +12,7 @@ interface RevisionBarProps {
   corrections: Correction[];
   hasUnsavedChanges: boolean;
   isSaving: boolean;
-  isAddingCorrection: boolean;
   onSave: () => void;
-  onToggleAddCorrection: () => void;
 }
 
 const RevisionBar = ({
@@ -22,9 +20,7 @@ const RevisionBar = ({
   corrections,
   hasUnsavedChanges,
   isSaving,
-  isAddingCorrection,
   onSave,
-  onToggleAddCorrection,
 }: RevisionBarProps) => {
   const router = useRouter();
 
@@ -89,28 +85,6 @@ const RevisionBar = ({
               <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
             )}
           </div>
-
-          {/* Add correction button */}
-          <Button
-            variant={isAddingCorrection ? "secondary" : "outline"}
-            onClick={onToggleAddCorrection}
-            className={cn(
-              "gap-2",
-              isAddingCorrection && "bg-amber-100 border-amber-300"
-            )}
-          >
-            {isAddingCorrection ? (
-              <>
-                <Eye className="h-4 w-4" />
-                Cancelar
-              </>
-            ) : (
-              <>
-                <Plus className="h-4 w-4" />
-                Agregar Corrección
-              </>
-            )}
-          </Button>
 
           {/* Save button */}
           <Button

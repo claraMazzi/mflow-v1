@@ -28,6 +28,7 @@ import {
   CorrectionBubble,
   AddCorrectionOverlay,
 } from "@components/revisions/CorrectionBubble";
+import { FloatingAddCorrectionButton } from "@components/revisions/FloatingAddCorrectionButton";
 import { Loader2 } from "lucide-react";
 
 // Import new revision-specific components
@@ -300,8 +301,12 @@ export default function Page({
         corrections={corrections}
         hasUnsavedChanges={hasUnsavedChanges}
         isSaving={isSaving}
-        isAddingCorrection={isAddingCorrection}
         onSave={handleSaveCorrections}
+      />
+
+      {/* Floating action button for adding corrections */}
+      <FloatingAddCorrectionButton
+        isAddingCorrection={isAddingCorrection}
         onToggleAddCorrection={() => setIsAddingCorrection(!isAddingCorrection)}
       />
 

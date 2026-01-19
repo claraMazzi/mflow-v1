@@ -78,7 +78,7 @@ export function RevisionAlcance({ conceptualModel }: RevisionAlcanceProps) {
                 </div>
 
                 {/* Scope Decision Details - Always expanded */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">
                       Incluir
@@ -88,7 +88,17 @@ export function RevisionAlcance({ conceptualModel }: RevisionAlcanceProps) {
                     </div>
                   </div>
 
+                 
                   <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Tipo de argumento
+                    </label>
+                    <div className="px-3 py-2 border-2 border-gray-200 rounded-md bg-white text-sm text-gray-600">
+                      {getArgumentTypeLabel(entity.scopeDecision?.argumentType)}
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">
                       Justificación
                     </label>
@@ -100,15 +110,7 @@ export function RevisionAlcance({ conceptualModel }: RevisionAlcanceProps) {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Tipo de argumento
-                    </label>
-                    <div className="px-3 py-2 border-2 border-gray-200 rounded-md bg-white text-sm text-gray-600">
-                      {getArgumentTypeLabel(entity.scopeDecision?.argumentType)}
-                    </div>
-                  </div>
-                </div>
+
               </div>
             );
           })}

@@ -97,6 +97,9 @@ export function RevisionDetalle({ conceptualModel }: RevisionDetalleProps) {
                           key={property._id || propIndex}
                           className="flex flex-col gap-3 p-3 bg-white rounded-lg border"
                         >
+                          
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           <div className="space-y-2">
                             <label className="block text-sm font-medium text-gray-700">
                               {propIndex + 1}. Nombre de la propiedad
@@ -108,8 +111,7 @@ export function RevisionDetalle({ conceptualModel }: RevisionDetalleProps) {
                               className="border-2 border-gray-200 bg-gray-50"
                             />
                           </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          
                             <div className="space-y-2">
                               <label className="block text-sm font-medium text-gray-700">
                                 Incluir
@@ -121,19 +123,6 @@ export function RevisionDetalle({ conceptualModel }: RevisionDetalleProps) {
                               </div>
                             </div>
 
-                            <div className="space-y-2">
-                              <label className="block text-sm font-medium text-gray-700">
-                                Justificación
-                              </label>
-                              <Input
-                                value={
-                                  property.detailLevelDecision?.justification || ""
-                                }
-                                readOnly
-                                disabled
-                                className="border-2 border-gray-200 bg-gray-50"
-                              />
-                            </div>
 
                             <div className="space-y-2">
                               <label className="block text-sm font-medium text-gray-700">
@@ -146,6 +135,21 @@ export function RevisionDetalle({ conceptualModel }: RevisionDetalleProps) {
                               </div>
                             </div>
                           </div>
+
+
+                          <div className="space-y-2">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Justificación
+                              </label>
+                              <Input
+                                value={
+                                  property.detailLevelDecision?.justification || ""
+                                }
+                                readOnly
+                                disabled
+                                className="border-2 border-gray-200 bg-gray-50"
+                              />
+                            </div>
                         </div>
                       ))}
                     </div>
