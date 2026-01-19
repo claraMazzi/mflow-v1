@@ -1,8 +1,9 @@
 import mongoose from "mongoose";
-import { VersionModel, VerifierRequestModel, RevisionModel, ProjectModel } from "../../data";
+import { VersionModel, VerifierRequestModel, RevisionModel, ProjectModel, NotificationType } from "../../data";
 import { CustomError } from "../../domain";
 import { RequestRevisionDto } from "../../domain/dtos/revision/request-revision.dto";
 import { VersionImageModel } from "../../data/mongo/models/version-image.model";
+import { notificationService } from "./notification.service";
 
 type RevisionState = "PENDIENTE" | "EN CURSO" | "FINALIZADA";
 
@@ -414,6 +415,13 @@ export class RevisionService {
 				$set: { state: "REVISADA" },
 			});
 
+			// Create notifications for project owner and collaborators
+			await this.notifyRevisionCompleted(
+				revision.version.toString(),
+				updatedRevision._id.toString(),
+				userId
+			);
+
 			return {
 				message: "La revisión ha sido finalizada exitosamente.",
 				revision: {
@@ -436,6 +444,74 @@ export class RevisionService {
 			throw CustomError.internalServer(
 				"Se ha producido un error al finalizar la revisión."
 			);
+		}
+	}
+
+	/**
+	 * Notify project owner and collaborators when a revision is completed
+	 */
+	private async notifyRevisionCompleted(
+		versionId: string,
+		revisionId: string,
+		verifierId: string
+	) {
+		try {
+			// Find the project that contains this version
+			const project = await ProjectModel.findOne({
+				versions: new mongoose.Types.ObjectId(versionId),
+			})
+				.populate("owner", "name lastName")
+				.lean();
+
+			if (!project) {
+				console.warn("Project not found for version:", versionId);
+				return;
+			}
+
+			// Get version title for the notification message
+			const version = await VersionModel.findById(versionId)
+				.select("title")
+				.lean();
+
+			const versionTitle = (version as any)?.title || "Sin título";
+
+			// Collect all recipient IDs (owner + collaborators)
+			const recipientIds: string[] = [];
+
+			// Add owner
+			if (project.owner) {
+				recipientIds.push((project.owner as any)._id.toString());
+			}
+
+			// Add collaborators
+			if (project.collaborators && project.collaborators.length > 0) {
+				project.collaborators.forEach((collaboratorId: any) => {
+					const collabIdStr = collaboratorId.toString();
+					// Avoid duplicates
+					if (!recipientIds.includes(collabIdStr)) {
+						recipientIds.push(collabIdStr);
+					}
+				});
+			}
+
+			if (recipientIds.length === 0) {
+				return;
+			}
+
+			// Create notifications for all recipients
+			await notificationService.createBulkNotifications(recipientIds, {
+				type: NotificationType.REVISION_COMPLETED,
+				title: "Revisión finalizada",
+				message: `La revisión de la versión "${versionTitle}" del proyecto "${project.title}" ha sido completada.`,
+				link: `/dashboard/projects/${project._id.toString()}/versions`,
+				relatedProjectId: project._id.toString(),
+				relatedVersionId: versionId,
+				relatedRevisionId: revisionId,
+				triggeredById: verifierId,
+			});
+		} catch (error) {
+			// Don't throw - notifications are not critical
+			console.error("Error creating revision completion notifications:", error);
 		}
 	}
 }

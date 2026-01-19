@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, ChevronsUpDown, LogOut, Sparkles, X } from "lucide-react";
+import { ChevronsUpDown, LogOut, Sparkles, X } from "lucide-react";
 import { useUI } from "@components/ui/context";
 import { Avatar, AvatarFallback } from "@components/ui/common/avatar";
 import {
@@ -26,6 +26,7 @@ import { modifyUserData } from "@components/dashboard/users/actions/modify-user"
 import { DeleteUserForm } from "@components/dashboard/users/forms/delete-user-form";
 import { deleteUserData } from "@components/dashboard/users/actions/delete-user";
 import { useSession } from "next-auth/react";
+import { NotificationPanel } from "@components/dashboard/notifications/NotificationPanel";
 
 export function NavUser({
   name,
@@ -127,73 +128,74 @@ export function NavUser({
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarFallback className="rounded-lg">{avatar}</AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{name}</span>
-                <span className="truncate text-xs">{email}</span>
-              </div>
-              <ChevronsUpDown className="ml-auto size-4" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-            side={"right"}
-            align="end"
-            sideOffset={4}
-          >
-            <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+        <div className="flex items-center gap-2">
+          {/* Notification bell */}
+          <NotificationPanel className="h-10 w-10 rounded-lg hover:bg-sidebar-accent" />
+
+          {/* User dropdown */}
+          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+            <DropdownMenuTrigger asChild>
+              <SidebarMenuButton
+                size="lg"
+                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground flex-1"
+              >
                 <Avatar className="h-8 w-8 rounded-lg">
-                  {/* <AvatarImage src={avatar} alt={name} /> */}
-                  <AvatarFallback className="rounded-lg">
-                    {avatar}
-                  </AvatarFallback>
+                  <AvatarFallback className="rounded-lg">{avatar}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{name}</span>
                   <span className="truncate text-xs">{email}</span>
                 </div>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+                <ChevronsUpDown className="ml-auto size-4" />
+              </SidebarMenuButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+              side={"right"}
+              align="end"
+              sideOffset={4}
+            >
+              <DropdownMenuLabel className="p-0 font-normal">
+                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                  <Avatar className="h-8 w-8 rounded-lg">
+                    <AvatarFallback className="rounded-lg">
+                      {avatar}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">{name}</span>
+                    <span className="truncate text-xs">{email}</span>
+                  </div>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
 
-            <DropdownMenuGroup>
+              <DropdownMenuGroup>
+                <DropdownMenuItem onClick={handleEditUser}>
+                  <Sparkles />
+                  Editar usuario
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDeleteUser}>
+                  <X />
+                  Eliminar cuenta
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
               <DropdownMenuItem>
-                <Bell />
-                Notificaciones
+                <LogoutButton
+                  className="w-full"
+                  variant="outline"
+                  label={
+                    <>
+                      <LogOut />
+                      Cerrar sesión
+                    </>
+                  }
+                />
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleEditUser}>
-                <Sparkles />
-                Editar usuario
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDeleteUser}>
-                <X />
-                Eliminar cuenta
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <LogoutButton
-                className="w-full"
-                variant="outline"
-                label={
-                  <>
-                    <LogOut />
-                    Cerrar sesión
-                  </>
-                }
-              />
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </SidebarMenuItem>
     </SidebarMenu>
   );
