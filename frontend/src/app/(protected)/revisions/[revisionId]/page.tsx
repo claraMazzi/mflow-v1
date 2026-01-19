@@ -236,10 +236,17 @@ export default function Page({
     handleSaveCorrections(newCorrectionsList, false);
   }, [corrections, handleSaveCorrections]);
 
-  // Handle closing a correction bubble (deselect)
+  // Handle closing a correction bubble (deselect) - but prevent if unsaved
   const handleCloseCorrection = useCallback(() => {
+    // Check if the currently selected correction is new (unsaved)
+    if (selectedCorrectionId && newCorrectionIds.has(selectedCorrectionId)) {
+      toast.error("Corrección sin guardar", {
+        description: "Debes guardar la corrección antes de cerrarla.",
+      });
+      return;
+    }
     setSelectedCorrectionId(null);
-  }, []);
+  }, [selectedCorrectionId, newCorrectionIds]);
 
   // Handle add new correction (no auto-save, just adds locally)
   const handleAddCorrection = useCallback(
@@ -257,12 +264,19 @@ export default function Page({
     []
   );
 
-  // Click outside to deselect
+  // Click outside to deselect - but prevent if correction is unsaved
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
+      // Check if the currently selected correction is new (unsaved)
+      if (selectedCorrectionId && newCorrectionIds.has(selectedCorrectionId)) {
+        toast.error("Corrección sin guardar", {
+          description: "Debes guardar la corrección antes de cerrarla.",
+        });
+        return;
+      }
       setSelectedCorrectionId(null);
     }
-  }, []);
+  }, [selectedCorrectionId, newCorrectionIds]);
 
   if (isLoading) {
     return (

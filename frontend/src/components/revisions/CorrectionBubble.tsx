@@ -5,6 +5,7 @@ import { MessageCircle, X, Trash2, Check, GripVertical, Pencil } from "lucide-re
 import { Correction } from "#types/revision";
 import { cn } from "@lib/utils";
 import { Textarea } from "@components/ui/common/textarea";
+import { toast } from "sonner";
 
 interface CorrectionBubbleProps {
   correction: Correction;
@@ -77,6 +78,14 @@ export function CorrectionBubble({
   };
 
   const handleClose = () => {
+    // Don't allow closing if correction is not saved yet
+    if (isNew) {
+      toast.error("Corrección sin guardar", {
+        description: "Debes guardar la corrección antes de cerrarla.",
+      });
+      return;
+    }
+    
     // Reset description to saved value when closing without saving
     setDescription(correction.description);
     setIsEditing(false);
@@ -85,6 +94,13 @@ export function CorrectionBubble({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
+      // Don't allow cancel/escape if correction is not saved yet
+      if (isNew) {
+        toast.error("Corrección sin guardar", {
+          description: "Debes guardar la corrección antes de cerrarla.",
+        });
+        return;
+      }
       handleCancel();
     } else if (e.key === "Enter" && e.metaKey) {
       handleSave();
@@ -210,13 +226,16 @@ export function CorrectionBubble({
                 </span>
               </div>
             </div>
-            <button
-              onClick={handleClose}
-              className="p-1 hover:bg-amber-100 rounded transition-colors"
-              title="Cerrar"
-            >
-              <X className="w-4 h-4 text-gray-500" />
-            </button>
+            {/* Only show close button if correction is saved */}
+            {!isNew && (
+              <button
+                onClick={handleClose}
+                className="p-1 hover:bg-amber-100 rounded transition-colors"
+                title="Cerrar"
+              >
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            )}
           </div>
 
           {/* Content */}
@@ -233,16 +252,19 @@ export function CorrectionBubble({
                 />
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-400">
-                    ⌘+Enter para guardar
+                    {isNew ? "Guarda para continuar" : "⌘+Enter para guardar"}
                   </span>
                   <div className="flex gap-2">
-                    <button
-                      onClick={handleCancel}
-                      className="p-1.5 hover:bg-gray-100 rounded transition-colors"
-                      title="Cancelar"
-                    >
-                      <X className="w-4 h-4 text-gray-500" />
-                    </button>
+                    {/* Only show cancel button if correction is saved (not new) */}
+                    {!isNew && (
+                      <button
+                        onClick={handleCancel}
+                        className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                        title="Cancelar"
+                      >
+                        <X className="w-4 h-4 text-gray-500" />
+                      </button>
+                    )}
                     <button
                       onClick={handleSave}
                       disabled={!description.trim()}
