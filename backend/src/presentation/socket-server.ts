@@ -11,7 +11,7 @@ import {
 import { VersionService } from "./services";
 import { jwtAdapter } from "../config";
 import { UserModel } from "../data";
-import { getProperty, setValue } from "../types/socket-events";
+import { getProperty, parsePropertyPath, setValue } from "../types/socket-events";
 import { ConceptualModel } from "../data/mongo/models/subdocuments-schemas";
 import { Version } from "../data/mongo/models/version.model";
 import { VersionImage } from "../data/mongo/models/version-image.model";
@@ -609,6 +609,11 @@ export class SocketServer {
 			s._id.equals(payload.itemId),
 		);
 		listField.remove(itemToDelete);
+
+		const parsedListPath = parsePropertyPath(version.conceptualModel, payload.listPropertyPath);
+		if(parsedListPath !== undefined && parsedListPath.at(-1) == "entities") {
+			version.conceptualModel.outputs
+		}
 
 		version.save();
 

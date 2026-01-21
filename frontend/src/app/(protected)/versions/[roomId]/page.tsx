@@ -298,10 +298,10 @@ export default function Page({
 				shouldValidate: true,
 				shouldTouch: true,
 			});
-			// TODO: LOOK AT THE CAUSE
+/* 			// TODO: LOOK AT THE CAUSE
 			if (parsedPath?.startsWith("entities")) {
 				setValue("entities", [...getValues("entities")], { shouldDirty: true });
-			}
+			} */
 		}
 
 		function onItemAddedToList({
