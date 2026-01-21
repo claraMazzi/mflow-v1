@@ -312,6 +312,18 @@ const VersionList = ({
 							: []),
 					];
 
+						// Determine the route based on version state
+						const isReadOnly = 
+							version.state === "FINALIZADA" || 
+							version.state === "PENDIENTE DE REVISION" || 
+							version.state === "REVISADA";
+
+							console.log("isReadOnly: ", isReadOnly);
+						
+						const versionRoute = isReadOnly
+							? `/versions/${version.id}/view`
+							: `/versions/${version.id}`;
+
 						return (
 							<ContentCard
 								key={version.id}
@@ -320,7 +332,7 @@ const VersionList = ({
 								options={popoverOptions}
 								decorators={getVersionDecorators(version)}
 								action={() => {
-									router.push(`/versions/${version.id}`);
+									router.push(versionRoute);
 								}}
 							/>
 						);

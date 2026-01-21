@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
-import { ProjectModel, Version, VersionModel } from "../../data";
+import { ProjectModel, RevisionModel, Version, VersionModel } from "../../data";
 import { CreateVersionDto, CustomError } from "../../domain";
-import { VersionImage } from "../../data/mongo/models/version-image.model";
+import { VersionImage, VersionImageModel } from "../../data/mongo/models/version-image.model";
 import {
 	Assumption,
 	Input,
@@ -9,7 +9,10 @@ import {
 	Output,
 	Entity,
 	ConceptualModel,
+	Diagram,
 } from "../../data/mongo/models/subdocuments-schemas";
+import fs from "fs";
+import path from "path";
 
 const plantumlEncoder = require("plantuml-encoder");
 
@@ -114,6 +117,17 @@ export class VersionService {
 			const newVersion = new VersionModel(newVersionData);
 			await newVersion.save();
 
+			// If creating from parent, copy images and regenerate PlantText tokens
+			if (createDto.parentVersionId) {
+				await this.copyImagesAndRegenerateTokens(
+					createDto.parentVersionId,
+					newVersion._id.toString(),
+					newVersion.conceptualModel
+				);
+				// Save again after updating image references
+				await newVersion.save();
+			}
+
 			// Add version to project's versions array
 			await ProjectModel.findByIdAndUpdate(createDto.projectId, {
 				$push: { versions: newVersion._id },
@@ -165,8 +179,8 @@ export class VersionService {
 		// Remove all _id fields to let mongoose generate new ones
 		this.removeIds(plainObject);
 
-		// Note: imageFileId references are preserved as they point to existing images
-		// The images themselves are not duplicated
+		// Note: imageFileId references are preserved here but will be updated
+		// by copyImagesAndRegenerateTokens() after the version is created
 
 		return plainObject;
 	}
@@ -196,6 +210,137 @@ export class VersionService {
 					this.removeIds(value);
 				}
 			});
+		}
+	}
+
+	/**
+	 * Copy images from parent version to new version and regenerate PlantText tokens
+	 */
+	private async copyImagesAndRegenerateTokens(
+		parentVersionId: string,
+		newVersionId: string,
+		conceptualModel: any
+	): Promise<void> {
+		try {
+			// Get all images from parent version
+			const parentImages = await VersionImageModel.find({
+				version: new mongoose.Types.ObjectId(parentVersionId),
+			}).lean();
+
+			// Create a mapping of old image IDs to new image IDs
+			const imageIdMap = new Map<string, string>();
+
+			// Copy each image
+			for (const parentImage of parentImages) {
+				const newImageId = await this.copyVersionImage(
+					parentImage as any,
+					newVersionId
+				);
+				if (newImageId) {
+					imageIdMap.set(parentImage._id.toString(), newImageId);
+				}
+			}
+
+			// Update imageFileId references in the conceptual model and regenerate tokens
+			this.updateDiagramReferencesAndTokens(
+				conceptualModel,
+				imageIdMap
+			);
+		} catch (error) {
+			console.error("Error copying images and regenerating tokens:", error);
+			// Don't throw - version creation should still succeed even if image copying fails
+		}
+	}
+
+	/**
+	 * Copy a single version image file and create new database record
+	 */
+	private async copyVersionImage(
+		parentImage: any,
+		newVersionId: string
+	): Promise<string | null> {
+		try {
+			// Check if source file exists
+			if (!fs.existsSync(parentImage.path)) {
+				console.warn(`Source image file not found: ${parentImage.path}`);
+				return null;
+			}
+
+			// Create destination directory
+			const baseUploadDir = `${process.cwd()}/uploads`;
+			const newVersionDir = `${baseUploadDir}/${newVersionId}/conceptual-model`;
+			fs.mkdirSync(newVersionDir, { recursive: true });
+
+			// Generate new filename with timestamp to avoid conflicts
+			const timestamp = Date.now();
+			const ext = path.extname(parentImage.filename);
+			const baseName = path.basename(parentImage.filename, ext);
+			const newFilename = `${baseName}-${timestamp}${ext}`;
+			const newFilePath = path.join(newVersionDir, newFilename);
+
+			// Copy the file
+			fs.copyFileSync(parentImage.path, newFilePath);
+
+			// Create new VersionImage record
+			const newVersionImage = new VersionImageModel({
+				filename: newFilename,
+				originalFilename: parentImage.originalFilename,
+				sizeInBytes: parentImage.sizeInBytes,
+				mimeType: parentImage.mimeType,
+				path: newFilePath,
+				version: new mongoose.Types.ObjectId(newVersionId),
+			});
+
+			// Generate URL (using the same base URL pattern as UploadService)
+			const uploadServiceBaseUrl = `${process.env.WEBSERVICE_URL || "http://localhost:3000"}/uploads`;
+			newVersionImage.url = `${uploadServiceBaseUrl}/${newVersionImage._id}`;
+
+			await newVersionImage.save();
+
+			return newVersionImage._id.toString();
+		} catch (error) {
+			console.error("Error copying version image:", error);
+			return null;
+		}
+	}
+
+	/**
+	 * Update imageFileId references in diagrams and regenerate PlantText tokens
+	 */
+	private updateDiagramReferencesAndTokens(
+		conceptualModel: any,
+		imageIdMap: Map<string, string>
+	): void {
+		// Helper to process a single diagram
+		const processDiagram = (diagram: any) => {
+			if (!diagram) return;
+
+			// Regenerate PlantText token if using PlantText
+			if (diagram.usePlantText && diagram.plantTextCode) {
+				diagram.plantTextToken = plantumlEncoder.encode(diagram.plantTextCode);
+			}
+
+			// Update imageFileId if it exists and has a mapping
+			if (diagram.imageFileId) {
+				const oldId = diagram.imageFileId.toString();
+				const newId = imageIdMap.get(oldId);
+				if (newId) {
+					diagram.imageFileId = new mongoose.Types.ObjectId(newId);
+				}
+			}
+		};
+
+		// Process structure diagram
+		processDiagram(conceptualModel.structureDiagram);
+
+		// Process flow diagram
+		processDiagram(conceptualModel.flowDiagram);
+
+		// Process entity dynamic diagrams
+		if (conceptualModel.entities && Array.isArray(conceptualModel.entities)) {
+			for (const entity of conceptualModel.entities) {
+				processDiagram(entity.dynamicDiagram);
+			}
 		}
 	}
 
@@ -788,5 +933,120 @@ export class VersionService {
 			errors,
 			warnings,
 		};
+	}
+
+	/**
+	 * Get version for read-only view (MODELADOR viewing their version)
+	 * Includes revision corrections if version is in REVISADA state
+	 */
+	async getVersionForReadOnlyView(versionId: string, userId: string) {
+		try {
+			// Find the version
+			const version = await VersionModel.findById(versionId)
+				.populate("revision")
+				.lean();
+
+			if (!version) {
+				throw CustomError.notFound("La versión especificada no existe.");
+			}
+
+			// Check if user has access to this version
+			// User must be the project owner or a collaborator
+			const project = await ProjectModel.findOne({
+				versions: new mongoose.Types.ObjectId(versionId),
+			})
+				.populate("owner", "name lastName")
+				.lean();
+
+			if (!project) {
+				throw CustomError.notFound(
+					"No se encontró el proyecto asociado a esta versión."
+				);
+			}
+
+			const isOwner = (project.owner as any)._id.toString() === userId;
+			const isCollaborator = project.collaborators?.some(
+				(c: any) => c.toString() === userId
+			);
+
+			if (!isOwner && !isCollaborator) {
+				throw CustomError.forbidden(
+					"No tiene permisos para ver esta versión."
+				);
+			}
+
+			// Get image infos for this version
+			const imageInfos = await VersionImageModel.find({
+				version: new mongoose.Types.ObjectId(versionId),
+			})
+				.select("_id originalFilename sizeInBytes url createdAt fieldPath")
+				.lean();
+
+			// Get revision with corrections if version is REVISADA
+			let revisionData = null;
+			if (version.state === "REVISADA" && version.revision) {
+				const revision = await RevisionModel.findById(version.revision)
+					.populate("verifier", "name lastName")
+					.lean();
+
+				if (revision) {
+					revisionData = {
+						id: (revision._id as any).toString(),
+						state: revision.state,
+						finalReview: revision.finalReview || "",
+						verifier: revision.verifier
+							? {
+									id: (revision.verifier as any)._id.toString(),
+									name: `${(revision.verifier as any).name} ${(revision.verifier as any).lastName}`,
+							  }
+							: null,
+						corrections: (revision.corrections || []).map((c: any) => ({
+							_id: c._id?.toString(),
+							description: c.description,
+							location: {
+								x: c.location?.x || 0,
+								y: c.location?.y || 0,
+								page: c.location?.page || 0,
+							},
+							multimediaFilePath: c.multimediaFilePath,
+						})),
+					};
+				}
+			}
+
+			return {
+				version: {
+					id: (version._id as any).toString(),
+					title: version.title,
+					state: version.state,
+					conceptualModel: version.conceptualModel,
+				},
+				project: {
+					id: project._id.toString(),
+					title: project.title,
+					owner: {
+						id: (project.owner as any)._id.toString(),
+						name: `${(project.owner as any).name} ${(project.owner as any).lastName}`,
+					},
+				},
+				revision: revisionData,
+				imageInfos: imageInfos.map((img: any) => ({
+					id: img._id.toString(),
+					originalFilename: img.originalFilename,
+					sizeInBytes: img.sizeInBytes,
+					url: img.url,
+					createdAt: img.createdAt,
+					fieldPath: img.fieldPath,
+				})),
+			};
+		} catch (error) {
+			if (error instanceof CustomError) {
+				throw error;
+			}
+			console.error("Error getting version for read-only view:", error);
+			throw CustomError.internalServer(
+				"Se ha producido un error al obtener la versión."
+			);
+		}
 	}
 }
