@@ -1,6 +1,9 @@
 import { useSession } from "@node_modules/next-auth/react";
 import { VersionEntity } from "@src/types/version";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+// Minimum time between automatic refetches (5 seconds)
+const REFETCH_COOLDOWN = 5000;
 
 export type UseVersionsOfProjectProps = {
 	projectId: string;
@@ -18,6 +21,7 @@ export const useVersionsOfProject = ({
 	const [versions, setVersions] = useState<VersionEntity[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const lastFetchTimeRef = useRef<number>(0);
 
 	const fetchVersions = useCallback(async () => {
 		if (!session?.auth) {
@@ -34,12 +38,12 @@ export const useVersionsOfProject = ({
 				projectId,
 			});
 			if (response.success) {
-				console.log(response.data?.project.versions)
 				setVersions(response.data!.project.versions);
 			} else {
 				setError(response.error);
 				setVersions([]);
 			}
+			lastFetchTimeRef.current = Date.now();
 		} catch (err) {
 			setError("No fue posible obtener las versiones desde el servidor.");
 			console.error("Error fetching versions:", err);
@@ -76,6 +80,42 @@ export const useVersionsOfProject = ({
 		if (session?.auth) {
 			fetchVersions();
 		}
+	}, [fetchVersions, session?.auth]);
+
+	// Refetch when window gains focus (e.g., after navigating from notification)
+	// Uses cooldown to prevent excessive fetches
+	useEffect(() => {
+		const handleFocus = () => {
+			const timeSinceLastFetch = Date.now() - lastFetchTimeRef.current;
+			if (session?.auth && timeSinceLastFetch > REFETCH_COOLDOWN) {
+				fetchVersions();
+			}
+		};
+
+		window.addEventListener("focus", handleFocus);
+		return () => {
+			window.removeEventListener("focus", handleFocus);
+		};
+	}, [fetchVersions, session?.auth]);
+
+	// Refetch when page becomes visible
+	// Uses cooldown to prevent excessive fetches
+	useEffect(() => {
+		const handleVisibilityChange = () => {
+			const timeSinceLastFetch = Date.now() - lastFetchTimeRef.current;
+			if (
+				document.visibilityState === "visible" &&
+				session?.auth &&
+				timeSinceLastFetch > REFETCH_COOLDOWN
+			) {
+				fetchVersions();
+			}
+		};
+
+		document.addEventListener("visibilitychange", handleVisibilityChange);
+		return () => {
+			document.removeEventListener("visibilitychange", handleVisibilityChange);
+		};
 	}, [fetchVersions, session?.auth]);
 
 	return {

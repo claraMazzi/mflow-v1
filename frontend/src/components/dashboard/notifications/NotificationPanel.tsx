@@ -232,9 +232,11 @@ export function NotificationPanel({ className }: NotificationPanelProps) {
 		}
 	};
 
-	const handleNavigate = (link: string) => {
+	const handleNavigate = async (link: string) => {
 		setIsOpen(false);
-		router.push(link);
+		// Navigate and then refresh to invalidate router cache
+		await router.push(link);
+		router.refresh();
 	};
 
 	return (

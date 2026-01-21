@@ -139,6 +139,14 @@ export class RevisionService {
 
 				// Update version with revision reference
 				version.revision = revision._id as mongoose.Types.ObjectId;
+
+				// Notify the verifier about the new revision assignment
+				await this.notifyVerifierAssigned(
+					dto.selectedVerifierId,
+					dto.versionId,
+					revision._id.toString(),
+					dto.requestingUserId
+				);
 			}
 
 			// Update version state to "PENDIENTE DE REVISION"
@@ -444,6 +452,51 @@ export class RevisionService {
 			throw CustomError.internalServer(
 				"Se ha producido un error al finalizar la revisión."
 			);
+		}
+	}
+
+	/**
+	 * Notify verifier when they are assigned a new revision
+	 */
+	private async notifyVerifierAssigned(
+		verifierId: string,
+		versionId: string,
+		revisionId: string,
+		requestingUserId: string
+	) {
+		try {
+			// Find the project that contains this version
+			const project = await ProjectModel.findOne({
+				versions: new mongoose.Types.ObjectId(versionId),
+			}).lean();
+
+			if (!project) {
+				console.warn("Project not found for version:", versionId);
+				return;
+			}
+
+			// Get version title for the notification message
+			const version = await VersionModel.findById(versionId)
+				.select("title")
+				.lean();
+
+			const versionTitle = (version as any)?.title || "Sin título";
+
+			// Create notification for the verifier
+			await notificationService.createNotification({
+				recipientId: verifierId,
+				type: NotificationType.REVISION_REQUESTED,
+				title: "Nueva revisión asignada",
+				message: `Se te ha asignado la revisión de la versión "${versionTitle}" del proyecto "${project.title}".`,
+				link: `/dashboard/revision/pending`,
+				relatedProjectId: project._id.toString(),
+				relatedVersionId: versionId,
+				relatedRevisionId: revisionId,
+				triggeredById: requestingUserId,
+			});
+		} catch (error) {
+			// Don't throw - notifications are not critical
+			console.error("Error creating verifier assignment notification:", error);
 		}
 	}
 
