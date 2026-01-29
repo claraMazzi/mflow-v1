@@ -105,11 +105,6 @@ export const conceptualModelSchema = new Schema({
 
 export type ConceptualModel = InferSchemaType<typeof conceptualModelSchema>;
 
-export type Simplification = {
-	_id: string;
-	description: string;
-};
-
 export type Input = {
 	_id: string;
 	description: string;
@@ -121,8 +116,6 @@ export type Output = {
 	description: string;
 	entity: string;
 };
-
-export type Assumption = Simplification;
 
 export type Entity = InferSchemaType<typeof entitySchema>;
 
