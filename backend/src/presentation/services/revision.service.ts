@@ -705,7 +705,7 @@ export class RevisionService {
 				type: NotificationType.REVISION_REQUESTED,
 				title: "Nueva revisión asignada",
 				message: `Se te ha asignado la revisión de la versión "${versionTitle}" del proyecto "${project.title}".`,
-				link: `/dashboard/revision/pending`,
+				link: `/dashboard/revision/ongoing`,
 				relatedProjectId: project._id.toString(),
 				relatedVersionId: versionId,
 				relatedRevisionId: revisionId,

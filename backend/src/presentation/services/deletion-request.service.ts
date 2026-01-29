@@ -1,9 +1,10 @@
-import { DeletionRequestModel, ProjectModel, ProjectState } from "../../data";
+import { DeletionRequestModel, ProjectModel, ProjectState, NotificationType } from "../../data";
 import { CustomError } from "../../domain";
 import { DelitionRequestEntity } from "../../domain/entities/delition-request.entity";
 import { ApproveDeletionRequestDto } from "../../domain/dtos/deletion-request/approve-deletion-request.dto";
 import { DenyDeletionRequestDto } from "../../domain/dtos/deletion-request/deny-deletion-request.dto";
 import { Types } from "mongoose";
+import { notificationService } from "./notification.service";
 
 const deletionRequestStates = {
   pending: "PENDIENTE",
@@ -133,11 +134,28 @@ export class DeletionRequestService {
 
       await deletionRequest.save();
 
-      // Update the project state to pending deletion
+      // Update the linked project state to ELIMINADO
       const project = await ProjectModel.findById(deletionRequest.project);
       if (project) {
-        project.state = ProjectState.PENDING;
+        project.state = ProjectState.DELETED;
         await project.save();
+      }
+
+      // Notify the requesting user about the approval
+      try {
+        const requestingUserId = deletionRequest.requestingUser.toString();
+        const projectTitle = project?.title ?? "el proyecto";
+        await notificationService.createNotification({
+          recipientId: requestingUserId,
+          type: NotificationType.DELETION_REQUEST_APPROVED,
+          title: "Solicitud de eliminación aprobada",
+          message: `Tu solicitud de eliminación del proyecto "${projectTitle}" ha sido aprobada. El proyecto ha sido marcado como eliminado.`,
+          link: "/dashboard/deletion-requests",
+          relatedProjectId: deletionRequest.project.toString(),
+          triggeredById: reviewer,
+        });
+      } catch (notifError) {
+        console.error("Error notifying requesting user of deletion approval:", notifError);
       }
 
       const deletionRequestEntity = DelitionRequestEntity.fromObject(deletionRequest);
@@ -180,6 +198,24 @@ export class DeletionRequestService {
       if (project) {
         project.state = ProjectState.CREATED;
         await project.save();
+      }
+
+      // Notify the requesting user about the denial
+      try {
+        const requestingUserId = deletionRequest.requestingUser.toString();
+        const projectTitle = project?.title ?? "el proyecto";
+        const reasonText = reason?.trim() ? ` Motivo: ${reason.trim()}.` : "";
+        await notificationService.createNotification({
+          recipientId: requestingUserId,
+          type: NotificationType.DELETION_REQUEST_DENIED,
+          title: "Solicitud de eliminación denegada",
+          message: `Tu solicitud de eliminación del proyecto "${projectTitle}" ha sido denegada.${reasonText}`,
+          link: "/dashboard/deletion-requests",
+          relatedProjectId: deletionRequest.project.toString(),
+          triggeredById: reviewer,
+        });
+      } catch (notifError) {
+        console.error("Error notifying requesting user of deletion denial:", notifError);
       }
 
       const deletionRequestEntity = DelitionRequestEntity.fromObject(deletionRequest);
