@@ -21,13 +21,19 @@ export function DeletionRequestHistoryTable({
     .filter(request => request.state === "ACEPTADA" || request.state === "RECHAZADA")
     .sort((a, b) => new Date(b.reviewedAt).getTime() - new Date(a.reviewedAt).getTime());
 
-  // Format date to dd/MM/yy
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear().toString().slice(-2);
-    return `${day}/${month}/${year}`;
+  // Format date to dd/MM/yy; accepts string, Date, or { $date: string }. Returns "—" if invalid or missing
+  const formatDate = (value: string | Date | undefined | null | { $date?: string }) => {
+    if (value == null) return "—";
+    const date =
+      value instanceof Date
+        ? value
+        : new Date(typeof value === "string" ? value : (value as { $date?: string })?.$date ?? "");
+    if (Number.isNaN(date.getTime())) return "—";
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    if (Number.isNaN(day) || Number.isNaN(month) || Number.isNaN(year)) return "—";
+    return `${day.toString().padStart(2, "0")}/${month.toString().padStart(2, "0")}/${year.toString().slice(-2)}`;
   };
 
   const getStateBadgeVariant = (state: string): StaticColor => {
@@ -97,7 +103,7 @@ export function DeletionRequestHistoryTable({
                 {formatDate(deletionRequest.reviewedAt)}
               </TableCell>
               <TableCell className="font-medium">
-                {deletionRequest.project.name}
+                {deletionRequest.project.title}
               </TableCell>
               <TableCell>
                 {deletionRequest.requestingUser.name}

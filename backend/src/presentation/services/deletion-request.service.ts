@@ -23,7 +23,7 @@ export class DeletionRequestService {
       const deletionRequests = await DeletionRequestModel.find()
         .populate({
           path: 'project',
-          select: 'name description owner collaborators',
+          select: 'title description owner collaborators',
           populate: [
             { path: 'owner', select: 'email name' },
             { path: 'collaborators', select: 'email name' }
@@ -55,7 +55,7 @@ export class DeletionRequestService {
       const deletionRequest = await DeletionRequestModel.findById(deletionRequestId)
         .populate({
           path: 'project',
-          select: 'name description owner collaborators',
+          select: 'title description owner collaborators',
           populate: [
             { path: 'owner', select: 'email name' },
             { path: 'collaborators', select: 'email name' }
@@ -87,7 +87,7 @@ export class DeletionRequestService {
       const deletionRequests = await DeletionRequestModel.find({ project: projectId })
         .populate({
           path: 'project',
-          select: 'name description owner collaborators',
+          select: 'title description owner collaborators',
           populate: [
             { path: 'owner', select: 'email name' },
             { path: 'collaborators', select: 'email name' }
@@ -206,7 +206,7 @@ export class DeletionRequestService {
       const deletionRequests = await DeletionRequestModel.find({ state })
         .populate({
           path: 'project',
-          select: 'name description owner collaborators',
+          select: 'title description owner collaborators',
           populate: [
             { path: 'owner', select: 'email name' },
             { path: 'collaborators', select: 'email name' }
