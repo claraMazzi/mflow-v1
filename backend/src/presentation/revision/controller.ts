@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { CustomError } from "../../domain";
 import { RevisionService, Correction } from "../services/revision.service";
 import { RequestRevisionDto } from "../../domain/dtos/revision/request-revision.dto";
+import { AssignVerifierDto } from "../../domain/dtos/revision/assign-verifier.dto";
 
 export class RevisionController {
 	constructor(readonly revisionService: RevisionService) {}
@@ -119,6 +120,63 @@ export class RevisionController {
 				userId, 
 				corrections as Correction[]
 			);
+			return res.status(200).json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
+
+	getPendingVerifierRequests = async (req: Request, res: Response) => {
+		try {
+			const result = await this.revisionService.getPendingVerifierRequests();
+			return res.status(200).json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
+
+	getFinalizedVerifierRequests = async (req: Request, res: Response) => {
+		try {
+			const result = await this.revisionService.getFinalizedVerifierRequests();
+			return res.status(200).json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
+
+	getVerifierRequestById = async (req: Request, res: Response) => {
+		try {
+			const { verifierRequestId } = req.params;
+			if (!verifierRequestId) {
+				return res.status(400).json({ error: "El identificador de la solicitud es obligatorio." });
+			}
+			const result = await this.revisionService.getVerifierRequestById(verifierRequestId);
+			return res.status(200).json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
+
+	assignVerifierToRequest = async (req: Request, res: Response) => {
+		try {
+			const userId = req.session?.userId;
+			if (!userId) {
+				return res.status(401).json({ error: "Debe iniciar sesión para asignar un verificador." });
+			}
+			const { verifierRequestId } = req.params;
+			if (!verifierRequestId) {
+				return res.status(400).json({ error: "El identificador de la solicitud es obligatorio." });
+			}
+			const { assignedVerifierId } = req.body;
+			const [error, dto] = AssignVerifierDto.create({
+				verifierRequestId,
+				assignedVerifierId,
+				reviewerId: userId,
+			});
+			if (error || !dto) {
+				return res.status(400).json({ error });
+			}
+			const result = await this.revisionService.assignVerifierToRequest(dto);
 			return res.status(200).json(result);
 		} catch (error) {
 			return this.handleError(error, res);

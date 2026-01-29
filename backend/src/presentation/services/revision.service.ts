@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { VersionModel, VerifierRequestModel, RevisionModel, ProjectModel, NotificationType } from "../../data";
 import { CustomError } from "../../domain";
 import { RequestRevisionDto } from "../../domain/dtos/revision/request-revision.dto";
+import { AssignVerifierDto } from "../../domain/dtos/revision/assign-verifier.dto";
 import { VersionImageModel } from "../../data/mongo/models/version-image.model";
 import { notificationService } from "./notification.service";
 
@@ -97,6 +98,222 @@ export class RevisionService {
 				"Se ha producido un error al obtener las revisiones."
 			);
 		}
+	}
+
+	/**
+	 * Get all PENDIENTE verifier requests (ADMIN only).
+	 * Only lists requests whose linked version is in state "PENDIENTE DE REVISION".
+	 */
+	async getPendingVerifierRequests() {
+		try {
+			const versionIdsPendingReview = await VersionModel.find({
+				state: "PENDIENTE DE REVISION",
+			})
+				.select("_id")
+				.lean();
+			const versionIds = (versionIdsPendingReview as any[]).map((v) => v._id);
+
+			const requests = await VerifierRequestModel.find({
+				state: "PENDIENTE",
+				version: { $in: versionIds },
+			})
+				.populate("version", "title")
+				.populate("requestingUser", "name lastName email")
+				.sort({ createdAt: 1 })
+				.lean();
+
+			const result = await Promise.all(
+				(requests as any[]).map(async (req) => {
+					const project = await ProjectModel.findOne({
+						versions: req.version._id,
+					})
+						.populate("owner", "name lastName email")
+						.select("title owner")
+						.lean();
+
+					const owner = project?.owner as any;
+					return {
+						id: req._id.toString(),
+						versionTitle: req.version?.title ?? "",
+						projectName: project?.title ?? "",
+						projectOwnerName: owner
+							? `${owner.name ?? ""} ${owner.lastName ?? ""}`.trim()
+							: "",
+						projectOwnerEmail: owner?.email ?? "",
+						createdAt: req.createdAt,
+						requestingUser: req.requestingUser
+							? {
+									id: req.requestingUser._id.toString(),
+									name: `${req.requestingUser.name ?? ""} ${req.requestingUser.lastName ?? ""}`.trim(),
+									email: req.requestingUser.email,
+							  }
+							: null,
+					};
+				})
+			);
+
+			return { count: result.length, verifierRequests: result };
+		} catch (error) {
+			console.error("Error fetching pending verifier requests:", error);
+			throw CustomError.internalServer(
+				"Se ha producido un error al obtener las solicitudes de verificador pendientes."
+			);
+		}
+	}
+
+	/**
+	 * Get all FINALIZADA verifier requests (ADMIN only) - history
+	 */
+	async getFinalizedVerifierRequests() {
+		try {
+			const requests = await VerifierRequestModel.find({ state: "FINALIZADA" })
+				.populate("version", "title")
+				.populate("requestingUser", "name lastName email")
+				.populate("assignedVerifier", "name lastName email")
+				.populate("reviewer", "name lastName email")
+				.sort({ updatedAt: -1 })
+				.lean();
+
+			const result = (requests as any[]).map((req) => ({
+				id: req._id.toString(),
+				versionTitle: req.version?.title ?? "",
+				requestingUser: req.requestingUser
+					? `${req.requestingUser.name ?? ""} ${req.requestingUser.lastName ?? ""}`.trim()
+					: "",
+				assignedVerifier: req.assignedVerifier
+					? `${req.assignedVerifier.name ?? ""} ${req.assignedVerifier.lastName ?? ""}`.trim()
+					: "",
+				reviewerName: req.reviewer
+					? `${req.reviewer.name ?? ""} ${req.reviewer.lastName ?? ""}`.trim()
+					: "",
+			}));
+
+			return { count: result.length, verifierRequests: result };
+		} catch (error) {
+			console.error("Error fetching finalized verifier requests:", error);
+			throw CustomError.internalServer(
+				"Se ha producido un error al obtener el historial de solicitudes de verificador."
+			);
+		}
+	}
+
+	/**
+	 * Get a single verifier request by ID for the assign modal (ADMIN only)
+	 */
+	async getVerifierRequestById(verifierRequestId: string) {
+		try {
+			const req = await VerifierRequestModel.findById(verifierRequestId)
+				.populate("version", "title")
+				.populate("requestingUser", "name lastName email")
+				.lean();
+
+			if (!req) {
+				throw CustomError.notFound("La solicitud de verificador no existe.");
+			}
+
+			const reqAny = req as any;
+			if (reqAny.state !== "PENDIENTE") {
+				throw CustomError.badRequest(
+					"Solo se puede asignar un verificador a solicitudes en estado PENDIENTE."
+				);
+			}
+
+			const project = await ProjectModel.findOne({
+				versions: reqAny.version._id,
+			})
+				.populate("owner", "name lastName email")
+				.populate("collaborators", "name lastName email")
+				.select("title owner collaborators")
+				.lean();
+
+			if (!project) {
+				throw CustomError.notFound("No se encontró el proyecto asociado a la versión.");
+			}
+
+			const collaborators = (project.collaborators || []) as any[];
+			const collaboratorsList = collaborators.map((c) => ({
+				id: c._id.toString(),
+				name: `${c.name ?? ""} ${c.lastName ?? ""}`.trim(),
+				email: c.email,
+			}));
+
+			return {
+				id: reqAny._id.toString(),
+				projectName: project.title,
+				versionTitle: reqAny.version?.title ?? "",
+				collaborators: collaboratorsList,
+				requestingUser: reqAny.requestingUser
+					? {
+							id: reqAny.requestingUser._id.toString(),
+							name: `${reqAny.requestingUser.name ?? ""} ${reqAny.requestingUser.lastName ?? ""}`.trim(),
+							email: reqAny.requestingUser.email,
+					  }
+					: null,
+			};
+		} catch (error) {
+			if (error instanceof CustomError) throw error;
+			console.error("Error fetching verifier request:", error);
+			throw CustomError.internalServer(
+				"Se ha producido un error al obtener la solicitud de verificador."
+			);
+		}
+	}
+
+	/**
+	 * Assign a verifier to a PENDIENTE verifier request (ADMIN only).
+	 * Creates the Revision, updates VerifierRequest and Version, notifies the verifier.
+	 */
+	async assignVerifierToRequest(dto: AssignVerifierDto) {
+		const verifierRequest = await VerifierRequestModel.findById(dto.verifierRequestId);
+		if (!verifierRequest) {
+			throw CustomError.notFound("La solicitud de verificador no existe.");
+		}
+		if (verifierRequest.state !== "PENDIENTE") {
+			throw CustomError.badRequest(
+				"Solo se puede asignar un verificador a solicitudes en estado PENDIENTE."
+			);
+		}
+
+		const versionId = verifierRequest.version.toString();
+		const version = await VersionModel.findById(versionId);
+		if (!version) {
+			throw CustomError.notFound("La versión asociada no existe.");
+		}
+
+		// Create Revision linked to this VerifierRequest
+		const revision = new RevisionModel({
+			verifierRequest: verifierRequest._id,
+			verifier: new mongoose.Types.ObjectId(dto.assignedVerifierId),
+			version: new mongoose.Types.ObjectId(versionId),
+			finalReview: "",
+			state: "PENDIENTE",
+			corrections: [],
+		});
+		await revision.save();
+
+		// Update version with revision reference
+		version.revision = revision._id as mongoose.Types.ObjectId;
+		await version.save();
+
+		// Update VerifierRequest: assignedVerifier, reviewer, state FINALIZADA, assignedAt
+		verifierRequest.assignedVerifier = new mongoose.Types.ObjectId(dto.assignedVerifierId);
+		verifierRequest.reviewer = new mongoose.Types.ObjectId(dto.reviewerId);
+		verifierRequest.state = "FINALIZADA";
+		verifierRequest.assignedAt = new Date();
+		await verifierRequest.save();
+
+		// Notify the assigned verifier
+		await this.notifyVerifierAssigned(
+			dto.assignedVerifierId,
+			versionId,
+			revision._id.toString(),
+			verifierRequest.requestingUser.toString()
+		);
+
+		return {
+			message: "El verificador ha sido asignado correctamente.",
+			revisionId: revision._id.toString(),
+		};
 	}
 
 	async requestRevision(dto: RequestRevisionDto): Promise<{ message: string }> {

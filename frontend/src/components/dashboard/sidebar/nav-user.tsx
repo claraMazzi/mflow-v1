@@ -128,7 +128,7 @@ export function NavUser({
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-row-reverse align-start items-center gap-2">
           {/* Notification bell */}
           <NotificationPanel className="h-10 w-10 rounded-lg hover:bg-sidebar-accent" />
 
