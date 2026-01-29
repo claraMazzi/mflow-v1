@@ -117,6 +117,13 @@ export type Output = {
 	entity: string;
 };
 
+export type Simplification = {
+	_id: string;
+	description: string;
+};
+
+export type Assumption = Simplification;
+
 export type Entity = InferSchemaType<typeof entitySchema>;
 
 export const correctionSchema = new Schema({
