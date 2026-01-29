@@ -6,14 +6,14 @@ export type ImageInfo = {
 	id: string;
 };
 
-type Diagram = {
+export type Diagram = {
 	usePlantText: boolean;
 	plantTextCode: string;
 	plantTextToken: string;
 	imageFileId: string;
 };
 
-type Property = {
+export type Property = {
 	_id: string;
 	name: string;
 	detailLevelDecision: {
@@ -75,7 +75,11 @@ export type ConceptualModel = {
 	entities: Entity[];
 };
 
-export type VersionState = "EN EDICION" | "FINALIZADA" | "PENDIENTE DE REVISION" | "REVISADA";
+export type VersionState =
+	| "EN EDICION"
+	| "FINALIZADA"
+	| "PENDIENTE DE REVISION"
+	| "REVISADA";
 
 export type Version = {
 	conceptualModel: ConceptualModel;
