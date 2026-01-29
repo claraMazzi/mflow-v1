@@ -14,12 +14,11 @@ export class VersionRoutes {
 		// Create version
 		router.post("/", controller.createVersion);
 
+		// Get version for read-only view (includes corrections if REVISADA)
+		router.get("/:versionId/view", controller.getVersionForReadOnlyView);
+
 		// Delete version (soft delete - changes state to "ELIMINADA")
 		router.delete("/:versionId", controller.deleteVersion);
-
-		// TODO: Implement these routes
-		// router.get("/:versionId", controller.getVersionById);
-		// router.put("/:versionId", controller.updateVersion);
 
 		return router;
 	}

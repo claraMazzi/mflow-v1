@@ -70,26 +70,26 @@ export const navigation: SidebarMenu = {
       activeColor: "",
     },
   ],
-  verificador: [
-    {
-      title: "Revisiones pendientes",
-      icon: <ClipboardList />,
-      slug: "/dashboard",
-      activeColor: "",
-    },
-    {
-      title: "Revisiones en curso",
-      icon: <ClipboardList />,
-      slug: "/dashboard/ongoing-reviews",
-      activeColor: "",
-    },
-    {
-      title: "Revisiones completadas",
-      icon: <ClipboardList />,
-      slug: "/dashboard/completed-reviews",
-      activeColor: "",
-    },
-  ],
+	verificador: [
+		{
+			title: "Revisiones pendientes",
+			icon: <ClipboardList />,
+			slug: "/dashboard",
+			activeColor: "",
+		},
+		{
+			title: "Revisiones en curso",
+			icon: <ClipboardList />,
+			slug: "/dashboard/revision/ongoing",
+			activeColor: "",
+		},
+		{
+			title: "Revisiones finalizadas",
+			icon: <ClipboardList />,
+			slug: "/dashboard/revision/finalized",
+			activeColor: "",
+		},
+	],
 };
 
 export const getMenuItemsByRole = (role: string): MenuItem[] => {

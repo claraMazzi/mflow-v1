@@ -4,7 +4,7 @@ const verifierRequestSchema = new Schema(
 	{
 		requestingUser: {
 			type: Schema.Types.ObjectId,
-			ref: "VerifierRequest",
+			ref: "User",
 			required: [
 				true,
 				"El usuario solicitante debe estar asociado a la solicitud.",

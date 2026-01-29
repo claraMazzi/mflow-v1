@@ -8,7 +8,8 @@ export class DelitionRequestEntity {
     public requestingUser: string,
     public reviewer: string,
     public state: string,
-    public reviewedAt: Date
+    public reviewedAt: Date,
+    public registeredAt: Date
   ) {}
 
   static fromObject(object: { [key: string]: any }) {
@@ -21,6 +22,7 @@ export class DelitionRequestEntity {
       reviewer,
       state,
       reviewedAt,
+      registeredAt,
     } = object;
 
     if (!_id && !id) throw CustomError.badRequest("Missing id");
@@ -29,7 +31,8 @@ export class DelitionRequestEntity {
     if (!requestingUser) throw CustomError.badRequest("Missing requestingUser");
     if (!state) throw CustomError.badRequest("Missing state");
     if (!reviewedAt) throw CustomError.badRequest("Missing reviewedAt");
-    
+    if (!registeredAt) throw CustomError.badRequest("Missing registeredAt");
+
     return new DelitionRequestEntity(
       _id || id,
       project,
@@ -37,7 +40,8 @@ export class DelitionRequestEntity {
       requestingUser,
       reviewer,
       state,
-      reviewedAt
+      reviewedAt,
+      registeredAt
     );
   }
 }

@@ -2,7 +2,7 @@ export type DeletionRequest = {
   id: string;
   project: {
     id: string;
-    name: string;
+    title: string;
     description: string;
     owner: { id: string; name: string; email: string };
     collaborators: {
