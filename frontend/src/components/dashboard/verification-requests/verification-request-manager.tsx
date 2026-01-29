@@ -2,7 +2,7 @@
 
 import { VerificationRequestManagementTable } from "@components/dashboard/verification-requests/verification-request-management-table";
 import { VerificationRequestHistoryTable } from "@components/dashboard/verification-requests/verification-request-history-table";
-import { Skeleton } from "@components/ui/skeleton";
+import { DashboardPageSkeleton } from "@components/dashboard/dashboard-page-skeleton";
 import { useVerificationRequests } from "@hooks/use-verification-requests";
 
 export default function VerificationRequestManager() {
@@ -15,7 +15,7 @@ export default function VerificationRequestManager() {
 	} = useVerificationRequests();
 
 	if (isLoading) {
-		return <Skeleton className="h-screen w-full" />;
+		return <DashboardPageSkeleton />;
 	}
 
 	return (

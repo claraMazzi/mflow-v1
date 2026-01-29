@@ -1,7 +1,7 @@
 "use client";
 
 import { usePendingRevisions } from "@hooks/use-revisions";
-import { Skeleton } from "@components/ui/skeleton";
+import { DashboardPageSkeleton } from "@components/dashboard/dashboard-page-skeleton";
 import { PendingRevisionsTable } from "./pending-revisions-table";
 import { Input } from "@components/ui/common/input";
 import { Search } from "lucide-react";
@@ -23,7 +23,7 @@ const PendingRevisions = () => {
   }, [revisions, searchQuery]);
 
   if (isLoading) {
-    return <Skeleton className="h-96 w-full" />;
+    return <DashboardPageSkeleton />;
   }
 
   return (

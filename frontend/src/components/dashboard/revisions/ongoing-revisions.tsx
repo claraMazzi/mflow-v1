@@ -1,7 +1,7 @@
 "use client";
 
 import { useOngoingRevisions } from "@hooks/use-revisions";
-import { Skeleton } from "@components/ui/skeleton";
+import { DashboardPageSkeleton } from "@components/dashboard/dashboard-page-skeleton";
 import { OngoingRevisionsTable } from "./ongoing-revisions-table";
 import { Input } from "@components/ui/common/input";
 import { Search } from "lucide-react";
@@ -23,7 +23,7 @@ const OngoingRevisions = () => {
   }, [revisions, searchQuery]);
 
   if (isLoading) {
-    return <Skeleton className="h-96 w-full" />;
+    return <DashboardPageSkeleton />;
   }
 
   return (

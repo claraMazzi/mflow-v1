@@ -1,7 +1,7 @@
 "use client";
 
 import { useFinalizedRevisions } from "@hooks/use-revisions";
-import { Skeleton } from "@components/ui/skeleton";
+import { DashboardPageSkeleton } from "@components/dashboard/dashboard-page-skeleton";
 import { FinalizedRevisionsTable } from "./finalized-revisions-table";
 import { Input } from "@components/ui/common/input";
 import { Search } from "lucide-react";
@@ -22,7 +22,7 @@ const FinalizedRevisions = () => {
   }, [revisions, searchQuery]);
 
   if (isLoading) {
-    return <Skeleton className="h-96 w-full" />;
+    return <DashboardPageSkeleton />;
   }
 
   return (

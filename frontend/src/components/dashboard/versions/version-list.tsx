@@ -3,7 +3,7 @@
 import { Button } from "@components/ui/common/button";
 import React, { ReactNode, useState } from "react";
 import ContentCard from "@components/ui/Cards/ContentCard";
-import { Skeleton } from "@components/ui/skeleton";
+import { DashboardPageSkeleton } from "@components/dashboard/dashboard-page-skeleton";
 import { useRouter } from "next/navigation";
 import { useUI } from "@components/ui/context";
 import { VersionEntity } from "#types/version";
@@ -247,7 +247,7 @@ const VersionList = ({
 		});
 	};
 
-	if (isLoading) return <Skeleton className="w-full h-96" />;
+	if (isLoading) return <DashboardPageSkeleton />;
 
 	return (
 		<div>
