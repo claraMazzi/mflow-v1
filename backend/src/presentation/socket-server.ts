@@ -11,8 +11,15 @@ import {
 import { VersionService } from "./services";
 import { jwtAdapter } from "../config";
 import { UserModel } from "../data";
-import { getProperty, parsePropertyPath, setValue } from "../types/socket-events";
-import { ConceptualModel } from "../data/mongo/models/subdocuments-schemas";
+import {
+	getProperty,
+	parsePropertyPath,
+	setValue,
+} from "../types/socket-events";
+import {
+	ConceptualModel,
+	conceptualModelSchema,
+} from "../data/mongo/models/subdocuments-schemas";
 import { Version } from "../data/mongo/models/version.model";
 import { VersionImage } from "../data/mongo/models/version-image.model";
 const plantumlEncoder = require("plantuml-encoder");
@@ -559,7 +566,7 @@ export class SocketServer {
 				listField.push({ description: "", type: "PARAMETRO" });
 				break;
 			case "output":
-				listField.push({ description: "", entity: null });
+				listField.push({ description: "", entity: "" });
 				break;
 			case "simplification":
 				listField.push({ description: "" });
@@ -610,17 +617,36 @@ export class SocketServer {
 		);
 		listField.remove(itemToDelete);
 
-		const parsedListPath = parsePropertyPath(version.conceptualModel, payload.listPropertyPath);
-		if(parsedListPath !== undefined && parsedListPath.at(-1) == "entities") {
-			version.conceptualModel.outputs
+		if (payload.listPropertyPath === "entities") {
+			const changedOutputIds: string[] = [];
+			version.conceptualModel.outputs.forEach((output) => {
+				if (output.entity === payload.itemId) {
+					output.entity = "";
+					changedOutputIds.push(output.id);
+				}
+			});
+
+			version.save();
+
+			changedOutputIds.forEach((id) => {
+				this.emitFieldUpdate(payload.roomId, {
+					propertyPath: `outputs:${id}.entity`,
+					value: "",
+				});
+			});
+
+			this.emitItemRemovedFromList(payload.roomId, {
+				listPropertyPath: payload.listPropertyPath,
+				itemId: payload.itemId,
+			});
+		} else {
+			version.save();
+
+			this.emitItemRemovedFromList(payload.roomId, {
+				listPropertyPath: payload.listPropertyPath,
+				itemId: payload.itemId,
+			});
 		}
-
-		version.save();
-
-		this.emitItemRemovedFromList(payload.roomId, {
-			listPropertyPath: payload.listPropertyPath,
-			itemId: payload.itemId,
-		});
 	}
 
 	private handleFinalizeVersion(socket: Socket, payload: { roomId: string }) {

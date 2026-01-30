@@ -42,13 +42,6 @@ function OutputItem({
 	entitiesList,
 	handleRemoveItemFromList,
 }: OutputItemProps) {
-	// Register the entity select field once at component level
-	// The customRegisterField now properly handles select elements with immediate propagation
-	const entityFieldRegistration = customRegisterField({
-		name: `outputs.${index}.entity` as Path<ConceptualModel>,
-		propertyPath: `outputs:${field._id}.entity`,
-	});
-
 	return (
 		<div className="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg border">
 			<div className="flex items-center gap-3">
@@ -86,12 +79,16 @@ function OutputItem({
 					Entidad
 				</label>
 				<select
-					{...entityFieldRegistration}
+					{...customRegisterField({
+						name: `outputs.${index}.entity` as Path<ConceptualModel>,
+						propertyPath: `outputs:${field._id}.entity`,
+					})}
 					className={`w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none ${
 						!hasEditingRights ? "bg-gray-100 cursor-not-allowed" : "bg-white"
 					}`}
 					disabled={!hasEditingRights}
 				>
+					<option value="">Seleccione una entidad...</option>
 					{entitiesList.fields.map((entity, index) => {
 						return (
 							<option key={entity.id} value={entity._id}>
