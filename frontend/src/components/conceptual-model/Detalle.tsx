@@ -398,7 +398,7 @@ export default function Detalle({
 					);
 				})
 			) : (
-				<div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+				<div className="text-center p-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
 					<p>No hay entidades incluidas para gestionar propiedades</p>
 					<p className="text-sm">
 						Ingrese al menos una entidad en la seccion &quot;Entidades y
