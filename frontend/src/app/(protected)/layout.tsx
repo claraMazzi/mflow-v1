@@ -32,7 +32,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 	}
 
 	// Show unauthorized if session is not available, status is unauthenticated, or loading timed out
-	if (!session || status === "unauthenticated" || loadingTimeout) {
+	if (!session || loadingTimeout) {
 		return <Unauthorized />;
 	}
 

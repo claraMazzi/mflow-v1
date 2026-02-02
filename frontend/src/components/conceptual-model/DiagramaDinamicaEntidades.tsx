@@ -109,8 +109,8 @@ const DiagramaDinamicaEntidadesComponent = ({
 					content: (
 						<div className="flex flex-col mx-auto justify-center items-center p-4 space-y-4">
 							<p className="text-base text-center">
-								Excluir una entidad provocará que se elimine la lista de
-								propiedades asociadas a esa entidad, esta acción no es
+								Eliminar una entidad provocará que se descarte la lista de
+								propiedades asociadas a esta, esta acción no es
 								reversible.
 							</p>
 							<p className="text-base text-center font-semibold">

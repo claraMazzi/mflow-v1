@@ -1,6 +1,6 @@
 import { ConceptualModel } from "../data/mongo/models/subdocuments-schemas";
 
-function parsePropertyPath(conceptualModel: ConceptualModel, path: string) {
+export function parsePropertyPath(conceptualModel: ConceptualModel, path: string) {
 	const pathParts = path.split(".");
 	const parsedPath = [];
 	let current: any = conceptualModel;

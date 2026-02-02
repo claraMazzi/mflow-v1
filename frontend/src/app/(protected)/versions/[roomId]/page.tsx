@@ -298,10 +298,10 @@ export default function Page({
 				shouldValidate: true,
 				shouldTouch: true,
 			});
-			// TODO: LOOK AT THE CAUSE
+/* 			// TODO: LOOK AT THE CAUSE
 			if (parsedPath?.startsWith("entities")) {
 				setValue("entities", [...getValues("entities")], { shouldDirty: true });
-			}
+			} */
 		}
 
 		function onItemAddedToList({
@@ -893,8 +893,8 @@ export default function Page({
 								hasEditingRights={hasEditingRights}
 								inputList={inputList}
 								outputList={outputList}
-								entitiesList={entitiesList}
 								watch={watch}
+								control={control}
 								customRegisterField={customRegisterField}
 								handleAddItemToList={handleAddItemToList}
 								handleRemoveItemFromList={handleRemoveItemFromList}
@@ -903,16 +903,15 @@ export default function Page({
 						<TabsContent value="alcance">
 							<Alcance
 								hasEditingRights={hasEditingRights}
-								entitiesList={entitiesList}
 								customRegisterField={customRegisterField}
 								watch={watch}
+								control={control}
 							/>
 						</TabsContent>
 
 						<TabsContent value="detalle">
 							<Detalle
 								hasEditingRights={hasEditingRights}
-								entitiesList={entitiesList}
 								control={control}
 								customRegisterField={customRegisterField}
 								handleAddItemToList={handleAddItemToList}

@@ -6,13 +6,13 @@ export const diagramSchema = new Schema(
 			type: Boolean,
 			default: true,
 		},
-		plantTextCode: { 
+		plantTextCode: {
 			type: String,
-			default: ""
+			default: "",
 		},
 		plantTextToken: {
 			type: String,
-			default: "0m00"
+			default: "0m00",
 		},
 		imageFileId: {
 			type: Schema.Types.ObjectId,
@@ -21,7 +21,7 @@ export const diagramSchema = new Schema(
 		},
 	},
 	//Prevents mongo from generating a default id
-	{ _id: false }
+	{ _id: false },
 );
 
 export type Diagram = InferSchemaType<typeof diagramSchema>;
@@ -70,7 +70,7 @@ export const conceptualModelSchema = new Schema({
 		type: String,
 		default: "",
 	},
-	name : {
+	name: {
 		type: String,
 		default: "",
 	},
@@ -82,7 +82,7 @@ export const conceptualModelSchema = new Schema({
 	//https://mongoosejs.com/docs/subdocs.html#altsyntaxarrays
 	simplifications: [{ description: String }],
 	assumptions: [{ description: String }],
-	structureDiagram: diagramSchema, 
+	structureDiagram: diagramSchema,
 	flowDiagram: diagramSchema,
 	inputs: [
 		{
@@ -93,8 +93,11 @@ export const conceptualModelSchema = new Schema({
 	],
 	outputs: [
 		{
-			description: String, 
-			entity: Schema.Types.ObjectId,
+			description: String,
+			entity: {
+				type: String,
+				default: "",
+			},
 		},
 	],
 	entities: [entitySchema],
