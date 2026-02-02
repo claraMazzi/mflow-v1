@@ -266,7 +266,6 @@ function EntityPropertiesEditor({
 
 interface DetalleProps {
 	hasEditingRights: boolean;
-	entitiesList: ReturnType<typeof useFieldArray<ConceptualModel, "entities">>;
 	control: Control<ConceptualModel>;
 	customRegisterField: CustomRegisterFieldFn;
 	handleAddItemToList: HandleAddItemToListFn;
@@ -276,7 +275,6 @@ interface DetalleProps {
 
 export default function Detalle({
 	hasEditingRights,
-	entitiesList,
 	control,
 	customRegisterField,
 	handleAddItemToList,

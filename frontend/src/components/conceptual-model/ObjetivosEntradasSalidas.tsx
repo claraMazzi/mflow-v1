@@ -7,6 +7,7 @@ import {
 	Path,
 	FieldArrayWithId,
 	UseFormReturn,
+	useWatch,
 } from "react-hook-form";
 import { ConceptualModel } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
@@ -18,10 +19,9 @@ import { CustomRegisterFieldFn } from "@src/types/collaboration";
 interface OutputItemProps {
 	field: FieldArrayWithId<ConceptualModel, "outputs", "id">;
 	index: number;
-	watch: UseFormReturn<ConceptualModel>["watch"];
 	hasEditingRights: boolean;
 	customRegisterField: CustomRegisterFieldFn;
-	entitiesList: ReturnType<typeof useFieldArray<ConceptualModel, "entities">>;
+	entities: ConceptualModel["entities"];
 	handleRemoveItemFromList: ({
 		e,
 		listPropertyPath,
@@ -36,10 +36,9 @@ interface OutputItemProps {
 function OutputItem({
 	field,
 	index,
-	watch,
 	hasEditingRights,
 	customRegisterField,
-	entitiesList,
+	entities,
 	handleRemoveItemFromList,
 }: OutputItemProps) {
 	return (
@@ -89,10 +88,10 @@ function OutputItem({
 					disabled={!hasEditingRights}
 				>
 					<option value="">Seleccione una entidad...</option>
-					{entitiesList.fields.map((entity, index) => {
+					{entities.map((entity, index) => {
 						return (
-							<option key={entity.id} value={entity._id}>
-								{watch(`entities.${index}.name`) || `Entidad sin nombre`}
+							<option key={entity._id} value={entity._id}>
+								{entity.name || `Entidad sin nombre`}
 							</option>
 						);
 					})}
@@ -182,8 +181,8 @@ interface ObjetivosEntradasSalidasProps {
 	hasEditingRights: boolean;
 	inputList: ReturnType<typeof useFieldArray<ConceptualModel, "inputs">>;
 	outputList: ReturnType<typeof useFieldArray<ConceptualModel, "outputs">>;
-	entitiesList: ReturnType<typeof useFieldArray<ConceptualModel, "entities">>;
 	watch: UseFormReturn<ConceptualModel>["watch"];
+	control: UseFormReturn<ConceptualModel>["control"];
 	customRegisterField: CustomRegisterFieldFn;
 	handleAddItemToList: ({
 		e,
@@ -209,7 +208,7 @@ export default function ObjetivosEntradasSalidas({
 	hasEditingRights,
 	inputList,
 	outputList,
-	entitiesList,
+	control,
 	watch,
 	customRegisterField,
 	handleAddItemToList,
@@ -217,6 +216,8 @@ export default function ObjetivosEntradasSalidas({
 }: ObjetivosEntradasSalidasProps) {
 	const previousInputsLength = useRef(inputList.fields.length);
 	const previousOutputsLength = useRef(outputList.fields.length);
+
+	const watchedEntities = useWatch({ control, name: "entities" });
 
 	// Focus on the last added item when the list changes
 	useEffect(() => {
@@ -413,13 +414,12 @@ export default function ObjetivosEntradasSalidas({
 					<div className="space-y-3">
 						{outputList.fields.map((field, index) => (
 							<OutputItem
-								watch={watch}
 								key={field.id}
 								field={field}
 								index={index}
 								hasEditingRights={hasEditingRights}
 								customRegisterField={customRegisterField}
-								entitiesList={entitiesList}
+								entities={watchedEntities}
 								handleRemoveItemFromList={handleRemoveItemFromList}
 							/>
 						))}

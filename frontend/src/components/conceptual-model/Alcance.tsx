@@ -7,8 +7,9 @@ import {
 	Path,
 	FieldArrayWithId,
 	UseFormReturn,
+	useWatch,
 } from "react-hook-form";
-import { ConceptualModel } from "#types/conceptual-model";
+import { ConceptualModel, Entity } from "#types/conceptual-model";
 import { Input } from "@components/ui/common/input";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import cn from "clsx";
@@ -16,7 +17,7 @@ import { CustomRegisterFieldFn } from "@src/types/collaboration";
 
 // Extracted component to prevent infinite re-renders from inline customRegisterField calls
 interface EntityScopeEditorProps {
-	entity: FieldArrayWithId<ConceptualModel, "entities", "id">;
+	entity: Entity;
 	index: number;
 	hasEditingRights: boolean;
 	customRegisterField: CustomRegisterFieldFn;
@@ -99,18 +100,19 @@ function EntityScopeEditor({
 
 interface AlcanceProps {
 	hasEditingRights: boolean;
-	entitiesList: ReturnType<typeof useFieldArray<ConceptualModel, "entities">>;
 	customRegisterField: CustomRegisterFieldFn;
 	watch: UseFormReturn<ConceptualModel>["watch"];
+	control: UseFormReturn<ConceptualModel>["control"];
 }
 
 export default function Alcance({
 	hasEditingRights,
-	entitiesList,
 	customRegisterField,
 	watch,
+	control,
 }: AlcanceProps) {
-	// State to track which entities are collapsed
+	const watchedEntities = useWatch({ control, name: "entities" });
+
 	const [collapsedEntities, setCollapsedEntities] = useState<Set<string>>(
 		new Set(),
 	);
@@ -140,14 +142,13 @@ export default function Alcance({
 				</p>
 			</div>
 
-			{entitiesList &&
-				entitiesList.fields.length > 0 &&
-				entitiesList.fields.map((entity, index) => {
+			{watchedEntities && watchedEntities.length > 0 ? (
+				watchedEntities.map((entity, index) => {
 					const isCollapsed = collapsedEntities.has(entity._id);
 
 					return (
 						<div
-							key={entity.id}
+							key={entity._id}
 							className="border border-gray-200 rounded-lg bg-gray-50"
 						>
 							{/* Collapsible Header */}
@@ -186,19 +187,17 @@ export default function Alcance({
 							</div>
 						</div>
 					);
-				})}
-
-			{!entitiesList ||
-				(!entitiesList.fields.length && (
-					<div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-						<p>No hay entidades agregadas</p>
-						<p className="text-sm">
-							Ingrese al menos una entidad en la seccion &quot;Entidades y
-							Diagramas Dinámicas&quot; para poder definir el alcance del modelo
-							conceptual
-						</p>
-					</div>
-				))}
+				})
+			) : (
+				<div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+					<p>No hay entidades agregadas</p>
+					<p className="text-sm">
+						Ingrese al menos una entidad en la seccion &quot;Entidades y
+						Diagramas Dinámicas&quot; para poder definir el alcance del modelo
+						conceptual
+					</p>
+				</div>
+			)}
 		</div>
 	);
 }
