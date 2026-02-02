@@ -88,7 +88,7 @@ export const LoginForm = () => {
           type="email" 
           placeholder="tu@email.com" 
           {...form.register("email", {
-            required: "Email is required",
+            required: "Email es requerido",
             pattern: { value: /^\S+@\S+$/i, message: "Invalid email" },
           })}
         />
@@ -113,7 +113,7 @@ export const LoginForm = () => {
           type="password" 
           placeholder="Tu contraseña" 
           {...form.register("password", {
-            required: "Password is required"
+            required: "La contraseña es requerida"
           })}
         />
         {form.formState.errors.password && (

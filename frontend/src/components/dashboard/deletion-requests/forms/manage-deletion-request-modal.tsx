@@ -138,7 +138,7 @@ export function ManageDeletionRequestModal({
             Nombre del proyecto <small className="text-red-600">*</small>
           </Label>
           <div className="mt-1 text-sm text-gray-900">
-            {deletionRequest.project.name}
+            {deletionRequest.project.title}
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">

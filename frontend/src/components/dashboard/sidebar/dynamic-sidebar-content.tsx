@@ -5,7 +5,6 @@ import {
 } from "@components/ui/common/collapsible";
 import {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -14,8 +13,9 @@ import {
   SidebarMenuSubItem,
 } from "@components/dashboard/sidebar/sidebar";
 import { getMenuItemsByRole } from "@components/dashboard/navigation";
-import { useEffect, useState } from "react";
+import { useMemo, memo } from "react";
 import cn from "clsx";
+import Link from "next/link";
 
 type DynamicSidebarContentProps = {
   userRoles?: string[];
@@ -23,20 +23,19 @@ type DynamicSidebarContentProps = {
   activeSidebarOption: string;
 };
 
-export function DynamicSidebarContent({
+export const DynamicSidebarContent = memo(function DynamicSidebarContent({
   activeSidebarOption,
   userRoles,
   activeRole,
 }: DynamicSidebarContentProps) {
-  const [items, setItems] = useState(getMenuItemsByRole("modelador"));
   const userHasRole = (userRoles || []).includes(activeRole.toUpperCase());
 
-  useEffect(() => {
-    const items = userHasRole
+  // Memoize menu items to prevent unnecessary recalculations
+  const items = useMemo(() => {
+    return userHasRole
       ? getMenuItemsByRole(activeRole)
       : getMenuItemsByRole("modelador");
-    setItems(items);
-  }, [activeRole]);
+  }, [activeRole, userHasRole]);
 
   return (
     <SidebarGroup>
@@ -69,14 +68,13 @@ export function DynamicSidebarContent({
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton
                             asChild
-                            // onClick={() => onMenuItemClick(`${item.title} - ${subItem.title}`)}
                             className={cn(
                               activeSidebarOption === subItem.title
                                 ? "bg-purple-400 hover:bg-purple-500 hover:text-white text-white"
                                 : ""
                             )}
                           >
-                            <a
+                            <Link
                               href={subItem.slug}
                               className={cn(
                                 activeSidebarOption === subItem.title
@@ -87,7 +85,7 @@ export function DynamicSidebarContent({
                               <div className="w-12">{subItem.icon}</div>
 
                               <span>{subItem.title}</span>
-                            </a>
+                            </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       ))}
@@ -98,11 +96,11 @@ export function DynamicSidebarContent({
                 <SidebarMenuButton
                   isActive={activeSidebarOption === item.title}
                 >
-                  <a href={item.slug} className="flex gap-2">
+                  <Link href={item.slug} className="flex gap-2">
                     <div className="">{item.icon}</div>
 
                     <span>{item.title}</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               )}
             </SidebarMenuItem>
@@ -111,4 +109,4 @@ export function DynamicSidebarContent({
       </SidebarMenu>
     </SidebarGroup>
   );
-}
+});

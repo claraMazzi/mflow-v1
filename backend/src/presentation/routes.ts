@@ -8,6 +8,7 @@ import { DeletionRequestRoutes } from "./deletion-request/routes";
 import { AuthMiddleware } from "./middlewares/auth.middleware";
 import { VersionRoutes } from "./version/routes";
 import { RevisionRoutes } from "./revision/routes";
+import { NotificationRoutes } from "./notification/routes";
 
 export class AppRoutes {
 	private socketServer: SocketServer;
@@ -40,6 +41,9 @@ export class AppRoutes {
 		router.use("/api/versions", VersionRoutes.routes)
 
 		router.use("/api/revisions", RevisionRoutes.routes)
+
+		// notifications routes
+		router.use("/api/notifications", NotificationRoutes.routes);
 
 		//-----------user needs to be admin routes
 		router.use(AuthMiddleware.validateRequiredRoles(["ADMIN"]));

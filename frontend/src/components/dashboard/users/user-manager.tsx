@@ -1,7 +1,7 @@
 import { UserManagementTable } from "@components/dashboard/users/user-managment-table";
 import { Button } from "@components/ui/common/button";
 import { Plus } from "lucide-react";
-import { Skeleton } from "@components/ui/skeleton";
+import { DashboardPageSkeleton } from "@components/dashboard/dashboard-page-skeleton";
 import { useUsers } from "@hooks/use-users";
 import { useUI } from "@components/ui/context";
 import { InviteUserForm } from "./forms/invite-user-form";
@@ -20,7 +20,7 @@ export default function UserManager() {
   };
 
   if (isLoading) {
-    return <Skeleton className="h-screen w-full" />;
+    return <DashboardPageSkeleton />;
   }
 
   return (

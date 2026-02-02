@@ -1,15 +1,14 @@
 "use client";
 import { DeletionRequestManagementTable } from "@components/dashboard/deletion-requests/deletion-request-management-table";
 import { DeletionRequestHistoryTable } from "@components/dashboard/deletion-requests/deletion-request-history-table";
-import { Skeleton } from "@components/ui/skeleton";
+import { DashboardPageSkeleton } from "@components/dashboard/dashboard-page-skeleton";
 import { useDeletionRequests } from "@hooks/use-deletion-requests";
 
 export default function DeletionRequestManager() {
   const { deletionRequests, isLoading, refreshDeletionRequests } = useDeletionRequests();
 
-  console.log('deletion', deletionRequests)
   if (isLoading) {
-    return <Skeleton className="h-screen w-full" />;
+    return <DashboardPageSkeleton />;
   }
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import Unauthorized from "@components/auth/Unauthorized";
+import RoleRouteGuard from "@components/auth/RoleRouteGuard";
 import { useSession } from "@node_modules/next-auth/react";
 import { useEffect, useState } from "react";
 
@@ -35,5 +36,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 		return <Unauthorized />;
 	}
 
-	return <> {children}</>;
+	return (
+		<RoleRouteGuard>
+			{children}
+		</RoleRouteGuard>
+	);
 }

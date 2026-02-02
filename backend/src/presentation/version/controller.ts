@@ -63,4 +63,31 @@ export class VersionController {
 			return this.handleError(error, res);
 		}
 	};
+
+	/**
+	 * GET /api/versions/:versionId/view
+	 * Get version for read-only view (includes corrections if REVISADA)
+	 */
+	getVersionForReadOnlyView = async (req: Request, res: Response) => {
+		try {
+			const userId = req.session?.userId;
+			if (!userId) {
+				return res.status(401).json({ error: "Debe iniciar sesión para ver esta versión." });
+			}
+
+			const { versionId } = req.params;
+			if (!versionId) {
+				return res.status(400).json({ error: "El identificador de la versión es obligatorio." });
+			}
+
+			const result = await this.versionService.getVersionForReadOnlyView(
+				versionId,
+				userId
+			);
+
+			return res.status(200).json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
 }
