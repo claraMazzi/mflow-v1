@@ -113,59 +113,6 @@ const VersionList = ({
 		});
 	};
 
-	// const handleFinalizeVersion = (version: VersionEntity) => {
-	// 	openModal({
-	// 		name: "fullscreen-modal",
-	// 		title: "Finalizar Versión",
-	// 		size: "md",
-	// 		showCloseButton: false,
-	// 		content: (
-	// 			<div className="flex max-w-md flex-col mx-auto justify-center items-center p-4 space-y-4">
-	// 				<p className="text-base text-center flex flex-col items-center gap-2">
-	// 					¿Está seguro que desea finalizar la versión{" "}
-	// 					<span className="font-bold">{version.title}</span>?
-	// 					<span className="font-bold">Esta operación no es reversible.</span>
-	// 				</p>
-	// 				<div className="flex justify-center space-x-3 mt-3 w-full">
-	// 					<Button variant="outline" size="sm" onClick={closeModal}>
-	// 						Cancelar
-	// 					</Button>
-	// 					<Button
-	// 						size="sm"
-	// 						onClick={async () => {
-	// 							// TODO: Implement API call to finalize version
-	// 							// Mock implementation
-	// 							try {
-	// 								if (!session?.auth) {
-	// 									console.error("Not authenticated");
-	// 									return;
-	// 								}
-	// 								// Mock: This would be the actual API call
-	// 								// const response = await fetch(
-	// 								//   `${process.env.NEXT_PUBLIC_API_URL}/api/versions/${version.id}/finalize`,
-	// 								//   {
-	// 								//     method: "POST",
-	// 								//     headers: {
-	// 								//       Authorization: `Bearer ${session.auth}`,
-	// 								//     },
-	// 								//   }
-	// 								// );
-	// 								console.log("Finalizing version:", version.id);
-	// 								closeModal();
-	// 								refreshVersions();
-	// 							} catch (error) {
-	// 								console.error("Error finalizing version:", error);
-	// 							}
-	// 						}}
-	// 					>
-	// 						Aceptar
-	// 					</Button>
-	// 				</div>
-	// 			</div>
-	// 		),
-	// 	});
-	// };
-
 	const handleExportVersion = async (version: VersionEntity) => {
 		// Navigate to version page where export functionality is available
 		// The version page has access to the conceptual model and can export properly

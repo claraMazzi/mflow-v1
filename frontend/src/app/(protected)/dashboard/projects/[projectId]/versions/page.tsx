@@ -20,9 +20,10 @@ const Page = () => {
 	});
 
 	const [isOwner, setIsOwner] = useState(false);
+	const [projectName, setProjectName] = useState<string | null>(null);
 	const [isLoadingOwnership, setIsLoadingOwnership] = useState(true);
 
-	// Fetch project to check ownership
+	// Fetch project to check ownership and get project name
 	useEffect(() => {
 		const checkOwnership = async () => {
 			if (!session?.auth || !session?.user?.id) {
@@ -44,6 +45,7 @@ const Page = () => {
 				if (response.ok) {
 					const data = await response.json();
 					setIsOwner(data.project?.owner === session.user.id);
+					setProjectName(data.project?.title ?? null);
 				}
 			} catch (error) {
 				console.error("Error checking project ownership:", error);
@@ -79,7 +81,9 @@ const Page = () => {
 	return (
 		<div className="w-full flex flex-col gap-4">
 			<div className="flex w-full justify-between border-b border-accent-100 py-2">
-				<h1 className="text-2xl font-bold">Versiones del proyecto {projectId}</h1>
+				<h1 className="text-2xl font-bold">
+					Versiones del proyecto {projectName ?? projectId}
+				</h1>
 				<Button className="uppercase" onClick={handleCreateProject}>
 					<Plus />
 					Crear versión
