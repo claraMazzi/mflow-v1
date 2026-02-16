@@ -94,7 +94,7 @@ const VersionList = ({
 	const { openModal, closeModal } = useUI();
 	const [isDeleting, setIsDeleting] = useState(false);
 
-	const handleCreateNewVersion = () => {
+	const handleCreateNewVersion = (version?: VersionEntity) => {
 		openModal({
 			name: "fullscreen-modal",
 			title: "Crear nueva versión",
@@ -104,6 +104,7 @@ const VersionList = ({
 				<CreateVersionForm
 					existingVersions={versions}
 					projectId={projectId}
+					defaultParentVersionId={version?.id}
 					onSuccess={() => {
 						refreshVersions();
 					}}
@@ -214,7 +215,7 @@ const VersionList = ({
 							content: (
 								<Button
 									variant={"optionList"}
-									onClick={() => handleCreateNewVersion()}
+									onClick={() => handleCreateNewVersion(version)}
 									className={cn({ hidden: !canCreateFromVersion })}
 								>
 									Crear Nueva Versión
@@ -265,7 +266,6 @@ const VersionList = ({
 							version.state === "PENDIENTE DE REVISION" || 
 							version.state === "REVISADA";
 
-							console.log("isReadOnly: ", isReadOnly);
 						
 						const versionRoute = isReadOnly
 							? `/versions/${version.id}/view`

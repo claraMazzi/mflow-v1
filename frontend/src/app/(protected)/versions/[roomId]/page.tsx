@@ -49,6 +49,8 @@ import { useUI } from "@components/ui/context";
 import { FinalizeVersionModal } from "@components/versions/FinalizeVersionModal";
 import { toast } from "sonner";
 import { FinalizeVersionResultModal } from "@components/versions/FinalizeVersionResultModal";
+import { useRouter } from "next/navigation";
+
 
 function throttle(func: any, delay: number) {
 	let timeout: NodeJS.Timeout | null = null;
@@ -72,9 +74,10 @@ export default function Page({
 }: {
 	params: Promise<{ roomId: string }>;
 }) {
+	const router = useRouter();
 	const { data: session } = useSession();
 	const { openModal, closeModal } = useUI();
-	const { isConnected: isSocketConnected, transport } = useSocketConnection({
+	const { isConnected: isSocketConnected } = useSocketConnection({
 		socket,
 		sessionToken: session?.auth,
 	});
@@ -386,7 +389,7 @@ export default function Page({
 			closeModal();
 			if (payload.isValid) {
 				toast.success("Versión finalizada exitosamente");
-				setTimeout(() => window.location.reload(), 2000);
+				setTimeout(() => router.push(`/versions/${roomId}/view`), 2000);
 			} else {
 				openModal({
 					name: "finalize-version-result-modal",
