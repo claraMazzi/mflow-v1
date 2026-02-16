@@ -172,7 +172,7 @@ export const CreateVersionForm = ({
 			</div>
 
 			{/* Checkbox - only visible when a parent version is selected */}
-			{hasParentSelected && (
+			{/* {hasParentSelected && (
 				<div className="flex items-center space-x-2">
 					<Checkbox
 						id="migrateTodoItems"
@@ -187,7 +187,7 @@ export const CreateVersionForm = ({
 						Migrar To Do items a la nueva versión
 					</label>
 				</div>
-			)}
+			)} */}
 
 			{state?.error && (
 				<p className="text-sm text-red-600">{state.error}</p>

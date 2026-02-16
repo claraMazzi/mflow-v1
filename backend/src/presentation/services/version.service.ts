@@ -362,11 +362,41 @@ export class VersionService {
 			> & {
 				id: string;
 			})[];
+			projectTitle?: string;
+			ownerName?: string;
 		};
 	}> {
 		const pipeline: mongoose.PipelineStage[] = [
 			{
 				$match: { _id: new mongoose.Types.ObjectId(id) },
+			},
+			{
+				$lookup: {
+					from: "projects",
+					foreignField: "versions",
+					localField: "_id",
+					as: "projectDoc",
+				},
+			},
+			{
+				$unwind: {
+					path: "$projectDoc",
+					preserveNullAndEmptyArrays: true,
+				},
+			},
+			{
+				$lookup: {
+					from: "users",
+					localField: "projectDoc.owner",
+					foreignField: "_id",
+					as: "ownerDoc",
+				},
+			},
+			{
+				$unwind: {
+					path: "$ownerDoc",
+					preserveNullAndEmptyArrays: true,
+				},
 			},
 			{
 				$lookup: {
@@ -391,11 +421,25 @@ export class VersionService {
 			{
 				$addFields: {
 					id: { $toString: "$_id" },
+					projectTitle: "$projectDoc.title",
+					ownerName: {
+						$trim: {
+							input: {
+								$concat: [
+									{ $ifNull: ["$ownerDoc.name", ""] },
+									" ",
+									{ $ifNull: ["$ownerDoc.lastName", ""] },
+								],
+							},
+						},
+					},
 				},
 			},
 			{
 				$project: {
 					_id: 0,
+					projectDoc: 0,
+					ownerDoc: 0,
 				},
 			},
 		];

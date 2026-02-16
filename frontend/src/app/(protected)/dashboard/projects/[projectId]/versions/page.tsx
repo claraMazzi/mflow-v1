@@ -84,7 +84,7 @@ const Page = () => {
 				<h1 className="text-2xl font-bold">
 					Versiones del proyecto {projectName ?? projectId}
 				</h1>
-				<Button className="uppercase" onClick={handleCreateProject}>
+				<Button variant="tertiary" className="uppercase" onClick={handleCreateProject}>
 					<Plus />
 					Crear versión
 				</Button>

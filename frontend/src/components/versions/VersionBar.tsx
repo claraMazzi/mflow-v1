@@ -9,8 +9,7 @@ import { ArrowLeft, Check, Edit } from "lucide-react";
 import { useUI } from "../ui/context";
 import { CollaboratorAvatar } from "./CollaboratorAvatar";
 import { Socket } from "socket.io-client";
-import { ConceptualModel, ImageInfo, VersionState } from "#types/conceptual-model";
-import { exportVersionToExcel } from "@lib/export-version";
+import { VersionState } from "#types/conceptual-model";
 import { useRouter } from "next/navigation";
 interface VersionBarProps {
   canUserSendEditingRequest: boolean;
@@ -25,13 +24,13 @@ interface VersionBarProps {
     action: "accept" | "decline";
   }) => () => void;
   title: string;
+  projectTitle?: string;
+  ownerName?: string;
   onFollowUser?: (userId: string) => void;
   followingUserId?: string | null;
   currentUserId?: string | null;
   roomId: string;
   socket: Socket;
-  conceptualModel: ConceptualModel;
-  imageInfos?: Map<string, ImageInfo>;
   versionState: VersionState;
 }
 
@@ -42,26 +41,21 @@ const VersionBar = ({
   collaborators,
   handleEditingRequestEvaluation,
   title,
+  projectTitle,
+  ownerName,
   onFollowUser,
   followingUserId,
   currentUserId,
   roomId,
   socket,
-  conceptualModel,
-  imageInfos,
   versionState,
 }: VersionBarProps) => {
   const isVersionEditable = versionState === "EN EDICION";
+  console.log("versionState: ", isVersionEditable);
+
   const { addEditingRequestToast, removeEditingRequestToast } = useUI();
   const shownRequestsRef = useRef<Set<string>>(new Set());
   const router = useRouter();
-  const handleExport = async () => {
-    await exportVersionToExcel({
-      conceptualModel,
-      title: title || "version",
-      imageInfos: imageInfos || new Map(),
-    });
-  };
 
   // Show toast for each pending request
   useEffect(() => {
@@ -69,7 +63,7 @@ const VersionBar = ({
       .filter((r): r is ActiveEditingRequest => r.status === "pending")
       .filter((r) => collaborators.get(r.requesterUserId));
 
-    if (!validPendingRequests.length) return
+    if (!validPendingRequests.length) return;
 
     // First, clean up shown requests that are no longer pending
     const currentRequestIds = new Set(
@@ -85,7 +79,7 @@ const VersionBar = ({
 
     // Then, add toasts for new pending requests
     validPendingRequests.forEach((request) => {
-    if (!shownRequestsRef.current.has(request.requestId!)) {
+      if (!shownRequestsRef.current.has(request.requestId!)) {
         shownRequestsRef.current.add(request.requestId!);
         const collaborator = collaborators.get(request.requesterUserId)!;
 
@@ -140,14 +134,26 @@ const VersionBar = ({
     <div className="bg-blue-50 h-16 flex justify-between items-center p-4">
       <div className="flex items-center w-full justify-between">
         <div className="flex items-center gap-2">
-          <ArrowLeft className="w-5 h-5 text-gray-500 cursor-pointer" onClick={() => router.push(`/dashboard`)} />
-          <p className="text-lg font-bold">{title}</p>
-          {getStateBadge()}
-          {!isVersionEditable && (
-            <span className="px-2 py-1 text-xs font-medium bg-gray-200 text-gray-600 rounded-full">
-              Solo lectura
-            </span>
-          )}
+          <ArrowLeft
+            className="w-5 h-5 text-gray-500 cursor-pointer"
+            onClick={() => router.push(`/dashboard`)}
+          />
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <p className="text-lg font-bold">{title}</p>
+              {getStateBadge()}
+              {!isVersionEditable && (
+                <span className="px-2 py-1 text-xs font-medium bg-gray-200 text-gray-600 rounded-full">
+                  Solo lectura
+                </span>
+              )}
+            </div>
+            {projectTitle != null && ownerName != null && (projectTitle || ownerName) && (
+              <p className="text-xs text-gray-500">
+                Proyecto: {projectTitle} • Dueño: {ownerName}
+              </p>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {/* Active collaborators avatars */}
@@ -165,30 +171,38 @@ const VersionBar = ({
               );
             })}
           </div>
-          <Button
-            disabled={!isVersionEditable || !canUserSendEditingRequest}
-            onClick={handleRequestEditingRights}
-            title={!isVersionEditable ? "Esta versión no se puede editar" : undefined}
-          >
-            <Edit className="h-4 w-4" />
-            SOLICITAR EDICIÓN
-          </Button>
+          {isVersionEditable && (
+            <Button
+              disabled={!isVersionEditable || !canUserSendEditingRequest}
+              onClick={handleRequestEditingRights}
+              title={
+                !isVersionEditable
+                  ? "Esta versión no se puede editar"
+                  : undefined
+              }
+            >
+              <Edit className="h-4 w-4" />
+              SOLICITAR EDICIÓN
+            </Button>
+          )}
 
-          <Button onClick={handleExport}>
-            EXPORTAR
-          </Button>
-
-          <Button
-            variant="secondary"
-            disabled={!isVersionEditable || canUserSendEditingRequest} //if can't send editing request it's because user has editing rights
-            onClick={() => {
-              socket.emit("finalize-version", { roomId });
-            }}
-            title={!isVersionEditable ? "Esta versión ya fue finalizada" : undefined}
-          >
-            <Check className="h-4 w-4" />
-            FINALIZAR
-          </Button>
+          {isVersionEditable && (
+            <Button
+              variant="secondary"
+              disabled={!isVersionEditable || canUserSendEditingRequest} //if can't send editing request it's because user has editing rights
+              onClick={() => {
+                socket.emit("finalize-version", { roomId });
+              }}
+              title={
+                !isVersionEditable
+                  ? "Esta versión ya fue finalizada"
+                  : undefined
+              }
+            >
+              <Check className="h-4 w-4" />
+              FINALIZAR
+            </Button>
+          )}
         </div>
       </div>
     </div>

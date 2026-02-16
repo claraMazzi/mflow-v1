@@ -88,6 +88,8 @@ export default function Page({
 		new Map()
 	);
 	const [followingUserId, setFollowingUserId] = useState<string | null>(null);
+	const [projectTitle, setProjectTitle] = useState("");
+	const [ownerName, setOwnerName] = useState("");
 	const containerRef = useRef<HTMLDivElement>(null);
 	const collaboratorsRef = useRef(collaborators);
 	const sessionRef = useRef(session);
@@ -192,6 +194,8 @@ export default function Page({
 			const conceptualModel = version.conceptualModel;
 			setTitle(version.title);
 			setVersionState(version.state ?? "EN EDICION");
+			setProjectTitle(version.projectTitle ?? "");
+			setOwnerName(version.ownerName ?? "");
 			reset(conceptualModel);
 			const newImageInfos = new Map<string, ImageInfo>();
 			imageInfos
@@ -792,7 +796,6 @@ export default function Page({
 					containerRef={containerRef}
 				/>
 			))}
-
 			<VersionBar
 				canUserSendEditingRequest={canUserSendEditingRequest}
 				handleRequestEditingRights={handleRequestEditingRights}
@@ -800,13 +803,13 @@ export default function Page({
 				collaborators={collaborators}
 				handleEditingRequestEvaluation={handleEditingRequestEvaluation}
 				title={title}
+				projectTitle={projectTitle}
+				ownerName={ownerName}
 				onFollowUser={handleFollowUser}
 				followingUserId={followingUserId}
 				currentUserId={session?.user.id}
 				roomId={roomId}
 				socket={socket}
-				conceptualModel={watch()}
-				imageInfos={imageInfos}
 				versionState={versionState}
 			/>
 

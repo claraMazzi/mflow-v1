@@ -6,6 +6,12 @@ import { useRouter } from "next/navigation";
 import { Correction } from "#types/revision";
 import { VersionState } from "#types/version-view";
 import { cn } from "@lib/utils";
+import { Button } from "@components/ui/common/button";
+import { useUI } from "../ui/context";
+import { exportVersionToExcel } from "@lib/export-version";
+import { RequestRevisionForm } from "../dashboard/versions/forms/request-revision-form";
+import { VersionEntity } from "@src/types/version";
+import { ConceptualModel, ImageInfo } from "#types/conceptual-model";
 
 interface VersionViewBarProps {
 	versionTitle: string;
@@ -17,6 +23,10 @@ interface VersionViewBarProps {
 	finalReview?: string;
 	verifierName?: string;
 	onCorrectionClick?: (correctionId: string) => void;
+	/** Optional: when provided, Export and Request Revision buttons are shown when version is not in edit mode */
+	versionId?: string;
+	conceptualModel?: ConceptualModel;
+	imageInfos?: Map<string, ImageInfo>;
 }
 
 const VersionViewBar = ({
@@ -29,9 +39,49 @@ const VersionViewBar = ({
 	finalReview,
 	verifierName,
 	onCorrectionClick,
+	versionId,
+	conceptualModel,
+	imageInfos,
 }: VersionViewBarProps) => {
 	const router = useRouter();
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const { openModal, closeModal } = useUI();
+
+	const isVersionEditable = versionState === "EN EDICION";
+	const showExportAndRevision =
+		!isVersionEditable && versionId && conceptualModel !== undefined;
+
+	const handleExport = async () => {
+		if (!conceptualModel) return;
+		await exportVersionToExcel({
+			conceptualModel,
+			title: versionTitle || "version",
+			imageInfos: imageInfos || new Map(),
+		});
+	};
+
+	const handleRequestRevision = () => {
+		if (!versionId) return;
+		const version: VersionEntity = {
+			id: versionId,
+			title: versionTitle,
+			state: versionState,
+			parentVersion: { id: "", title: "N/A" },
+		};
+		openModal({
+			name: "fullscreen-modal",
+			title: "Solicitar Revisión",
+			size: "md",
+			showCloseButton: false,
+			content: (
+				<RequestRevisionForm
+					version={version}
+					onSuccess={() => {}}
+					onClose={closeModal}
+				/>
+			),
+		});
+	};
 
 	const getStateBadge = (state: VersionState) => {
 		switch (state) {
@@ -91,6 +141,16 @@ const VersionViewBar = ({
 					</div>
 
 					<div className="flex items-center gap-3">
+						{/* Export and Request Revision - when not in edit mode */}
+						{showExportAndRevision && (
+							<>
+								<Button onClick={handleExport}>EXPORTAR</Button>
+								<Button onClick={handleRequestRevision}>
+									SOLICITAR REVISIÓN
+								</Button>
+							</>
+						)}
+
 						{/* Show corrections counter when REVISADA */}
 						{showRevisionInfo && (
 							<div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-slate-200">
