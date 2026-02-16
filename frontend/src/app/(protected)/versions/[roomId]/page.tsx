@@ -49,6 +49,10 @@ import { useUI } from "@components/ui/context";
 import { FinalizeVersionModal } from "@components/versions/FinalizeVersionModal";
 import { toast } from "sonner";
 import { FinalizeVersionResultModal } from "@components/versions/FinalizeVersionResultModal";
+import { useRouter } from "next/navigation";
+import { getVersionForReadOnlyView } from "@components/dashboard/versions/actions/get-version-view";
+import { Loader2 } from "lucide-react";
+
 
 function throttle(func: any, delay: number) {
 	let timeout: NodeJS.Timeout | null = null;
@@ -72,9 +76,10 @@ export default function Page({
 }: {
 	params: Promise<{ roomId: string }>;
 }) {
+	const router = useRouter();
 	const { data: session } = useSession();
 	const { openModal, closeModal } = useUI();
-	const { isConnected: isSocketConnected, transport } = useSocketConnection({
+	const { isConnected: isSocketConnected } = useSocketConnection({
 		socket,
 		sessionToken: session?.auth,
 	});
@@ -88,6 +93,10 @@ export default function Page({
 		new Map(),
 	);
 	const [followingUserId, setFollowingUserId] = useState<string | null>(null);
+	const [projectTitle, setProjectTitle] = useState("");
+	const [ownerName, setOwnerName] = useState("");
+	const [isCheckingAccess, setIsCheckingAccess] = useState(true);
+	const [accessError, setAccessError] = useState<string | null>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const collaboratorsRef = useRef(collaborators);
 	const sessionRef = useRef(session);
@@ -105,6 +114,32 @@ export default function Page({
 	useEffect(() => {
 		sessionRef.current = session;
 	}, [session]);
+
+	// Verify user has access to this version (same safeguard as view page)
+	useEffect(() => {
+		async function checkAccess() {
+			if (!session?.user || !roomId) {
+				setIsCheckingAccess(false);
+				return;
+			}
+			const result = await getVersionForReadOnlyView(roomId);
+			if (result.error) {
+				toast.error("Error al cargar la versión", {
+					description: result.error,
+				});
+				setAccessError(result.error);
+			} else if (result.data) {
+				// Read-only users (e.g. shared readers) should use the view page
+				if (result.data.canExportAndRequestRevision === false) {
+					router.push(`/versions/${roomId}/view`);
+					return;
+				}
+				setAccessError(null);
+			}
+			setIsCheckingAccess(false);
+		}
+		checkAccess();
+	}, [roomId, session?.user, router]);
 
 	// Check if the version is in an editable state
 	const isVersionEditable = useMemo(() => {
@@ -192,6 +227,8 @@ export default function Page({
 			const conceptualModel = version.conceptualModel;
 			setTitle(version.title);
 			setVersionState(version.state ?? "EN EDICION");
+			setProjectTitle(version.projectTitle ?? "");
+			setOwnerName(version.ownerName ?? "");
 			reset(conceptualModel);
 			const newImageInfos = new Map<string, ImageInfo>();
 			imageInfos
@@ -382,7 +419,7 @@ export default function Page({
 			closeModal();
 			if (payload.isValid) {
 				toast.success("Versión finalizada exitosamente");
-				setTimeout(() => window.location.reload(), 2000);
+				setTimeout(() => router.push(`/versions/${roomId}/view`), 2000);
 			} else {
 				openModal({
 					name: "finalize-version-result-modal",
@@ -762,6 +799,23 @@ export default function Page({
 	//todo: enhance error message
 	if (!roomId) return <>No version ID</>;
 
+	if (isCheckingAccess) {
+		return (
+			<div className="flex items-center justify-center h-screen">
+				<Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+				<span className="ml-2 text-gray-600">Cargando versión...</span>
+			</div>
+		);
+	}
+
+	if (accessError) {
+		return (
+			<div className="flex items-center justify-center h-screen">
+				<p className="text-gray-500">No se pudo cargar la versión.</p>
+			</div>
+		);
+	}
+
 	return (
 		<div
 			ref={containerRef}
@@ -778,7 +832,6 @@ export default function Page({
 					containerRef={containerRef}
 				/>
 			))}
-
 			<VersionBar
 				canUserSendEditingRequest={canUserSendEditingRequest}
 				handleRequestEditingRights={handleRequestEditingRights}
@@ -786,13 +839,13 @@ export default function Page({
 				collaborators={collaborators}
 				handleEditingRequestEvaluation={handleEditingRequestEvaluation}
 				title={title}
+				projectTitle={projectTitle}
+				ownerName={ownerName}
 				onFollowUser={handleFollowUser}
 				followingUserId={followingUserId}
 				currentUserId={session?.user.id}
 				roomId={roomId}
 				socket={socket}
-				conceptualModel={watch()}
-				imageInfos={imageInfos}
 				versionState={versionState}
 			/>
 

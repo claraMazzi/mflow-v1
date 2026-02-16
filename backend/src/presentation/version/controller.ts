@@ -1,5 +1,10 @@
 import { Request, Response } from "express";
-import { CustomError, CreateVersionDto } from "../../domain";
+import {
+	CustomError,
+	CreateVersionDto,
+	ShareVersionDto,
+	ShareVersionLinkDto,
+} from "../../domain";
 import { VersionService } from "../services";
 
 export class VersionController {
@@ -86,6 +91,130 @@ export class VersionController {
 			);
 
 			return res.status(200).json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
+
+	getVersionSharingLink = async (req: Request, res: Response) => {
+		try {
+			const userId = req.session?.userId;
+			if (!userId) {
+				return res.status(401).json({ error: "Debe iniciar sesión." });
+			}
+			const { versionId } = req.params;
+			const [error, dto] = ShareVersionLinkDto.create({
+				versionId,
+				requestingUser: userId,
+			});
+			if (error || !dto) return res.status(400).json({ error });
+			const result = await this.versionService.getVersionSharingLink(dto);
+			return res.json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
+
+	sendVersionShareInvitation = async (req: Request, res: Response) => {
+		try {
+			const userId = req.session?.userId;
+			if (!userId) {
+				return res.status(401).json({ error: "Debe iniciar sesión." });
+			}
+			const { versionId } = req.params;
+			const { collaborators: emails } = req.body;
+			const [error, dto] = ShareVersionDto.create({
+				versionId,
+				senderId: userId,
+				collaborators: emails,
+			});
+			if (error || !dto) return res.status(400).json({ error });
+			const result = await this.versionService.sendVersionShareInvitation(dto);
+			return res.json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
+
+	getVersionFromShareToken = async (req: Request, res: Response) => {
+		try {
+			const { token } = req.params;
+			if (!token) {
+				return res.status(401).json({ error: "Debe proveer un token de invitación." });
+			}
+			const result = await this.versionService.getVersionFromShareToken(token);
+			return res.json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
+
+	addReaderToVersion = async (req: Request, res: Response) => {
+		try {
+			const userId = req.session?.userId;
+			if (!userId) {
+				return res.status(401).json({ error: "Debe iniciar sesión." });
+			}
+			const { token } = req.params;
+			if (!token) {
+				return res.status(401).json({ error: "Debe proveer un token de invitación." });
+			}
+			const result = await this.versionService.addReaderToVersion(token, userId);
+			return res.json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
+
+	getVersionWithReaders = async (req: Request, res: Response) => {
+		try {
+			const userId = req.session?.userId;
+			if (!userId) {
+				return res.status(401).json({ error: "Debe iniciar sesión." });
+			}
+			const { versionId } = req.params;
+			if (!versionId) {
+				return res.status(400).json({ error: "El identificador de la versión es obligatorio." });
+			}
+			const result = await this.versionService.getVersionWithReaders(
+				versionId,
+				userId
+			);
+			return res.json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
+
+	removeReaderFromVersion = async (req: Request, res: Response) => {
+		try {
+			const userId = req.session?.userId;
+			if (!userId) {
+				return res.status(401).json({ error: "Debe iniciar sesión." });
+			}
+			const { versionId, readerId } = req.params;
+			if (!versionId || !readerId) {
+				return res.status(400).json({ error: "Faltan parámetros." });
+			}
+			const result = await this.versionService.removeReaderFromVersion({
+				versionId,
+				readerId,
+				requestingUserId: userId,
+			});
+			return res.json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
+
+	getSharedVersionsForUser = async (req: Request, res: Response) => {
+		try {
+			const userId = req.session?.userId;
+			if (!userId) {
+				return res.status(401).json({ error: "Debe iniciar sesión." });
+			}
+			const result = await this.versionService.getSharedVersionsForUser(userId);
+			return res.json(result);
 		} catch (error) {
 			return this.handleError(error, res);
 		}

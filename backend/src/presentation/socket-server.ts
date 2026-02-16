@@ -52,7 +52,7 @@ type UsersInRoomChangePayload = BaseSocketEventPayload & {
 
 type InitializeConceptualModelPayload = BaseSocketEventPayload & {
 	type: SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL;
-	version: Version;
+	version: Version & { projectTitle?: string; ownerName?: string };
 	imageInfos: (Pick<
 		VersionImage,
 		"originalFilename" | "url" | "createdAt" | "sizeInBytes"
