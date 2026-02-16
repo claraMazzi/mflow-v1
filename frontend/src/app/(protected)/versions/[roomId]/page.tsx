@@ -90,7 +90,7 @@ export default function Page({
 	const [title, setTitle] = useState("");
 	const [versionState, setVersionState] = useState<VersionState>("EN EDICION");
 	const [collaborators, setCollaborators] = useState<Map<string, Collaborator>>(
-		new Map()
+		new Map(),
 	);
 	const [followingUserId, setFollowingUserId] = useState<string | null>(null);
 	const [projectTitle, setProjectTitle] = useState("");
@@ -167,7 +167,7 @@ export default function Page({
 	});
 
 	const [imageInfos, setImageInfos] = useState<Map<string, ImageInfo>>(
-		new Map()
+		new Map(),
 	);
 
 	const { register, control, setValue, watch, getValues, reset } =
@@ -206,7 +206,7 @@ export default function Page({
 				currentTab,
 				timestamp: new Date(),
 			});
-		}, MOUSE_POSITION_UPDATE_DELAY)
+		}, MOUSE_POSITION_UPDATE_DELAY),
 	);
 
 	useEffect(() => {
@@ -251,7 +251,7 @@ export default function Page({
 			const hasEditorChanged =
 				previousEditorUserId !== roomState.currentEditingUser;
 			const newCollaboratorUserIds = new Set<string>(
-				roomState.collaborators.map((c) => c.userId)
+				roomState.collaborators.map((c) => c.userId),
 			);
 
 			setCollaborators((prevCollaborators) => {
@@ -273,7 +273,7 @@ export default function Page({
 								socketId,
 								existingSocketPosition
 									? { ...existingSocketPosition }
-									: { socketId }
+									: { socketId },
 							);
 						}
 					}
@@ -307,7 +307,7 @@ export default function Page({
 				if (existingCollaborator) {
 					const newSocketPositions = new Map(existingCollaborator.sockets);
 					const existingSocketPosition = newSocketPositions.get(
-						payload.socketId
+						payload.socketId,
 					);
 					newSocketPositions.set(payload.socketId, {
 						...existingSocketPosition,
@@ -335,7 +335,7 @@ export default function Page({
 				shouldValidate: true,
 				shouldTouch: true,
 			});
-/* 			// TODO: LOOK AT THE CAUSE
+			/* 			// TODO: LOOK AT THE CAUSE
 			if (parsedPath?.startsWith("entities")) {
 				setValue("entities", [...getValues("entities")], { shouldDirty: true });
 			} */
@@ -389,7 +389,7 @@ export default function Page({
 
 		function onFinalizeVersionModal(_payload: { initiatedBy: string }) {
 			const currentUserHasEditingRights = !!collaboratorsRef.current.get(
-				sessionRef.current?.user.id || ""
+				sessionRef.current?.user.id || "",
 			)?.hasEditingRights;
 			openModal({
 				name: "finalize-version-modal",
@@ -441,7 +441,7 @@ export default function Page({
 
 		socket.on(
 			SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
-			onInitializeConceptualModel
+			onInitializeConceptualModel,
 		);
 		socket.on(SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE, onUsersInRoomChange);
 		socket.on("server-volatile-broadcast", onServerVolatileBroadcast);
@@ -458,11 +458,11 @@ export default function Page({
 			// --- Unsubscriptions ---
 			socket.off(
 				SERVER_WS_EVENT_TYPES.INITIALIZE_CONCEPTUAL_MODEL,
-				onInitializeConceptualModel
+				onInitializeConceptualModel,
 			);
 			socket.off(
 				SERVER_WS_EVENT_TYPES.USERS_IN_ROOM_CHANGE,
-				onUsersInRoomChange
+				onUsersInRoomChange,
 			);
 			socket.off("server-volatile-broadcast", onServerVolatileBroadcast);
 			socket.off("field-update", onFieldUpdate);
@@ -490,7 +490,7 @@ export default function Page({
 
 			socket.emit("field-update", { roomId, propertyPath, value });
 		},
-		[hasEditingRights, roomId]
+		[hasEditingRights, roomId],
 	);
 
 	// Schedule a debounced property update
@@ -512,7 +512,7 @@ export default function Page({
 
 			pendingUpdatesRef.current.set(propertyPath, { value, timerId });
 		},
-		[hasEditingRights, roomId]
+		[hasEditingRights, roomId],
 	);
 
 	// Flush all pending updates immediately (used before tab switch, navigation, etc.)
@@ -638,7 +638,7 @@ export default function Page({
 				}
 			}
 		},
-		[followingUserId, collaborators, currentTab]
+		[followingUserId, collaborators, currentTab],
 	);
 
 	const customRegisterField = useCallback(
@@ -663,7 +663,7 @@ export default function Page({
 				onChange: (
 					e: ChangeEvent<
 						HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-					>
+					>,
 				) => {
 					// Call the original onChange handler
 					registerResult.onChange(e);
@@ -672,8 +672,6 @@ export default function Page({
 					const isCheckbox = target.type === "checkbox";
 					const isSelectBox = target.tagName === "SELECT";
 
-					// Capture field name synchronously - React synthetic events are pooled
-					// and e.currentTarget becomes null after the handler returns
 					const fieldName = target.name;
 
 					// Get the value based on element type
@@ -685,14 +683,12 @@ export default function Page({
 						return getValues(fieldName as Path<ConceptualModel>);
 					};
 
-					if (propagateUpdateOnChange || isSelectBox) {
-						// For selects and fields that need immediate propagation,
-						// send update immediately (selects don't have "typing in progress" state)
+					if (propagateUpdateOnChange || isSelectBox || isCheckbox) {
 						setTimeout(() => {
 							const value = getValue();
 							sendPropertyUpdate(value, propertyPath);
 						}, 0);
-					} else if (!isCheckbox) {
+					} else {
 						// For text inputs, use debounced update
 						// Schedule a debounced update so changes are auto-saved after typing stops
 						setTimeout(() => {
@@ -704,29 +700,19 @@ export default function Page({
 				onBlur: (
 					e: React.FocusEvent<
 						HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-					>
+					>,
 				) => {
-					// Call the original onBlur handler
 					registerResult.onBlur(e);
 
 					const target = e.target;
 					const isCheckbox = target.type === "checkbox";
 					const isSelectBox = target.tagName === "SELECT";
 
-					// For selects with propagateUpdateOnChange, they already updated on change
-					// Skip redundant blur update
-					if (isSelectBox && propagateUpdateOnChange) {
+					if (propagateUpdateOnChange || isSelectBox || isCheckbox) {
 						return;
 					}
 
-					// For checkboxes, get the value from e.target.checked, otherwise use getValues
-					// Use target.name instead of e.currentTarget.name for consistency
-					const value = isCheckbox
-						? (target as HTMLInputElement).checked
-						: getValues(target.name as Path<ConceptualModel>);
-
-					// Always send immediate update on blur as a safeguard
-					// This also clears any pending debounced updates
+					const value = getValues(target.name as Path<ConceptualModel>);
 					sendPropertyUpdate(value, propertyPath);
 				},
 				readOnly: !hasEditingRights,
@@ -741,7 +727,7 @@ export default function Page({
 			hasEditingRights,
 			sendPropertyUpdate,
 			scheduleDebouncedUpdate,
-		]
+		],
 	);
 
 	// Check if the form should be in read-only mode (version not editable)
