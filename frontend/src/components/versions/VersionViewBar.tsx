@@ -48,6 +48,7 @@ const VersionViewBar = ({
 	const { openModal, closeModal } = useUI();
 
 	const isVersionEditable = versionState === "EN EDICION";
+
 	const showExportAndRevision =
 		!isVersionEditable && versionId && conceptualModel !== undefined;
 
@@ -76,7 +77,9 @@ const VersionViewBar = ({
 			content: (
 				<RequestRevisionForm
 					version={version}
-					onSuccess={() => {}}
+					onSuccess={() => {
+						router.refresh();
+					}}
 					onClose={closeModal}
 				/>
 			),
@@ -145,7 +148,7 @@ const VersionViewBar = ({
 						{showExportAndRevision && (
 							<>
 								<Button onClick={handleExport}>EXPORTAR</Button>
-								<Button onClick={handleRequestRevision}>
+								<Button onClick={handleRequestRevision} disabled={versionState === "PENDIENTE DE REVISION"}>
 									SOLICITAR REVISIÓN
 								</Button>
 							</>

@@ -154,6 +154,8 @@ export default function Page({
 		<div className="flex flex-col h-screen overflow-hidden">
 			{/* Version View Bar with hamburger menu */}
 			<VersionViewBar
+				versionId={versionId}
+				conceptualModel={conceptualModel}
 				versionTitle={versionData.version.title}
 				versionState={versionData.version.state}
 				projectTitle={versionData.project.title}

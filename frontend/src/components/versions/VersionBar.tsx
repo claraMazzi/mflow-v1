@@ -51,7 +51,6 @@ const VersionBar = ({
   versionState,
 }: VersionBarProps) => {
   const isVersionEditable = versionState === "EN EDICION";
-  console.log("versionState: ", isVersionEditable);
 
   const { addEditingRequestToast, removeEditingRequestToast } = useUI();
   const shownRequestsRef = useRef<Set<string>>(new Set());
