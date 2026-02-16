@@ -49,6 +49,7 @@ import { useUI } from "@components/ui/context";
 import { FinalizeVersionModal } from "@components/versions/FinalizeVersionModal";
 import { toast } from "sonner";
 import { FinalizeVersionResultModal } from "@components/versions/FinalizeVersionResultModal";
+import { Skeleton } from "@src/components/ui/skeleton";
 
 function throttle(func: any, delay: number) {
 	let timeout: NodeJS.Timeout | null = null;
@@ -797,7 +798,9 @@ export default function Page({
 			/>
 
 			{!isModelInitialized ? (
-				<p>Loading Model</p>
+				<div className="m-8 min-h-96 flex items-center justify-center text-gray-800 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+					<p className="">Cargando el modelo conceptual...</p>
+				</div>
 			) : (
 				<form
 					onSubmit={(e) => {
