@@ -56,6 +56,7 @@ interface PropertyEditorProps {
 	>;
 	propIndex: number;
 	entityIndex: number;
+	entityId: string;
 	hasEditingRights: boolean;
 	customRegisterField: CustomRegisterFieldFn;
 	handleRemoveItemFromList: HandleRemoveItemFromListFn;
@@ -65,28 +66,11 @@ function PropertyEditor({
 	field,
 	propIndex,
 	entityIndex,
+	entityId,
 	hasEditingRights,
 	customRegisterField,
 	handleRemoveItemFromList,
 }: PropertyEditorProps) {
-	// Register fields once at component level using useMemo
-	// The customRegisterField now properly handles select elements with immediate propagation
-	const includeFieldRegistration = useMemo(
-		() =>
-			customRegisterField({
-				name: `entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.include` as unknown as Path<ConceptualModel>,
-			}),
-		[customRegisterField, entityIndex, propIndex],
-	);
-
-	const argumentTypeFieldRegistration = useMemo(
-		() =>
-			customRegisterField({
-				name: `entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.argumentType` as unknown as Path<ConceptualModel>,
-			}),
-		[customRegisterField, entityIndex, propIndex],
-	);
-
 	return (
 		<div className="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg border">
 			<div className="flex items-end gap-3">
@@ -96,7 +80,8 @@ function PropertyEditor({
 					</label>
 					<Input
 						{...customRegisterField({
-							name: `entities.${entityIndex}.properties.${propIndex}.name` as unknown as Path<ConceptualModel>,
+							name: `entities.${entityIndex}.properties.${propIndex}.name` as Path<ConceptualModel>,
+							propertyPath: `entities:${entityId}.properties:${field._id}.name`,
 						})}
 						placeholder="Nombre..."
 						className="border-2 border-gray-200 focus:border-purple-400"
@@ -119,22 +104,22 @@ function PropertyEditor({
 				</Button>
 			</div>
 
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+			<div className="grid grid-cols-1 gap-3">
 				<div className="space-y-2">
-					<label className="block text-sm font-medium text-gray-700">
-						Incluir
+					<label className="flex items-center gap-2 cursor-pointer">
+						<input
+							type="checkbox"
+							{...customRegisterField({
+								name: `entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.include` as Path<ConceptualModel>,
+								propertyPath: `entities:${entityId}.properties:${field._id}.detailLevelDecision.include`,
+								propagateUpdateOnChange: true,
+							})}
+							className="rounded border-gray-300"
+						/>
+						<span className="text-sm font-medium text-gray-700">
+							Incluir en el nivel de detalle del modelo
+						</span>
 					</label>
-					<select
-						{...includeFieldRegistration}
-						className={cn(
-							"w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none",
-							!hasEditingRights ? "bg-gray-100 cursor-not-allowed" : "bg-white",
-						)}
-						disabled={!hasEditingRights}
-					>
-						<option value="true">Incluir</option>
-						<option value="false">Excluir</option>
-					</select>
 				</div>
 
 				<div className="space-y-2">
@@ -143,7 +128,8 @@ function PropertyEditor({
 					</label>
 					<Input
 						{...customRegisterField({
-							name: `entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.justification` as unknown as Path<ConceptualModel>,
+							name: `entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.justification` as Path<ConceptualModel>,
+							propertyPath: `entities:${entityId}.properties:${field._id}.detailLevelDecision.justification`,
 						})}
 						placeholder="Describe la justificación..."
 						className="border-2 border-gray-200 focus:border-purple-400"
@@ -155,7 +141,10 @@ function PropertyEditor({
 						Tipo de argumento
 					</label>
 					<select
-						{...argumentTypeFieldRegistration}
+						{...customRegisterField({
+							name: `entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.argumentType` as Path<ConceptualModel>,
+							propertyPath: `entities:${entityId}.properties:${field._id}.detailLevelDecision.argumentType`,
+						})}
 						className={cn(
 							"w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none",
 							!hasEditingRights ? "bg-gray-100 cursor-not-allowed" : "bg-white",
@@ -175,6 +164,7 @@ function PropertyEditor({
 // EntityPropertiesEditor - MUST be defined outside of Detalle to prevent hooks from being recreated on every render
 interface EntityPropertiesEditorProps {
 	entityIndex: number;
+	entityId: string;
 	control: Control<ConceptualModel>;
 	hasEditingRights: boolean;
 	customRegisterField: CustomRegisterFieldFn;
@@ -184,6 +174,7 @@ interface EntityPropertiesEditorProps {
 
 function EntityPropertiesEditor({
 	entityIndex,
+	entityId,
 	control,
 	hasEditingRights,
 	customRegisterField,
@@ -240,10 +231,11 @@ function EntityPropertiesEditor({
 
 			{propertiesList.fields.length > 0 ? (
 				<div className="space-y-3">
-					{propertiesList.fields.map((field, propIndex) => (
+					{propertiesList.fields.map((propertyField, propIndex) => (
 						<PropertyEditor
-							key={field.id}
-							field={field}
+							key={propertyField.id}
+							entityId={entityId}
+							field={propertyField}
 							propIndex={propIndex}
 							entityIndex={entityIndex}
 							hasEditingRights={hasEditingRights}
@@ -375,15 +367,16 @@ export default function Detalle({
 							{/* Collapsible Content */}
 							<div
 								className={cn(
-									"overflow-hidden transition-all duration-300 ease-in-out",
+									"transition-all duration-300 ease-in-out",
 									isCollapsed
-										? "max-h-0 opacity-0"
-										: "max-h-[500px] opacity-100",
+										? "max-h-0 opacity-0 overflow-hidden"
+										: "max-h-[500px] overflow-y-auto opacity-100",
 								)}
 							>
 								<div className="p-4 pt-0 space-y-4">
 									<EntityPropertiesEditor
 										entityIndex={index}
+										entityId={entity._id}
 										control={control}
 										hasEditingRights={hasEditingRights}
 										customRegisterField={customRegisterField}
@@ -417,7 +410,11 @@ export default function Detalle({
 								return null;
 							}
 							if (entity) {
-								return <li key={entity._id}>{entity.name || "Entidad sin nombre"}</li>;
+								return (
+									<li key={entity._id}>
+										{entity.name || "Entidad sin nombre"}
+									</li>
+								);
 							}
 						})}
 					</ul>
