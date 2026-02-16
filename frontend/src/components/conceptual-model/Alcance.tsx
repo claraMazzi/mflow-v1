@@ -48,7 +48,7 @@ function EntityScopeEditor({
 						})}
 						className="rounded border-gray-300"
 					/>
-					<span className="text-sm font-medium">Incluir</span>
+					<span className="text-sm font-medium text-gray-700">Incluir en el alcance del modelo</span>
 				</label>
 			</div>
 

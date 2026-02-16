@@ -104,25 +104,22 @@ function PropertyEditor({
 				</Button>
 			</div>
 
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+			<div className="grid grid-cols-1 gap-3">
 				<div className="space-y-2">
-					<label className="block text-sm font-medium text-gray-700">
-						Incluir
+					<label className="flex items-center gap-2 cursor-pointer">
+						<input
+							type="checkbox"
+							{...customRegisterField({
+								name: `entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.include` as Path<ConceptualModel>,
+								propertyPath: `entities:${entityId}.properties:${field._id}.detailLevelDecision.include`,
+								propagateUpdateOnChange: true,
+							})}
+							className="rounded border-gray-300"
+						/>
+						<span className="text-sm font-medium text-gray-700">
+							Incluir en el nivel de detalle del modelo
+						</span>
 					</label>
-					<select
-						{...customRegisterField({
-							name: `entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.include` as Path<ConceptualModel>,
-							propertyPath: `entities:${entityId}.properties:${field._id}.detailLevelDecision.include`,
-						})}
-						className={cn(
-							"w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none",
-							!hasEditingRights ? "bg-gray-100 cursor-not-allowed" : "bg-white",
-						)}
-						disabled={!hasEditingRights}
-					>
-						<option value="true">Incluir</option>
-						<option value="false">Excluir</option>
-					</select>
 				</div>
 
 				<div className="space-y-2">
