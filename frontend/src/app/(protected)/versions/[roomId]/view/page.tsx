@@ -165,6 +165,7 @@ export default function Page({
 				finalReview={versionData.revision?.finalReview}
 				verifierName={versionData.revision?.verifier?.name}
 				onCorrectionClick={handleCorrectionClickFromMenu}
+				canExportAndRequestRevision={versionData.canExportAndRequestRevision}
 			/>
 
 			{/* Main content */}

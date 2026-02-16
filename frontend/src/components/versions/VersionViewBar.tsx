@@ -27,6 +27,8 @@ interface VersionViewBarProps {
 	versionId?: string;
 	conceptualModel?: ConceptualModel;
 	imageInfos?: Map<string, ImageInfo>;
+	/** When false, hide Export and Request Revision (e.g. shared reader). Default true when not provided */
+	canExportAndRequestRevision?: boolean;
 }
 
 const VersionViewBar = ({
@@ -42,6 +44,7 @@ const VersionViewBar = ({
 	versionId,
 	conceptualModel,
 	imageInfos,
+	canExportAndRequestRevision = true,
 }: VersionViewBarProps) => {
 	const router = useRouter();
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -50,7 +53,10 @@ const VersionViewBar = ({
 	const isVersionEditable = versionState === "EN EDICION";
 
 	const showExportAndRevision =
-		!isVersionEditable && versionId && conceptualModel !== undefined;
+		canExportAndRequestRevision &&
+		!isVersionEditable &&
+		versionId &&
+		conceptualModel !== undefined;
 
 	const handleExport = async () => {
 		if (!conceptualModel) return;
@@ -127,7 +133,9 @@ const VersionViewBar = ({
 					<div className="flex items-center gap-3">
 						<ArrowLeft
 							className="w-5 h-5 text-gray-500 cursor-pointer hover:text-gray-700 transition-colors"
-							onClick={() => router.push(`/dashboard/projects/${projectId}/versions`)}
+							onClick={() =>
+							router.push(`/dashboard/projects/${projectId}/versions`)
+						}
 						/>
 						<div className="flex flex-col">
 							<div className="flex items-center gap-2">

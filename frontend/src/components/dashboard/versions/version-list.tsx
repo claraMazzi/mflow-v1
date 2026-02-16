@@ -9,6 +9,7 @@ import { useUI } from "@components/ui/context";
 import { VersionEntity } from "#types/version";
 import { CreateVersionForm } from "./forms/create-version-form";
 import { RequestRevisionForm } from "./forms/request-revision-form";
+import { ShareVersionForm } from "./forms/share-version-form";
 import { DeleteVersionResult } from "@src/hooks/use-versions";
 import cn from "clsx";
 
@@ -210,6 +211,23 @@ const VersionList = ({
 					// Only show "Solicitar Revisión" button if version state is "FINALIZADA"
 					const canRequestRevision = version.state === "FINALIZADA";
 
+					// Share (read-only) for versions not in "EN EDICION"
+					const canShareVersion = version.state !== "EN EDICION" && version.state !== "ELIMINADA";
+
+					const handleShareVersion = (v: VersionEntity) => {
+						openModal({
+							name: "fullscreen-modal",
+							title: "Compartir versión (solo lectura)",
+							size: "md",
+							showCloseButton: false,
+							content: (
+								<ShareVersionForm
+									version={v}
+								/>
+							),
+						});
+					};
+
 					const popoverOptions = [
 						{
 							content: (
@@ -240,6 +258,17 @@ const VersionList = ({
 									className={cn({ hidden: !canRequestRevision })}
 								>
 									Solicitar Revisión
+								</Button>
+							),
+						},
+						{
+							content: (
+								<Button
+									variant={"optionList"}
+									onClick={() => handleShareVersion(version)}
+									className={cn({ hidden: !canShareVersion })}
+								>
+									Compartir
 								</Button>
 							),
 						},

@@ -1,7 +1,15 @@
 import mongoose from "mongoose";
-import { ProjectModel, RevisionModel, Version, VersionModel } from "../../data";
-import { CreateVersionDto, CustomError } from "../../domain";
+import { ProjectModel, RevisionModel, UserModel, Version, VersionModel } from "../../data";
+import {
+	CreateVersionDto,
+	CustomError,
+	ShareVersionDto,
+	ShareVersionLinkDto,
+} from "../../domain";
 import { VersionImage, VersionImageModel } from "../../data/mongo/models/version-image.model";
+import { jwtAdapter } from "../../config";
+import { VersionShareTokenPayload } from "../../types/tokens";
+import { EmailService } from "./email.service";
 import {
 	Assumption,
 	Input,
@@ -23,12 +31,13 @@ const VALID_PARENT_VERSION_STATES = [
 	"REVISADA",
 ];
 
-export class VersionService {
-	// private projectService: ProjectService;
+const VERSION_SHAREABLE_STATES = ["FINALIZADA", "PENDIENTE DE REVISION", "REVISADA"];
 
-	/* constructor(projectService: ProjectService) {
-		this.projectService = projectService;
-	} */
+export class VersionService {
+	constructor(
+		private readonly frontEndUrl?: string,
+		private readonly emailService?: EmailService
+	) {}
 
 	async createVersion(createDto: CreateVersionDto) {
 		// Verify project exists
@@ -488,7 +497,7 @@ export class VersionService {
 			},
 			{
 				$unwind: {
-					path: "project",
+					path: "$project",
 				},
 			},
 			{
@@ -563,38 +572,28 @@ export class VersionService {
 		versionId: string;
 		userId: string;
 	}): Promise<boolean> {
-		const pipeline: mongoose.PipelineStage[] = [
-			{
-				$match: { versions: new mongoose.Types.ObjectId(versionId) },
-			},
-			{
-				$project: {
-					_id: 0,
-					owner: 1,
-					collaborators: 1,
-				},
-			},
-		];
+		const project = await ProjectModel.findOne({
+			versions: new mongoose.Types.ObjectId(versionId),
+		})
+			.select("owner collaborators")
+			.lean()
+			.exec();
 
-		const result = await VersionModel.aggregate(pipeline).exec();
-
-		if (result.length === 0)
+		if (!project)
 			throw CustomError.notFound("Version does not exist.");
 
-		const usersWithAccess = result[0] as {
-			owner: mongoose.Types.ObjectId;
-			collaborators: mongoose.Types.ObjectId[];
-		};
-
-		const isOwner = usersWithAccess.owner.equals(userId);
-		if (isOwner) {
+		const ownerId =
+			typeof project.owner === "object" && (project.owner as any)._id
+				? (project.owner as any)._id.toString()
+				: (project.owner as any).toString();
+		if (ownerId === userId) {
 			return true;
 		}
 
-		const isCollaborator = usersWithAccess.collaborators.some((c) =>
-			c.equals(userId),
+		const collabIds = (project.collaborators || []).map((c: any) =>
+			typeof c === "object" && c._id ? c._id.toString() : c.toString(),
 		);
-		if (isCollaborator) {
+		if (collabIds.includes(userId)) {
 			return true;
 		}
 
@@ -994,8 +993,17 @@ export class VersionService {
 				throw CustomError.notFound("La versión especificada no existe.");
 			}
 
-			// Check if user has access to this version
-			// User must be the project owner or a collaborator
+			// Check if user has read access (owner, collaborator, shared reader, or verifier)
+			const hasAccess = await this.hasUserReadAccessToVersion({
+				versionId,
+				userId,
+			});
+			if (!hasAccess) {
+				throw CustomError.forbidden(
+					"No tiene permisos para ver esta versión."
+				);
+			}
+
 			const project = await ProjectModel.findOne({
 				versions: new mongoose.Types.ObjectId(versionId),
 			})
@@ -1008,16 +1016,9 @@ export class VersionService {
 				);
 			}
 
-			const isOwner = (project.owner as any)._id.toString() === userId;
-			const isCollaborator = project.collaborators?.some(
-				(c: any) => c.toString() === userId
-			);
-
-			if (!isOwner && !isCollaborator) {
-				throw CustomError.forbidden(
-					"No tiene permisos para ver esta versión."
-				);
-			}
+			// Only owner/collaborator can export and request revision; shared readers cannot
+			const canExportAndRequestRevision =
+				await this.hasUserWriteAccessToVersion({ versionId, userId });
 
 			// Get image infos for this version
 			const imageInfos = await VersionImageModel.find({
@@ -1073,6 +1074,7 @@ export class VersionService {
 						name: `${(project.owner as any).name} ${(project.owner as any).lastName}`,
 					},
 				},
+				canExportAndRequestRevision: !!canExportAndRequestRevision,
 				revision: revisionData,
 				imageInfos: imageInfos.map((img: any) => ({
 					id: img._id.toString(),
@@ -1092,5 +1094,325 @@ export class VersionService {
 				"Se ha producido un error al obtener la versión."
 			);
 		}
+	}
+
+	// -------- Share version (read-only) --------
+
+	private async generateVersionShareLink(
+		payload: VersionShareTokenPayload
+	): Promise<string> {
+		if (!this.frontEndUrl) {
+			throw CustomError.internalServer(
+				"Configuración de compartir versión no disponible."
+			);
+		}
+		const token = await jwtAdapter.generateToken(payload, "7d");
+		if (!token) {
+			throw CustomError.internalServer(
+				"Se produjo un error al generar el link para compartir la versión."
+			);
+		}
+		return `${this.frontEndUrl}/share/versions/?token=${token}`;
+	}
+
+	async getVersionSharingLink(dto: ShareVersionLinkDto) {
+		const version = await VersionModel.findById(dto.versionId).exec();
+		if (!version) {
+			throw CustomError.notFound("La versión especificada no existe.");
+		}
+		if (version.state === "ELIMINADA") {
+			throw CustomError.badRequest("La versión fue eliminada.");
+		}
+		if (!VERSION_SHAREABLE_STATES.includes(version.state)) {
+			throw CustomError.badRequest(
+				"Solo se puede compartir una versión que no esté en estado 'EN EDICION'."
+			);
+		}
+		const project = await ProjectModel.findOne({
+			versions: version._id,
+		}).exec();
+		if (!project) {
+			throw CustomError.notFound("No se encontró el proyecto de la versión.");
+		}
+		if (!project.owner.equals(dto.requestingUser)) {
+			throw CustomError.unauthorized(
+				"Solo el propietario del proyecto puede compartir la versión."
+			);
+		}
+		const link = await this.generateVersionShareLink({
+			requestingUser: dto.requestingUser,
+			versionId: dto.versionId,
+		});
+		return {
+			message: "El link para compartir la versión fue generado correctamente.",
+			shareLink: link,
+		};
+	}
+
+	async sendVersionShareInvitation(dto: ShareVersionDto) {
+		const version = await VersionModel.findById(dto.versionId).exec();
+		if (!version) {
+			throw CustomError.notFound("La versión especificada no existe.");
+		}
+		if (version.state === "ELIMINADA") {
+			throw CustomError.badRequest("La versión fue eliminada.");
+		}
+		if (!VERSION_SHAREABLE_STATES.includes(version.state)) {
+			throw CustomError.badRequest(
+				"Solo se puede compartir una versión que no esté en estado 'EN EDICION'."
+			);
+		}
+		const project = await ProjectModel.findOne({
+			versions: version._id,
+		}).exec();
+		if (!project) {
+			throw CustomError.notFound("No se encontró el proyecto de la versión.");
+		}
+		if (!project.owner.equals(dto.senderId)) {
+			throw CustomError.unauthorized(
+				"Solo el propietario del proyecto puede compartir la versión."
+			);
+		}
+		if (!this.emailService) {
+			throw CustomError.internalServer(
+				"El envío de invitaciones por email no está configurado."
+			);
+		}
+		const uniqueEmails = new Set<string>(dto.emails);
+		const link = await this.generateVersionShareLink({
+			requestingUser: dto.senderId,
+			versionId: dto.versionId,
+		});
+		const html = `<h1>Te han compartido una versión para solo lectura</h1>
+      <p>Hacé clic en el siguiente <a href="${link}">link</a> para acceder a la versión.</p>
+      <p><strong>Recordá que en caso de no tener cuenta primero deberás registrarte para poder acceder.</strong></p>`;
+		for (const email of uniqueEmails) {
+			await this.emailService.sendEmail({
+				to: email,
+				subject: "MFLOW - Versión compartida para lectura",
+				htmlBody: html,
+			});
+		}
+		return {
+			message: "Las invitaciones se enviaron correctamente.",
+			request: Array.from(uniqueEmails),
+		};
+	}
+
+	async addReaderToVersion(token: string, newReaderUserId: string) {
+		const payload = await jwtAdapter.validateToken(token);
+		if (!payload) {
+			throw CustomError.unauthorized("El token de invitación es inválido.");
+		}
+		const { requestingUser, versionId } = payload as VersionShareTokenPayload;
+		if (!versionId || !requestingUser) {
+			throw CustomError.unauthorized("El token de invitación es inválido.");
+		}
+		const version = await VersionModel.findById(versionId).exec();
+		if (!version) {
+			throw CustomError.notFound(
+				"La versión asociada a la invitación no existe o fue eliminada."
+			);
+		}
+		if (version.state === "ELIMINADA") {
+			throw CustomError.badRequest("La versión fue eliminada.");
+		}
+		const user = await UserModel.findOne({
+			_id: newReaderUserId,
+			deletedAt: null,
+		});
+		if (!user) {
+			throw CustomError.unauthorized(
+				"El usuario debe encontrarse registrado en la plataforma."
+			);
+		}
+		const project = await ProjectModel.findOne({ versions: version._id }).exec();
+		if (!project) {
+			throw CustomError.notFound("No se encontró el proyecto de la versión.");
+		}
+		if (project.owner.equals(user._id)) {
+			throw CustomError.badRequest(
+				"El dueño del proyecto ya tiene acceso a la versión."
+			);
+		}
+		if (project.collaborators.some((c) => c.equals(user._id))) {
+			throw CustomError.badRequest(
+				"El colaborador del proyecto ya tiene acceso a la versión."
+			);
+		}
+		if (version.sharedWithReaders.some((r) => r.equals(user._id))) {
+			throw CustomError.badRequest(
+				"El usuario ya tiene acceso de lectura a esta versión."
+			);
+		}
+		version.sharedWithReaders.push(user._id);
+		await version.save();
+		return {
+			message: "Se te ha dado acceso de lectura a la versión.",
+			versionId: version._id.toString(),
+		};
+	}
+
+	async getVersionFromShareToken(token: string) {
+		const payload = await jwtAdapter.validateToken(token);
+		if (!payload) {
+			throw CustomError.unauthorized("El token de invitación es inválido.");
+		}
+		const { versionId } = payload as VersionShareTokenPayload;
+		if (!versionId) {
+			throw CustomError.unauthorized("El token de invitación es inválido.");
+		}
+		const version = await VersionModel.findById(versionId)
+			.populate("parentVersion", "title")
+			.lean();
+		if (!version) {
+			throw CustomError.notFound(
+				"La versión asociada a la invitación no existe o fue eliminada."
+			);
+		}
+		if (version.state === "ELIMINADA") {
+			throw CustomError.badRequest("La versión fue eliminada.");
+		}
+		const project = await ProjectModel.findOne({
+			versions: new mongoose.Types.ObjectId(versionId),
+		})
+			.populate("owner", "name lastName")
+			.lean();
+		if (!project) {
+			throw CustomError.notFound("No se encontró el proyecto de la versión.");
+		}
+		return {
+			version: {
+				id: (version._id as any).toString(),
+				title: version.title,
+				state: version.state,
+				parentVersion: version.parentVersion
+					? {
+							id: (version.parentVersion as any)._id.toString(),
+							title: (version.parentVersion as any).title,
+					  }
+					: null,
+			},
+			project: {
+				id: (project._id as any).toString(),
+				title: (project as any).title,
+				owner: {
+					id: (project.owner as any)._id.toString(),
+					name: `${(project.owner as any).name} ${(project.owner as any).lastName}`,
+				},
+			},
+		};
+	}
+
+	async getVersionWithReaders(versionId: string, requestingUserId: string) {
+		const version = await VersionModel.findById(versionId)
+			.populate("sharedWithReaders", "name lastName email")
+			.populate("parentVersion", "title")
+			.lean();
+		if (!version) {
+			throw CustomError.notFound("La versión especificada no existe.");
+		}
+		const project = await ProjectModel.findOne({
+			versions: new mongoose.Types.ObjectId(versionId),
+		}).exec();
+		if (!project) {
+			throw CustomError.notFound("No se encontró el proyecto de la versión.");
+		}
+		if (!project.owner.equals(requestingUserId)) {
+			throw CustomError.unauthorized(
+				"Solo el propietario del proyecto puede ver y gestionar los lectores."
+			);
+		}
+		const readers = (version.sharedWithReaders || []).map((r: any) => ({
+			id: r._id.toString(),
+			email: r.email,
+			name: r.name,
+			lastName: r.lastName,
+		}));
+		return {
+			version: {
+				id: (version._id as any).toString(),
+				title: version.title,
+				state: version.state,
+				parentVersion: version.parentVersion
+					? {
+							id: (version.parentVersion as any)._id.toString(),
+							title: (version.parentVersion as any).title,
+					  }
+					: null,
+			},
+			readers,
+		};
+	}
+
+	async removeReaderFromVersion({
+		versionId,
+		readerId,
+		requestingUserId,
+	}: {
+		versionId: string;
+		readerId: string;
+		requestingUserId: string;
+	}) {
+		const version = await VersionModel.findById(versionId).exec();
+		if (!version) {
+			throw CustomError.notFound("La versión especificada no existe.");
+		}
+		const project = await ProjectModel.findOne({
+			versions: version._id,
+		}).exec();
+		if (!project) {
+			throw CustomError.notFound("No se encontró el proyecto de la versión.");
+		}
+		if (!project.owner.equals(requestingUserId)) {
+			throw CustomError.unauthorized(
+				"Solo el propietario del proyecto puede remover lectores."
+			);
+		}
+		await VersionModel.updateOne(
+			{ _id: versionId },
+			{ $pull: { sharedWithReaders: new mongoose.Types.ObjectId(readerId) } }
+		).exec();
+		return { message: "Lector removido correctamente." };
+	}
+
+	async getSharedVersionsForUser(userId: string) {
+		const versions = await VersionModel.find({
+			sharedWithReaders: new mongoose.Types.ObjectId(userId),
+			state: { $ne: "ELIMINADA" },
+		})
+			.populate("parentVersion", "title")
+			.lean();
+		const result: {
+			id: string;
+			title: string;
+			state: string;
+			parentVersion: { id: string; title: string } | null;
+			projectId: string;
+			projectTitle: string;
+		}[] = [];
+		for (const v of versions) {
+			const project = await ProjectModel.findOne({
+				versions: (v as any)._id,
+			})
+				.select("_id title")
+				.lean();
+			if (project) {
+				result.push({
+					id: (v as any)._id.toString(),
+					title: (v as any).title,
+					state: (v as any).state,
+					parentVersion: (v as any).parentVersion
+						? {
+								id: (v as any).parentVersion._id.toString(),
+								title: (v as any).parentVersion.title,
+						  }
+						: null,
+					projectId: (project as any)._id.toString(),
+					projectTitle: (project as any).title,
+				});
+			}
+		}
+		return { versions: result };
 	}
 }
