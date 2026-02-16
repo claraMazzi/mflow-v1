@@ -71,7 +71,6 @@ function PropertyEditor({
 	customRegisterField,
 	handleRemoveItemFromList,
 }: PropertyEditorProps) {
-
 	return (
 		<div className="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg border">
 			<div className="flex items-end gap-3">
@@ -112,9 +111,9 @@ function PropertyEditor({
 					</label>
 					<select
 						{...customRegisterField({
-				name: `entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.include` as Path<ConceptualModel>,
-				propertyPath: `entities:${entityId}.properties:${field._id}.detailLevelDecision.include`,
-			})}
+							name: `entities.${entityIndex}.properties.${propIndex}.detailLevelDecision.include` as Path<ConceptualModel>,
+							propertyPath: `entities:${entityId}.properties:${field._id}.detailLevelDecision.include`,
+						})}
 						className={cn(
 							"w-full px-3 py-2 border-2 border-gray-200 rounded-md focus:border-purple-400 focus:outline-none",
 							!hasEditingRights ? "bg-gray-100 cursor-not-allowed" : "bg-white",
@@ -371,10 +370,10 @@ export default function Detalle({
 							{/* Collapsible Content */}
 							<div
 								className={cn(
-									"overflow-hidden transition-all duration-300 ease-in-out",
+									"transition-all duration-300 ease-in-out",
 									isCollapsed
-										? "max-h-0 opacity-0"
-										: "max-h-[500px] opacity-100",
+										? "max-h-0 opacity-0 overflow-hidden"
+										: "max-h-[500px] overflow-y-auto opacity-100",
 								)}
 							>
 								<div className="p-4 pt-0 space-y-4">
