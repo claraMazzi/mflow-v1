@@ -15,6 +15,8 @@ export type VersionViewData = {
 		state: VersionState;
 		conceptualModel: ConceptualModel;
 	};
+	/** When false, user is a shared reader and cannot export or request revision */
+	canExportAndRequestRevision?: boolean;
 	project: {
 		id: string;
 		title: string;

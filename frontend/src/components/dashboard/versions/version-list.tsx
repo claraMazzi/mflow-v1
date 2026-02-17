@@ -9,6 +9,7 @@ import { useUI } from "@components/ui/context";
 import { VersionEntity } from "#types/version";
 import { CreateVersionForm } from "./forms/create-version-form";
 import { RequestRevisionForm } from "./forms/request-revision-form";
+import { ShareVersionForm } from "./forms/share-version-form";
 import { DeleteVersionResult } from "@src/hooks/use-versions";
 import cn from "clsx";
 
@@ -94,7 +95,7 @@ const VersionList = ({
 	const { openModal, closeModal } = useUI();
 	const [isDeleting, setIsDeleting] = useState(false);
 
-	const handleCreateNewVersion = () => {
+	const handleCreateNewVersion = (version?: VersionEntity) => {
 		openModal({
 			name: "fullscreen-modal",
 			title: "Crear nueva versión",
@@ -104,6 +105,7 @@ const VersionList = ({
 				<CreateVersionForm
 					existingVersions={versions}
 					projectId={projectId}
+					defaultParentVersionId={version?.id}
 					onSuccess={() => {
 						refreshVersions();
 					}}
@@ -112,59 +114,6 @@ const VersionList = ({
 			),
 		});
 	};
-
-	// const handleFinalizeVersion = (version: VersionEntity) => {
-	// 	openModal({
-	// 		name: "fullscreen-modal",
-	// 		title: "Finalizar Versión",
-	// 		size: "md",
-	// 		showCloseButton: false,
-	// 		content: (
-	// 			<div className="flex max-w-md flex-col mx-auto justify-center items-center p-4 space-y-4">
-	// 				<p className="text-base text-center flex flex-col items-center gap-2">
-	// 					¿Está seguro que desea finalizar la versión{" "}
-	// 					<span className="font-bold">{version.title}</span>?
-	// 					<span className="font-bold">Esta operación no es reversible.</span>
-	// 				</p>
-	// 				<div className="flex justify-center space-x-3 mt-3 w-full">
-	// 					<Button variant="outline" size="sm" onClick={closeModal}>
-	// 						Cancelar
-	// 					</Button>
-	// 					<Button
-	// 						size="sm"
-	// 						onClick={async () => {
-	// 							// TODO: Implement API call to finalize version
-	// 							// Mock implementation
-	// 							try {
-	// 								if (!session?.auth) {
-	// 									console.error("Not authenticated");
-	// 									return;
-	// 								}
-	// 								// Mock: This would be the actual API call
-	// 								// const response = await fetch(
-	// 								//   `${process.env.NEXT_PUBLIC_API_URL}/api/versions/${version.id}/finalize`,
-	// 								//   {
-	// 								//     method: "POST",
-	// 								//     headers: {
-	// 								//       Authorization: `Bearer ${session.auth}`,
-	// 								//     },
-	// 								//   }
-	// 								// );
-	// 								console.log("Finalizing version:", version.id);
-	// 								closeModal();
-	// 								refreshVersions();
-	// 							} catch (error) {
-	// 								console.error("Error finalizing version:", error);
-	// 							}
-	// 						}}
-	// 					>
-	// 						Aceptar
-	// 					</Button>
-	// 				</div>
-	// 			</div>
-	// 		),
-	// 	});
-	// };
 
 	const handleExportVersion = async (version: VersionEntity) => {
 		// Navigate to version page where export functionality is available
@@ -262,12 +211,29 @@ const VersionList = ({
 					// Only show "Solicitar Revisión" button if version state is "FINALIZADA"
 					const canRequestRevision = version.state === "FINALIZADA";
 
+					// Share (read-only) for versions not in "EN EDICION"
+					const canShareVersion = version.state !== "EN EDICION" && version.state !== "ELIMINADA";
+
+					const handleShareVersion = (v: VersionEntity) => {
+						openModal({
+							name: "fullscreen-modal",
+							title: "Compartir versión (solo lectura)",
+							size: "md",
+							showCloseButton: false,
+							content: (
+								<ShareVersionForm
+									version={v}
+								/>
+							),
+						});
+					};
+
 					const popoverOptions = [
 						{
 							content: (
 								<Button
 									variant={"optionList"}
-									onClick={() => handleCreateNewVersion()}
+									onClick={() => handleCreateNewVersion(version)}
 									className={cn({ hidden: !canCreateFromVersion })}
 								>
 									Crear Nueva Versión
@@ -295,6 +261,17 @@ const VersionList = ({
 								</Button>
 							),
 						},
+						{
+							content: (
+								<Button
+									variant={"optionList"}
+									onClick={() => handleShareVersion(version)}
+									className={cn({ hidden: !canShareVersion })}
+								>
+									Compartir
+								</Button>
+							),
+						},
 						// Only show delete option if user is the project owner
 						...(isOwner
 							? [
@@ -318,7 +295,6 @@ const VersionList = ({
 							version.state === "PENDIENTE DE REVISION" || 
 							version.state === "REVISADA";
 
-							console.log("isReadOnly: ", isReadOnly);
 						
 						const versionRoute = isReadOnly
 							? `/versions/${version.id}/view`

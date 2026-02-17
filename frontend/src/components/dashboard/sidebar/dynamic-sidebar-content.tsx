@@ -84,7 +84,7 @@ export const DynamicSidebarContent = memo(function DynamicSidebarContent({
                             >
                               <div className="w-12">{subItem.icon}</div>
 
-                              <span>{subItem.title}</span>
+                              <span className="group-data-[state=collapsed]:hidden">{subItem.title}</span>
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
@@ -99,7 +99,7 @@ export const DynamicSidebarContent = memo(function DynamicSidebarContent({
                   <Link href={item.slug} className="flex gap-2">
                     <div className="">{item.icon}</div>
 
-                    <span>{item.title}</span>
+                    <span className="group-data-[state=collapsed]:hidden">{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
               )}

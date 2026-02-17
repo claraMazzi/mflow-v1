@@ -1,6 +1,10 @@
 import { useSession } from "@node_modules/next-auth/react";
 import { VersionEntity } from "@src/types/version";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	getSharedVersions,
+	type SharedVersionItem,
+} from "@components/dashboard/versions/actions/share-version";
 
 // Minimum time between automatic refetches (5 seconds)
 const REFETCH_COOLDOWN = 5000;
@@ -28,6 +32,7 @@ export const useVersionsOfProject = ({
 			setError(
 				"Debe estar logueado para poder obtener las versiones del projecto."
 			);
+			setIsLoading(false);
 			return;
 		}
 		try {
@@ -124,6 +129,51 @@ export const useVersionsOfProject = ({
 		error,
 		refreshVersions: fetchVersions,
 		deleteVersion,
+	};
+};
+
+export const useSharedVersions = () => {
+	const { data: session } = useSession();
+	const [versions, setVersions] = useState<SharedVersionItem[]>([]);
+	const [isLoading, setIsLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+
+	const fetchVersions = useCallback(async () => {
+		if (!session?.auth) {
+			setVersions([]);
+			setIsLoading(false);
+			return;
+		}
+		try {
+			setIsLoading(true);
+			setError(null);
+			const result = await getSharedVersions();
+			if (result.data) {
+				setVersions(result.data.versions);
+			} else {
+				setError(result.error ?? null);
+				setVersions([]);
+			}
+		} catch (err) {
+			setError("No fue posible obtener las versiones compartidas.");
+			console.error("Error fetching shared versions:", err);
+			setVersions([]);
+		} finally {
+			setIsLoading(false);
+		}
+	}, [session?.auth]);
+
+	useEffect(() => {
+		if (session?.auth) {
+			fetchVersions();
+		}
+	}, [fetchVersions, session?.auth]);
+
+	return {
+		versions,
+		isLoading,
+		error,
+		refreshVersions: fetchVersions,
 	};
 };
 

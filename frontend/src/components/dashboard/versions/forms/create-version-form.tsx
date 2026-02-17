@@ -27,6 +27,8 @@ export type CreateVersionFormData = {
 interface CreateVersionFormProps {
 	projectId: string;
 	existingVersions: VersionEntity[];
+	/** When opening the form from a version card, preselect that version as parent */
+	defaultParentVersionId?: string;
 	onSuccess?: () => void;
 	onClose?: () => void;
 }
@@ -39,6 +41,7 @@ const initialState: ActionState = {
 export const CreateVersionForm = ({
 	projectId,
 	existingVersions,
+	defaultParentVersionId,
 	onSuccess,
 	onClose,
 }: CreateVersionFormProps) => {
@@ -47,21 +50,26 @@ export const CreateVersionForm = ({
 		initialState
 	);
 
-	// Track whether a parent version is selected (not "none")
-	const [hasParentSelected, setHasParentSelected] = useState(false);
-	const [migrateTodoItems, setMigrateTodoItems] = useState(true);
-
 	// Filter versions that are valid to be parent versions
 	const validParentVersions = useMemo(() => {
-		return existingVersions.filter((v) => 
+		return existingVersions.filter((v) =>
 			VALID_PARENT_VERSION_STATES.includes(v.state)
 		);
 	}, [existingVersions]);
 
+	const isValidDefaultParent = Boolean(
+		defaultParentVersionId &&
+			validParentVersions.some((v) => v.id === defaultParentVersionId)
+	);
+
+	// Track whether a parent version is selected (not "none")
+	const [hasParentSelected, setHasParentSelected] = useState(isValidDefaultParent);
+	const [migrateTodoItems, setMigrateTodoItems] = useState(true);
+
 	const form = useForm<CreateVersionFormData>({
 		defaultValues: {
 			title: "",
-			parentVersionId: undefined,
+			parentVersionId: isValidDefaultParent ? defaultParentVersionId : undefined,
 			migrateTodoItems: true,
 		},
 		mode: "onBlur",
@@ -150,7 +158,7 @@ export const CreateVersionForm = ({
 				<Select
 					onValueChange={handleParentVersionChange}
 					disabled={isPending}
-					defaultValue="none"
+					defaultValue={isValidDefaultParent ? defaultParentVersionId : "none"}
 				>
 					<SelectTrigger>
 						<SelectValue placeholder="Seleccionar versión padre" />
@@ -172,7 +180,7 @@ export const CreateVersionForm = ({
 			</div>
 
 			{/* Checkbox - only visible when a parent version is selected */}
-			{hasParentSelected && (
+			{/* {hasParentSelected && (
 				<div className="flex items-center space-x-2">
 					<Checkbox
 						id="migrateTodoItems"
@@ -187,7 +195,7 @@ export const CreateVersionForm = ({
 						Migrar To Do items a la nueva versión
 					</label>
 				</div>
-			)}
+			)} */}
 
 			{state?.error && (
 				<p className="text-sm text-red-600">{state.error}</p>

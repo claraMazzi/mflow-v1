@@ -1,10 +1,11 @@
 "use client";
 
-import { startTransition, useActionState } from "react";
+import { startTransition, useEffect, useActionState } from "react";
 import { Button } from "@components/ui/common/button";
 import { ProjectEntity } from "#types/project";
 import { acceptProjectCollaborationInvitation } from "../actions/share-project";
 import { useRouter } from "next/navigation";
+
 export type ShareProjectFormData = {
   id: string;
   collaborators?: string[];
@@ -30,6 +31,12 @@ export const ProjectInvitationForm = ({
   );
   const router = useRouter();
 
+  useEffect(() => {
+    if (inviteState?.success) {
+      router.push("/dashboard/shared/projects");
+    }
+  }, [inviteState?.success, router]);
+
   const acceptInvitation = async () => {
     startTransition(() => {
       if (token) inviteAction(token);
@@ -37,7 +44,14 @@ export const ProjectInvitationForm = ({
   };
 
   if (inviteState?.success) {
-    router.push("/dashboard/shared/projects");
+    return (
+      <div className="flex flex-col items-center gap-2">
+        <h1 className="text-3xl font-medium text-center text-purple-600">
+          MFLOW
+        </h1>
+        <p className="text-gray-600">Redirigiendo...</p>
+      </div>
+    );
   }
 
   if (!project || !token)

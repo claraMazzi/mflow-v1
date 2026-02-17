@@ -1,5 +1,6 @@
 import {
 	DeletionRequestModel,
+	NotificationType,
 	ProjectModel,
 	ProjectState,
 	UserModel,
@@ -17,6 +18,7 @@ import { jwtAdapter } from "../../config";
 import { ShareProjectLinkDto } from "../../domain/dtos/project/share-project-link.dto";
 import mongoose, { Schema } from "mongoose";
 import { ProjectInviteTokenPayload } from "../../types/tokens";
+import { notificationService } from "./notification.service";
 
 export class ProjectService {
 	constructor(
@@ -29,18 +31,13 @@ export class ProjectService {
 
 	private sendEmailInvitationLink = async ({
 		email,
-		requestingUser,
-		projectId,
+		link,
 	}: {
 		requestingUser: string;
 		projectId: string;
 		email: string;
+		link: string;
 	}) => {
-		const link = await this.generateProjectSharingLink({
-			requestingUser,
-			projectId,
-		});
-
 		const html = `<h1>Has sido invitado/a a colaborar en un proyecto!</h1>
       <p> Hace Click en el siguiente <a href=${link}>link</a> para aceptar la invitación </p>
       <p><strong>Recordá que en caso de no tener cuenta primero deberás registrarte para poder acceder a la invitación</strong></p>`;
@@ -70,15 +67,51 @@ export class ProjectService {
 			);
 
 		const uniqueEmails = new Set<string>(shareProjectDto.emails);
+		const { fullLink, token: shareToken } =
+			await this.generateProjectSharingLinkAndToken({
+				requestingUser: shareProjectDto.senderId,
+				projectId: shareProjectDto.projectId,
+			});
+
 		await Promise.all(
-			Array.from(uniqueEmails).map((email) => {
-				return this.sendEmailInvitationLink({
+			Array.from(uniqueEmails).map((email) =>
+				this.sendEmailInvitationLink({
 					email,
 					requestingUser: shareProjectDto.senderId,
 					projectId: shareProjectDto.projectId,
-				});
-			})
+					link: fullLink,
+				})
+			)
 		);
+
+		// In-app notification for recipients who are already platform users
+		for (const email of uniqueEmails) {
+			try {
+				const user = await UserModel.findOne({
+					email,
+					deletedAt: null,
+				}).exec();
+				if (!user) continue;
+				if (project.owner.equals(user._id)) continue;
+				if (project.collaborators.some((c) => c.equals(user._id)))
+					continue;
+				await notificationService.createNotification({
+					recipientId: user._id.toString(),
+					type: NotificationType.PROJECT_SHARED,
+					title: "Te han invitado a un proyecto",
+					message: `Te han invitado a colaborar en el proyecto "${project.title}".`,
+					link: `/share/projects?token=${shareToken}`,
+					relatedProjectId: shareProjectDto.projectId,
+					triggeredById: shareProjectDto.senderId,
+				});
+			} catch (notifError) {
+				console.error(
+					"Error creating project-share notification for",
+					email,
+					notifError
+				);
+			}
+		}
 
 		return {
 			message: "Las invitaciones fueron enviadas correctamente.",
@@ -117,17 +150,32 @@ export class ProjectService {
 		requestingUser,
 		projectId,
 	}: ProjectInviteTokenPayload) {
-		const token = await jwtAdapter.generateToken(
+		const { fullLink } = await this.generateProjectSharingLinkAndToken({
+			requestingUser,
+			projectId,
+		});
+		return fullLink;
+	}
+
+	/** Returns { fullLink, token } for emails and in-app notification links. */
+	private async generateProjectSharingLinkAndToken({
+		requestingUser,
+		projectId,
+	}: ProjectInviteTokenPayload): Promise<{ fullLink: string; token: string }> {
+		const raw = await jwtAdapter.generateToken(
 			{ requestingUser, projectId },
 			"7d"
 		);
-
-		if (!token)
+		if (typeof raw !== "string") {
 			throw CustomError.internalServer(
 				"Se produjo un error al generar el link para compartir el proyecto."
 			);
-
-		return `${this.frontEndUrl}/share/projects/?token=${token}`;
+		}
+		const token: string = raw;
+		return {
+			fullLink: `${this.frontEndUrl}/share/projects/?token=${token}`,
+			token,
+		};
 	}
 
 	//get user active projects
@@ -198,6 +246,39 @@ export class ProjectService {
 
 		return {
 			project: projectEntity,
+		};
+	}
+
+	/**
+	 * Returns whether the user has collaborator (or owner/admin) access to the project.
+	 * Used to gate access to the project versions list; shared readers only have access to shared versions, not the full list.
+	 */
+	async canUserAccessProjectVersions({
+		projectId,
+		userId,
+		roles = [],
+	}: {
+		projectId: string;
+		userId: string;
+		roles?: string[];
+	}): Promise<{ canAccessVersions: boolean }> {
+		const project = await ProjectModel.findById(projectId)
+			.select("owner collaborators")
+			.lean()
+			.exec();
+
+		if (!project)
+			throw CustomError.notFound(
+				"El proyecto solicitado no existe o fue eliminado."
+			);
+
+		const isOwner = (project.owner as any).toString() === userId;
+		const isCollaborator = (project.collaborators || []).some(
+			(c: any) => c.toString() === userId
+		);
+
+		return {
+			canAccessVersions: isOwner || isCollaborator,
 		};
 	}
 
@@ -440,6 +521,20 @@ export class ProjectService {
 		try {
 			project.collaborators.push(user._id);
 			await project.save();
+
+			try {
+				await notificationService.createNotification({
+					recipientId: user._id.toString(),
+					type: NotificationType.PROJECT_SHARED,
+					title: "Te han invitado a un proyecto",
+					message: `Te han añadido como colaborador del proyecto "${project.title}".`,
+					link: `/dashboard/projects/${projectId}/versions`,
+					relatedProjectId: projectId,
+					triggeredById: requestingUser,
+				});
+			} catch (notifError) {
+				console.error("Error creating project-share notification:", notifError);
+			}
 
 			const projectEntity = ProjectEntity.fromObject(project);
 
