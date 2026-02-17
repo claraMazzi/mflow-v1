@@ -32,6 +32,7 @@ export const useVersionsOfProject = ({
 			setError(
 				"Debe estar logueado para poder obtener las versiones del projecto."
 			);
+			setIsLoading(false);
 			return;
 		}
 		try {

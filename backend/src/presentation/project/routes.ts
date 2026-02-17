@@ -36,7 +36,10 @@ export class ProjectRoutes {
     //getById
     router.get("/:projectId", controller.getProjectById);
 
-    //getById
+    // Check if user can access project versions list (owner/collaborator/admin; not shared-reader only)
+    router.get("/:projectId/can-access-versions", controller.getCanAccessProjectVersions);
+
+    //getById with versions
     router.get("/:projectId/versions", controller.getProjectByIdWithVersions);
 
     //Update project data - name and desc

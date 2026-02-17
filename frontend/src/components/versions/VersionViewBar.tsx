@@ -134,8 +134,12 @@ const VersionViewBar = ({
 						<ArrowLeft
 							className="w-5 h-5 text-gray-500 cursor-pointer hover:text-gray-700 transition-colors"
 							onClick={() =>
-							router.push(`/dashboard/projects/${projectId}/versions`)
-						}
+								router.push(
+									canExportAndRequestRevision
+										? `/dashboard/projects/${projectId}/versions`
+										: "/dashboard/shared/artifacts"
+								)
+							}
 						/>
 						<div className="flex flex-col">
 							<div className="flex items-center gap-2">

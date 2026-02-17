@@ -2,7 +2,10 @@ export type NotificationType =
 	| "REVISION_COMPLETED"
 	| "REVISION_REQUESTED"
 	| "PROJECT_SHARED"
-	| "VERSION_CREATED";
+	| "VERSION_CREATED"
+	| "VERSION_SHARED"
+	| "DELETION_REQUEST_APPROVED"
+	| "DELETION_REQUEST_DENIED";
 
 export type Notification = {
 	id: string;

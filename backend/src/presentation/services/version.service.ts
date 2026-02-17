@@ -10,6 +10,8 @@ import { VersionImage, VersionImageModel } from "../../data/mongo/models/version
 import { jwtAdapter } from "../../config";
 import { VersionShareTokenPayload } from "../../types/tokens";
 import { EmailService } from "./email.service";
+import { notificationService } from "./notification.service";
+import { NotificationType } from "../../data";
 import {
 	Assumption,
 	Input,
@@ -1115,6 +1117,28 @@ export class VersionService {
 		return `${this.frontEndUrl}/share/versions/?token=${token}`;
 	}
 
+	/** Returns { fullLink, token } for use in emails and in-app notification links. */
+	private async generateVersionShareLinkAndToken(
+		payload: VersionShareTokenPayload
+	): Promise<{ fullLink: string; token: string }> {
+		if (!this.frontEndUrl) {
+			throw CustomError.internalServer(
+				"Configuración de compartir versión no disponible."
+			);
+		}
+		const raw = await jwtAdapter.generateToken(payload, "7d");
+		if (typeof raw !== "string") {
+			throw CustomError.internalServer(
+				"Se produjo un error al generar el link para compartir la versión."
+			);
+		}
+		const token: string = raw;
+		return {
+			fullLink: `${this.frontEndUrl}/share/versions/?token=${token}`,
+			token,
+		};
+	}
+
 	async getVersionSharingLink(dto: ShareVersionLinkDto) {
 		const version = await VersionModel.findById(dto.versionId).exec();
 		if (!version) {
@@ -1179,10 +1203,11 @@ export class VersionService {
 			);
 		}
 		const uniqueEmails = new Set<string>(dto.emails);
-		const link = await this.generateVersionShareLink({
-			requestingUser: dto.senderId,
-			versionId: dto.versionId,
-		});
+		const { fullLink: link, token: shareToken } =
+			await this.generateVersionShareLinkAndToken({
+				requestingUser: dto.senderId,
+				versionId: dto.versionId,
+			});
 		const html = `<h1>Te han compartido una versión para solo lectura</h1>
       <p>Hacé clic en el siguiente <a href="${link}">link</a> para acceder a la versión.</p>
       <p><strong>Recordá que en caso de no tener cuenta primero deberás registrarte para poder acceder.</strong></p>`;
@@ -1192,6 +1217,32 @@ export class VersionService {
 				subject: "MFLOW - Versión compartida para lectura",
 				htmlBody: html,
 			});
+		}
+		// In-app notification for recipients who are already platform users
+		for (const email of uniqueEmails) {
+			try {
+				const user = await UserModel.findOne({
+					email,
+					deletedAt: null,
+				}).exec();
+				if (!user) continue;
+				if (project.owner.equals(user._id)) continue;
+				if (project.collaborators.some((c) => c.equals(user._id))) continue;
+				if (version.sharedWithReaders.some((r) => r.equals(user._id)))
+					continue;
+				await notificationService.createNotification({
+					recipientId: user._id.toString(),
+					type: NotificationType.VERSION_SHARED,
+					title: "Te han invitado a ver una versión",
+					message: `Te han invitado a ver la versión "${version.title}" del proyecto "${project.title}" (solo lectura).`,
+					link: `/share/versions?token=${shareToken}`,
+					relatedProjectId: project._id.toString(),
+					relatedVersionId: version._id.toString(),
+					triggeredById: dto.senderId,
+				});
+			} catch (notifError) {
+				console.error("Error creating version-share notification for", email, notifError);
+			}
 		}
 		return {
 			message: "Las invitaciones se enviaron correctamente.",
@@ -1247,6 +1298,22 @@ export class VersionService {
 		}
 		version.sharedWithReaders.push(user._id);
 		await version.save();
+
+		try {
+			await notificationService.createNotification({
+				recipientId: user._id.toString(),
+				type: NotificationType.VERSION_SHARED,
+				title: "Te han invitado a ver una versión",
+				message: `Te han dado acceso de lectura a la versión "${version.title}" del proyecto "${project.title}".`,
+				link: `/versions/${version._id.toString()}/view`,
+				relatedProjectId: project._id.toString(),
+				relatedVersionId: version._id.toString(),
+				triggeredById: requestingUser,
+			});
+		} catch (notifError) {
+			console.error("Error creating version-share notification:", notifError);
+		}
+
 		return {
 			message: "Se te ha dado acceso de lectura a la versión.",
 			versionId: version._id.toString(),

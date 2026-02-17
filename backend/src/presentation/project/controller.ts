@@ -61,6 +61,25 @@ export class ProjectController {
 			.catch((error) => this.handleError(error, res));
 	};
 
+	// Check if user has collaborator/owner access to project versions (not shared-reader only)
+	getCanAccessProjectVersions = (req: Request, res: Response) => {
+		const { projectId } = req.params;
+		const session = req.session!;
+		if (!projectId) {
+			return res
+				.status(400)
+				.json({ error: "El identificador del proyecto es obligatorio." });
+		}
+		this.projectService
+			.canUserAccessProjectVersions({
+				projectId,
+				userId: session.userId,
+				roles: session.roles || [],
+			})
+			.then((result) => res.json(result))
+			.catch((error) => this.handleError(error, res));
+	};
+
 	// Get a specific project with its versions
 	getProjectByIdWithVersions = (req: Request, res: Response) => {
 		const { projectId } = req.params;
