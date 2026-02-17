@@ -201,6 +201,40 @@ export class ProjectService {
 		};
 	}
 
+	/**
+	 * Returns whether the user has collaborator (or owner/admin) access to the project.
+	 * Used to gate access to the project versions list; shared readers only have access to shared versions, not the full list.
+	 */
+	async canUserAccessProjectVersions({
+		projectId,
+		userId,
+		roles = [],
+	}: {
+		projectId: string;
+		userId: string;
+		roles?: string[];
+	}): Promise<{ canAccessVersions: boolean }> {
+		const project = await ProjectModel.findById(projectId)
+			.select("owner collaborators")
+			.lean()
+			.exec();
+
+		if (!project)
+			throw CustomError.notFound(
+				"El proyecto solicitado no existe o fue eliminado."
+			);
+
+		const isOwner = (project.owner as any).toString() === userId;
+		const isCollaborator = (project.collaborators || []).some(
+			(c: any) => c.toString() === userId
+		);
+		const isAdmin = roles.includes(UserRole.ADMIN);
+
+		return {
+			canAccessVersions: isOwner || isCollaborator || isAdmin,
+		};
+	}
+
 	async getProjectByIdWithCollaborators({
 		projectId,
 		userSession,
