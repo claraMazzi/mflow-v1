@@ -59,6 +59,21 @@ const notificationConfig: Record<
 		bgColor: "bg-amber-50",
 		textColor: "text-amber-700",
 	},
+	VERSION_SHARED: {
+		icon: "👁",
+		bgColor: "bg-sky-50",
+		textColor: "text-sky-700",
+	},
+	DELETION_REQUEST_APPROVED: {
+		icon: "✓",
+		bgColor: "bg-green-50",
+		textColor: "text-green-700",
+	},
+	DELETION_REQUEST_DENIED: {
+		icon: "✕",
+		bgColor: "bg-red-50",
+		textColor: "text-red-700",
+	},
 };
 
 interface NotificationItemProps {

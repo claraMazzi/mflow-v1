@@ -43,10 +43,9 @@ const Page = () => {
 						},
 					}
 				);
-				console.log(await response.json());
 				if (response.ok) {
 					const data = await response.json();
-					setCanAccessVersions(data.canAccessVersions === true);
+					setCanAccessVersions(data.canAccessVersions);
 				} else {
 					setCanAccessVersions(false);
 				}
