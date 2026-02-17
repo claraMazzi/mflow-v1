@@ -10,6 +10,8 @@ import { Buffer } from "buffer";
 import { Road_Rage } from "@node_modules/next/font/google";
 import { endpointWriteToDisk } from "@node_modules/next/dist/build/swc/generated-native";
 import { Clock10 } from "@node_modules/lucide-react/dist/lucide-react";
+import JSZip from "jszip";
+import { SheetOverlay } from "@src/components/ui/sheet";
 
 export interface ExportVersionParams {
 	conceptualModel: ConceptualModel;
@@ -20,20 +22,51 @@ export interface ExportVersionParams {
 /**
  * Fetches an image from a URL and returns it as a Buffer
  */
-async function fetchImageAsBuffer(imageUrl: string): Promise<Buffer> {
+async function fetchImageAsArrayBuffer(imageUrl: string) {
 	const response = await fetch(imageUrl);
 	if (!response.ok) {
 		throw new Error(`Failed to fetch image from ${imageUrl}`);
 	}
-	const arrayBuffer = await response.arrayBuffer();
-	return Buffer.from(arrayBuffer);
+
+	const buffer = await response.arrayBuffer();
+
+	const contentType = response.headers.get("Content-Type");
+	let extension = "jpeg";
+
+	if (contentType?.includes("svg")) extension = "svg";
+	else if (contentType?.includes("png")) extension = "png";
+
+	return { extension, buffer };
+}
+
+async function fetchImage({ url, title }: { url: string; title: string }) {
+	try {
+		const response = await fetch(url);
+		if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+		const blob = await response.blob();
+
+		const contentType = response.headers.get("Content-Type");
+		let extension = "jpg";
+
+		if (contentType?.includes("svg")) extension = "svg";
+		else if (contentType?.includes("png")) extension = "png";
+		else if (contentType?.includes("webp")) extension = "webp";
+
+		const filename = `${title}.${extension}`;
+
+		return { filename, data: blob };
+	} catch (error) {
+		console.warn(`Could not fetch image at ${url}:`, error);
+		return null;
+	}
 }
 
 async function convertSvgToHighResPng(
-	svgBuffer: Buffer,
+	svgBuffer: ArrayBuffer,
 	targetWidth: number,
 	targetHeight: number,
-): Promise<Buffer> {
+): Promise<ArrayBuffer> {
 	return new Promise((resolve, reject) => {
 		// Convert SVG buffer to string
 		const svgString = new TextDecoder().decode(svgBuffer);
@@ -76,7 +109,7 @@ async function convertSvgToHighResPng(
 				blob
 					.arrayBuffer()
 					.then((arrayBuffer) => {
-						resolve(Buffer.from(arrayBuffer));
+						resolve(arrayBuffer);
 					})
 					.catch(reject);
 			}, "image/png");
@@ -98,38 +131,21 @@ async function convertSvgToHighResPng(
 function getDiagramImageUrl(
 	diagram: Diagram,
 	imageInfos: Map<string, ImageInfo>,
-	useSvg: boolean = false,
 ): string | null {
 	if (diagram.usePlantText) {
-		// Generate PlantUML image URL
 		if (diagram.plantTextToken) {
-			// Use SVG format for high-quality rendering, PNG for regular display
-			if (useSvg) {
-				return `http://www.plantuml.com/plantuml/svg/${diagram.plantTextToken}`;
-			}
-			return `http://www.plantuml.com/plantuml/img/${diagram.plantTextToken}`;
+			return `http://www.plantuml.com/plantuml/svg/${diagram.plantTextToken}`;
 		}
 	} else {
-		// Get uploaded image URL
 		const imageFileId = diagram.imageFileId;
 		if (imageFileId) {
-			// Check if imageFileId is a populated object (has url property)
-			if (
-				typeof imageFileId === "object" &&
-				imageFileId !== null &&
-				"url" in imageFileId
-			) {
-				// Backend populated the image object, use its URL directly
-				return (imageFileId as { url: string }).url;
-			} else if (typeof imageFileId === "string") {
-				// imageFileId is a string ID, look it up in imageInfos map
-				const imageInfo = imageInfos.get(imageFileId);
-				if (imageInfo?.url) {
-					return imageInfo.url;
-				}
+			const imageInfo = imageInfos.get(imageFileId);
+			if (imageInfo?.url) {
+				return imageInfo.url;
 			}
 		}
 	}
+
 	return null;
 }
 
@@ -301,89 +317,54 @@ function buildSystemDescriptionSheet({
 	);
 }
 
-async function insertDiagram({
-	worksheet,
-	diagram,
-	title,
-	imageInfos,
-	startRow,
-	startCol,
-}: {
-	worksheet: ExcelJS.Worksheet;
-	diagram: Diagram;
-	title: string;
-	imageInfos: NonNullable<ExportVersionParams["imageInfos"]>;
-	startRow: number;
-	startCol: number;
-}) {}
-
-async function buildStructureDiagramSheet({
+async function buildSingleDiagramSheet({
 	workbook,
-	conceptualModel,
+	diagram,
 	imageInfos,
+	sheetTitle,
 }: {
 	imageInfos: NonNullable<ExportVersionParams["imageInfos"]>;
-	conceptualModel: ConceptualModel;
+	diagram: Diagram;
+	sheetTitle: string;
 	workbook: ExcelJS.Workbook;
 }) {
-	const sheet = workbook.addWorksheet("2 - Diagrama de estructura");
+	const sheet = workbook.addWorksheet(sheetTitle);
 
-	// Try to add the structure diagram image
 	try {
-		const isPlantUMLDiagram = conceptualModel.structureDiagram?.usePlantText;
-		// For PlantUML, use SVG for high quality; for uploaded images, use regular URL
-		const imageUrl = getDiagramImageUrl(
-			conceptualModel.structureDiagram,
-			imageInfos,
-			isPlantUMLDiagram,
-		);
+		const imageUrl = getDiagramImageUrl(diagram, imageInfos);
 
-		if (isPlantUMLDiagram) {
-			sheet.addRow([conceptualModel.structureDiagram.plantTextCode]);
+		if (diagram.usePlantText) {
+			sheet.addRow([diagram.plantTextCode]);
 			sheet.getRow(1).height = 800;
 			sheet.getColumn(1).width = 200;
 		}
 
 		if (imageUrl) {
-			// Fetch the image as a buffer
-			let imageBuffer = await fetchImageAsBuffer(imageUrl);
+			let image = await fetchImageAsArrayBuffer(imageUrl);
 
-			// Convert PlantUML SVG to high-resolution PNG (1600x1400)
-			if (isPlantUMLDiagram) {
-				imageBuffer = await convertSvgToHighResPng(imageBuffer, 1600, 1400);
+			if (diagram.usePlantText) {
+				image = {
+					extension: "png",
+					buffer: await convertSvgToHighResPng(image.buffer, 1600, 1400),
+				};
 			}
 
-			// Determine image extension from URL or default to png
-			const extension =
-				imageUrl.includes(".jpg") || imageUrl.includes(".jpeg")
-					? "jpeg"
-					: "png";
-
-			const bufferForExcel: any = imageBuffer;
 			const imageId = workbook.addImage({
-				buffer: bufferForExcel,
-				extension: extension,
+				buffer: image.buffer,
+				extension: image.extension as "jpeg" | "png",
 			});
 
-			sheet.getRow(2).height = 1600;
 			sheet.addImage(imageId, "A2:A2");
-
-			/* 		// Adjust column widths to accommodate the image
-			for (let col = 2; col <= 7; col++) {
-				sheet.getColumn(col).width = 15;
-			}
-
-			// Adjust row heights
-			for (let row = 2; row <= 20; row++) {
-				sheet.getRow(row).height = 20;
-			} */
+			sheet.addImage(imageId, {
+					tl: { col: 0, row: 1 },
+					ext: { width: 1600, height: 1400 }, 
+				});
 		} else {
-			// If no image available, add a message
-			sheet.addRow(["No hay diagrama de estructura disponible"]);
+			sheet.addRow(["No hay diagrama disponible"]);
 		}
 	} catch (error) {
 		console.error("Error adding structure diagram image:", error);
-		sheet.addRow(["Error al cargar el diagrama de estructura"]);
+		sheet.addRow(["Error al cargar el diagrama"]);
 	}
 }
 
@@ -829,6 +810,78 @@ function buildScopeDecisionsSheet({
 	);
 }
 
+async function buildEntitiesSheet({
+	workbook,
+	entities,
+	imageInfos,
+}: {
+	workbook: ExcelJS.Workbook;
+	entities: Entity[];
+	imageInfos: NonNullable<ExportVersionParams["imageInfos"]>;
+}) {
+	const sheet = workbook.addWorksheet("3 - Diagramas de Dinámica");
+
+	if (entities.length === 0) {
+		sheet.addRow(["No hay entidades disponibles"]);
+		return;
+	}
+
+	let currentRow = 1;
+	sheet.getColumn(1).width = 200;
+	for (const entity of entities) {
+		const entityName = entity.name || "Entidad sin nombre";
+		const headerRow = sheet.addRow([`Entidad: ${entityName}`]);
+
+		headerRow.getCell(1).style = MAIN_TITLE_STYLE;
+		currentRow = headerRow.number;
+		currentRow++;
+
+		try {
+			const imageUrl = getDiagramImageUrl(entity.dynamicDiagram, imageInfos);
+
+			if (entity.dynamicDiagram.usePlantText) {
+				sheet.addRow([entity.dynamicDiagram.plantTextCode]);
+				sheet.getRow(currentRow).height = 800;
+				currentRow++;
+			}
+
+			if (imageUrl) {
+				let image = await fetchImageAsArrayBuffer(imageUrl);
+
+				if (entity.dynamicDiagram.usePlantText) {
+					image = {
+						extension: "png",
+						buffer: await convertSvgToHighResPng(image.buffer, 600, 400),
+					};
+				}
+
+				const imageId = workbook.addImage({
+					buffer: image.buffer,
+					extension: image.extension as "jpeg" | "png",
+				});
+
+				sheet.addRow([]);
+				sheet.getRow(currentRow).height = 600;
+				sheet.addImage(imageId, {
+					tl: { col: 0, row: currentRow - 1 },
+					ext: { width: 800, height: 600 }, 
+				});
+				currentRow++;
+			} else {
+				sheet.addRow(["No hay diagrama disponible"]);
+				currentRow++;
+			}
+		} catch (error) {
+			console.error("Error adding structure diagram image:", error);
+			sheet.addRow(["Error al cargar el diagrama"]);
+			currentRow++;
+		}
+
+		sheet.addRow([]);
+		currentRow++;
+	}
+}
+
 /**
  * Exports version data to an Excel file and triggers download
  * @param params - Object containing conceptualModel, optional title, and optional imageInfos
@@ -847,123 +900,18 @@ export async function exportVersionToExcel({
 		assumptions: conceptualModel.assumptions,
 	});
 
-	await buildStructureDiagramSheet({
+	await buildSingleDiagramSheet({
 		workbook,
-		conceptualModel,
+		diagram: conceptualModel.structureDiagram,
+		sheetTitle: "2 - Diagrama de Estructura",
 		imageInfos,
 	});
 
-	// Sheet 3: Diagramas de dinamica
-	const sheet3 = workbook.addWorksheet("3 - Diagramas de dinamica");
-
-	// Add dynamic diagrams for each entity
-	if (conceptualModel.entities && conceptualModel.entities.length > 0) {
-		let currentRow = 1;
-
-		for (const entity of conceptualModel.entities) {
-			// Add entity name as header
-			const entityName = entity.name || "Entidad sin nombre";
-			sheet3.addRow([`Entidad: ${entityName}`]);
-			currentRow = sheet3.rowCount;
-
-			// Style the header row
-			const headerRow = sheet3.getRow(currentRow);
-			headerRow.font = { bold: true, size: 12 };
-			headerRow.height = 25;
-
-			// Try to add the dynamic diagram image
-			try {
-				const isPlantUMLDiagram = entity.dynamicDiagram?.usePlantText;
-				// For PlantUML, use SVG for high quality; for uploaded images, use regular URL
-				const imageUrl = getDiagramImageUrl(
-					entity.dynamicDiagram,
-					imageInfos,
-					isPlantUMLDiagram,
-				);
-
-				if (imageUrl) {
-					// Fetch the image as a buffer
-					let imageBuffer = await fetchImageAsBuffer(imageUrl);
-
-					// Convert PlantUML SVG to high-resolution PNG (600x400)
-					if (isPlantUMLDiagram) {
-						imageBuffer = await convertSvgToHighResPng(imageBuffer, 600, 400);
-					}
-
-					// Determine image extension from URL or default to png
-					const extension =
-						imageUrl.includes(".jpg") || imageUrl.includes(".jpeg")
-							? "jpeg"
-							: "png";
-
-					// Add image to workbook
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const bufferForExcel: any = imageBuffer;
-					const imageId = workbook.addImage({
-						buffer: bufferForExcel,
-						extension: extension,
-					});
-
-					// Add image to sheet, starting from the row after the entity name
-					// Each image will be 600x400 pixels for good readability
-					// currentRow is 1-based (from rowCount), but addImage uses 0-based indexing
-					// So if entity name is in row 1 (1-based), image should start in row 2 (1-based) = index 1 (0-based)
-					// Therefore: row index = currentRow (which is already the next row in 0-based terms)
-					const imageStartRow0Based = currentRow; // currentRow is 1-based, but equals the 0-based index for next row
-					sheet3.addImage(imageId, {
-						tl: { col: 0, row: imageStartRow0Based }, // Top-left: Column A (index 0), Row after entity name
-						ext: { width: 600, height: 400 }, // Set explicit dimensions in pixels
-					});
-
-					// Adjust column widths to accommodate the image
-					for (let col = 0; col < 7; col++) {
-						const column = sheet3.getColumn(col + 1);
-						if (!column.width || column.width < 15) {
-							column.width = 15;
-						}
-					}
-
-					// Adjust row heights for the image area
-					// imageStartRow0Based is 0-based, getRow uses 1-based, so we add 1
-					const imageStartRow1Based = imageStartRow0Based + 1;
-					for (
-						let row = imageStartRow1Based;
-						row <= imageStartRow1Based + 20;
-						row++
-					) {
-						const rowObj = sheet3.getRow(row);
-						if (!rowObj.height || rowObj.height < 20) {
-							rowObj.height = 20;
-						}
-					}
-
-					// Add spacing after the image
-					// Update currentRow to be 1-based for next iteration
-					currentRow = imageStartRow1Based + 21;
-				} else {
-					// No diagram available for this entity
-					sheet3.addRow([`No hay diagrama para la entidad: ${entityName}`]);
-					currentRow = sheet3.rowCount;
-				}
-			} catch (error) {
-				console.error(
-					`Error adding dynamic diagram for entity ${entityName}:`,
-					error,
-				);
-				sheet3.addRow([
-					`Error al cargar el diagrama para la entidad: ${entityName}`,
-				]);
-				currentRow = sheet3.rowCount;
-			}
-
-			// Add spacing between entities
-			currentRow++;
-			sheet3.addRow([]); // Empty row for spacing
-			currentRow = sheet3.rowCount;
-		}
-	} else {
-		sheet3.addRow(["No hay entidades disponibles"]);
-	}
+	await buildEntitiesSheet({
+		workbook,
+		entities: conceptualModel.entities,
+		imageInfos,
+	});
 
 	buildInputsOutputsSheet({
 		workbook,
@@ -979,15 +927,70 @@ export async function exportVersionToExcel({
 		entities: conceptualModel.entities,
 	});
 
-	// Generate Excel file and download
-	const buffer = await workbook.xlsx.writeBuffer();
-	const blob = new Blob([buffer], {
-		type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	await buildSingleDiagramSheet({
+		workbook,
+		diagram: conceptualModel.flowDiagram,
+		sheetTitle: "6 - Diagrama de Flujo",
+		imageInfos,
 	});
-	const url = window.URL.createObjectURL(blob);
+
+	const zip = new JSZip();
+
+	// 1. Generate the Excel buffer
+	const excelBuffer = await workbook.xlsx.writeBuffer();
+
+	zip.file(`${title}_export.xlsx`, excelBuffer);
+	const structureDiagramUrl = getDiagramImageUrl(
+		conceptualModel.structureDiagram,
+		imageInfos,
+	);
+	if (structureDiagramUrl) {
+		const imageData = await fetchImage({
+			url: structureDiagramUrl,
+			title: "Diagrama de Estructura",
+		});
+		if (imageData) {
+			zip.file(imageData.filename, imageData.data);
+		}
+	}
+
+	const imagePromises = conceptualModel.entities.map(async (entity, index) => {
+		const entityDiagramUrl = getDiagramImageUrl(
+			entity.dynamicDiagram,
+			imageInfos,
+		);
+		if (entityDiagramUrl) {
+			const imageData = await fetchImage({
+				url: entityDiagramUrl,
+				title: `(${index + 1}) Diagrama de Dinámica - Entidad ${entity.name}`,
+			});
+			if (imageData) {
+				zip.file(imageData.filename, imageData.data);
+			}
+		}
+	});
+
+	await Promise.all(imagePromises);
+
+	const flowDiagramUrl = getDiagramImageUrl(
+		conceptualModel.flowDiagram,
+		imageInfos,
+	);
+	if (flowDiagramUrl) {
+		const imageData = await fetchImage({
+			url: flowDiagramUrl,
+			title: "Diagrama de Flujo",
+		});
+		if (imageData) {
+			zip.file(imageData.filename, imageData.data);
+		}
+	}
+
+	const zipBlob = await zip.generateAsync({ type: "blob" });
+	const url = window.URL.createObjectURL(zipBlob);
 	const link = document.createElement("a");
 	link.href = url;
-	link.download = `${title}_export.xlsx`;
+	link.download = `${title}_export.zip`; // Change extension to .zip
 	document.body.appendChild(link);
 	link.click();
 	document.body.removeChild(link);
