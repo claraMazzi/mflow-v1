@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useUI } from "@components/ui/context";
 import { ModifyProjectForm } from "./forms/modify-project-form";
 import { ProjectEntity, ProjectState } from "#types/project";
-import { DeletionRequestForm } from "./forms/delition-request-form";
+import { DeletionRequestForm } from "./forms/deletion-request-form";
 import cn from "clsx";
 import { ShareProjectForm } from "./forms/share-project-form";
 
