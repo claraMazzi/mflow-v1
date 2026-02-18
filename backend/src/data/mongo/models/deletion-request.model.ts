@@ -1,9 +1,9 @@
 import { Schema, model } from "mongoose";
 
 export enum DeletionRequestState {
-  APPROVED = "ACEPTADA",
-  PENDING = "PENDIENTE",
-  DENIED = "RECHAZADA",
+	APPROVED = "ACEPTADA",
+	PENDING = "PENDIENTE",
+	DENIED = "RECHAZADA",
 }
 
 export const DELETION_REQUEST_STATES = Object.values(DeletionRequestState);
@@ -34,14 +34,17 @@ const deletionRequestSchema = new Schema(
 			enum: DELETION_REQUEST_STATES,
 			default: DeletionRequestState.PENDING,
 		},
-		reviewedAt: Date,
+		reviewedAt: {
+			type: Date,
+			default: null,
+		},
 	},
-	{ timestamps: { createdAt: "registeredAt", updatedAt: false } }
+	{ timestamps: { createdAt: "registeredAt", updatedAt: false } },
 	//{ timestamps: true }
 	//Renamed createdAt field so that its name is more similar to the diagram
 ); //https://mongoosejs.com/docs/timestamps.html
 
 export const DeletionRequestModel = model(
 	"DeletionRequest",
-	deletionRequestSchema
+	deletionRequestSchema,
 );
