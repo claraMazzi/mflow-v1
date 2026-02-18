@@ -23,6 +23,7 @@ export class VersionRoutes {
 
 		// Version CRUD routes
 		router.post("/", controller.createVersion);
+		router.get("/:versionId/check-access", controller.checkVersionAccess);
 		router.get("/:versionId/view", controller.getVersionForReadOnlyView);
 		router.delete("/:versionId", controller.deleteVersion);
 

@@ -50,7 +50,7 @@ import { FinalizeVersionModal } from "@components/versions/FinalizeVersionModal"
 import { toast } from "sonner";
 import { FinalizeVersionResultModal } from "@components/versions/FinalizeVersionResultModal";
 import { useRouter } from "next/navigation";
-import { getVersionForReadOnlyView } from "@components/dashboard/versions/actions/get-version-view";
+import { checkVersionAccess } from "@components/dashboard/versions/actions/get-version-view";
 import { Loader2 } from "lucide-react";
 
 
@@ -115,22 +115,21 @@ export default function Page({
 		sessionRef.current = session;
 	}, [session]);
 
-	// Verify user has access to this version (same safeguard as view page)
+	// Verify user has write-level access (owner/collaborator). Shared readers redirect to view page.
 	useEffect(() => {
 		async function checkAccess() {
 			if (!session?.user || !roomId) {
 				setIsCheckingAccess(false);
 				return;
 			}
-			const result = await getVersionForReadOnlyView(roomId);
+			const result = await checkVersionAccess(roomId);
 			if (result.error) {
 				toast.error("Error al cargar la versión", {
 					description: result.error,
 				});
 				setAccessError(result.error);
 			} else if (result.data) {
-				// Read-only users (e.g. shared readers) should use the view page
-				if (result.data.canExportAndRequestRevision === false) {
+				if (result.data.canWrite === false) {
 					router.push(`/versions/${roomId}/view`);
 					return;
 				}
