@@ -7,16 +7,15 @@ import { DashboardPageSkeleton } from "@components/dashboard/dashboard-page-skel
 import { useRouter } from "next/navigation";
 import { useUI } from "@components/ui/context";
 import { ModifyProjectForm } from "./forms/modify-project-form";
-import { ProjectEntity } from "#types/project";
-import { DelitionRequestForm } from "./forms/delition-request-form";
-import { projectPendingDelition } from "@src/config/sharedVariables";
+import { ProjectEntity, ProjectState } from "#types/project";
+import { DeletionRequestForm } from "./forms/delition-request-form";
 import cn from "clsx";
 import { ShareProjectForm } from "./forms/share-project-form";
 
 const getProjectDecorators = (project: ProjectEntity) => {
 	const decorators: ReactNode[] = [];
 
-	if (project.state && project.state === projectPendingDelition) {
+	if (project.state && project.state === ProjectState.PENDING_DELETION) {
 		decorators.push(
 			<div className="font-bold text-xs flex gap-1">
 				Estado:
@@ -82,7 +81,7 @@ const ProjectList = ({
 			size: "md",
 			showCloseButton: false,
 			content: (
-				<DelitionRequestForm
+				<DeletionRequestForm
 					onSuccess={() => {
 						refreshProjects();
 					}}
@@ -98,7 +97,7 @@ const ProjectList = ({
 			{projects && projects.length > 0 ? (
 				<div className="w-full grid md:grid-cols-2 lg:grid-cols-3 gap-2">
 					{projects.map((project, index) => {
-						const isPendingDelition = project.state === projectPendingDelition;
+						const isPendingDeletion = project.state === ProjectState.PENDING_DELETION;
 						const popoverOptionsBase = [
 							{
 								content: (
@@ -126,7 +125,7 @@ const ProjectList = ({
 											<Button
 												variant={"optionList"}
 												className={cn({
-													hidden: isPendingDelition,
+													hidden: isPendingDeletion,
 												})}
 												onClick={() => handleModifyProject(project)}
 											>
@@ -139,7 +138,7 @@ const ProjectList = ({
 											<Button
 												variant={"optionList"}
 												className={cn({
-													hidden: isPendingDelition,
+													hidden: isPendingDeletion,
 												})}
 												onClick={() => handleDelitionRequest(project)}
 											>

@@ -1,17 +1,10 @@
-import { DeletionRequestModel, ProjectModel, ProjectState, NotificationType } from "../../data";
+import { DeletionRequestModel, ProjectModel, DeletionRequestState, NotificationType, DELETION_REQUEST_STATES, ProjectState } from "../../data";
 import { CustomError } from "../../domain";
 import { DelitionRequestEntity } from "../../domain/entities/delition-request.entity";
 import { ApproveDeletionRequestDto } from "../../domain/dtos/deletion-request/approve-deletion-request.dto";
 import { DenyDeletionRequestDto } from "../../domain/dtos/deletion-request/deny-deletion-request.dto";
 import { Types } from "mongoose";
 import { notificationService } from "./notification.service";
-
-const deletionRequestStates = {
-  pending: "PENDIENTE",
-  approved: "ACEPTADA",
-  rejected: "RECHAZADA",
-} as const;
-
 
 export class DeletionRequestService {
   constructor() {
@@ -123,12 +116,12 @@ export class DeletionRequestService {
       }
 
       // Check if already processed
-      if (deletionRequest.state !== deletionRequestStates.pending) {
+      if (deletionRequest.state !== DeletionRequestState.PENDING) {
         throw CustomError.badRequest("Deletion request has already been processed");
       }
 
       // Update the deletion request
-      deletionRequest.state = deletionRequestStates.approved;
+      deletionRequest.state = DeletionRequestState.APPROVED;
       deletionRequest.reviewer = new Types.ObjectId(reviewer);
       deletionRequest.reviewedAt = reviewedAt;
 
@@ -182,12 +175,12 @@ export class DeletionRequestService {
       }
 
       // Check if already processed
-      if (deletionRequest.state !== deletionRequestStates.pending) {
+      if (deletionRequest.state !== DeletionRequestState.PENDING) {
         throw CustomError.badRequest("Deletion request has already been processed");
       }
 
       // Update the deletion request
-      deletionRequest.state = deletionRequestStates.rejected;
+      deletionRequest.state = DeletionRequestState.DENIED;
       deletionRequest.reviewer = new Types.ObjectId(reviewer);
       deletionRequest.reviewedAt = reviewedAt;
 
@@ -234,8 +227,7 @@ export class DeletionRequestService {
   // Get deletion requests by state
   async getDeletionRequestsByState(state: string) {
     try {
-      const validStates = Object.values(deletionRequestStates);
-      if (!validStates.includes(state as any)) {
+      if (!DELETION_REQUEST_STATES.includes(state as any)) {
         throw CustomError.badRequest("Invalid state provided");
       }
 

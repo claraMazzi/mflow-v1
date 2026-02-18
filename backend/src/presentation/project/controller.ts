@@ -234,14 +234,7 @@ export class ProjectController {
 	// Request project deletion
 	requestProjectDeletion = (req: Request, res: Response) => {
 		const { projectId } = req.params;
-		const user = req.session?.userId ?? "";
-		if (!user) {
-			return res.status(401).json({ error: "Unauthorized" });
-		}
-
-		if (!projectId) {
-			return res.status(401).json({ error: "No project id provided" });
-		}
+		const user = req.session!.userId;
 
 		const { motive } = req.body;
 

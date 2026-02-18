@@ -25,13 +25,12 @@ export class DelitionRequestEntity {
       registeredAt,
     } = object;
 
-    if (!_id && !id) throw CustomError.badRequest("Missing id");
-    if (!project) throw CustomError.badRequest("Missing project");
-    if (!motive) throw CustomError.badRequest("Missing motive");
-    if (!requestingUser) throw CustomError.badRequest("Missing requestingUser");
-    if (!state) throw CustomError.badRequest("Missing state");
-    if (!reviewedAt) throw CustomError.badRequest("Missing reviewedAt");
-    if (!registeredAt) throw CustomError.badRequest("Missing registeredAt");
+    if (!_id && !id) throw CustomError.badRequest("El identificador de la solicitud es requerido.");
+    if (!project) throw CustomError.badRequest("El identificador del proyecto es requerido.");
+    if (!motive) throw CustomError.badRequest("El motivo de la solictud es requerido.");
+    if (!requestingUser) throw CustomError.badRequest("El identificador del usuario solicitante es requerido.");
+    if (!state) throw CustomError.badRequest("El estado del usuario es requerido.");
+    if (!registeredAt) throw CustomError.badRequest("La fecha de registro de la solicitud es requerida.");
 
     return new DelitionRequestEntity(
       _id || id,

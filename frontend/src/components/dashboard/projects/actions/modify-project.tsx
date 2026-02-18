@@ -11,17 +11,18 @@ export type ActionState = {
 
 export const modifyProject = async (
 	prevState: ActionState,
-	formData: FormData
+	formData: FormData,
 ): Promise<ActionState> => {
 	try {
 		// NextAuth v5 uses auth() instead of getServerSession
 		const session = await auth();
-		if (!session?.user) {
+		if (!session?.user || !session.auth) {
 			return {
 				success: false,
 				error: "Tu sesión ha expirado. Por favor, inicie sesión nuevamente.",
 			};
-		}	
+		}
+		const accessToken = session.auth;
 
 		// Extract data from FormData
 		const projectData = {
@@ -29,7 +30,7 @@ export const modifyProject = async (
 			description: formData.get("description") as string,
 		};
 
-    // Validate required fields
+		// Validate required fields
 		if (!formData.get("id")) {
 			return {
 				success: false,
@@ -37,16 +38,10 @@ export const modifyProject = async (
 			};
 		}
 
-    if (!projectData.title?.trim()) {
-			return { success: false, error: "El título del proyecto es obligatorio." };
-		}
-
-		const accessToken = session.auth;
-
-		if (!accessToken) {
+		if (!projectData.title?.trim()) {
 			return {
 				success: false,
-				error: "Tu sesión ha expirado. Por favor, inicie sesión nuevamente.",
+				error: "El título del proyecto es obligatorio.",
 			};
 		}
 
@@ -59,14 +54,16 @@ export const modifyProject = async (
 					Authorization: `Bearer ${accessToken}`,
 				},
 				body: JSON.stringify(projectData),
-			}
+			},
 		);
 
 		if (!response.ok) {
 			const errorData = await response.json().catch(() => ({}));
 			return {
 				success: false,
-				error: errorData.error || "Se ha producido un error. Por favor, inténtelo de nuevo más tarde.",
+				error:
+					errorData.error ||
+					"Se ha producido un error. Por favor, inténtelo de nuevo más tarde.",
 			};
 		}
 
