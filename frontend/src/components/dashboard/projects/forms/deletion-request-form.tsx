@@ -7,7 +7,7 @@ import { Input } from "@components/ui/common/input";
 import { Textarea } from "@components/ui/common/textarea";
 import { useUI } from "@components/ui/context";
 import { ProjectEntity } from "#types/project";
-import { ActionState, requestProjectDeletion } from "../actions/request-project-delition";
+import { ActionState, requestProjectDeletion } from "../actions/request-project-deletion";
 
 type DeletionRequestFormData = {
   id: string;
