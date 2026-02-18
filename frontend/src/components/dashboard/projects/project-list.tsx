@@ -32,14 +32,14 @@ interface ProjectListProps {
 	projects: ProjectEntity[];
 	refreshProjects: () => void;
 	isLoading: boolean;
-	isSharing?: boolean;
+	areSharedProjects?: boolean;
 }
 
 const ProjectList = ({
 	projects,
 	refreshProjects,
 	isLoading,
-	isSharing = false,
+	areSharedProjects = false,
 }: ProjectListProps) => {
 	const router = useRouter();
 	const { openModal } = useUI();
@@ -107,7 +107,7 @@ const ProjectList = ({
 							},
 						];
 
-						const popoverOptions = isSharing
+						const popoverOptions = areSharedProjects
 							? popoverOptionsBase
 							: [
 									{
@@ -165,7 +165,7 @@ const ProjectList = ({
 				</div>
 			) : (
 				<div>
-					{isSharing
+					{areSharedProjects
 						? "Todavía no te han asignado como colaborador en ningún proyecto."
 						: "Todavía no tienes ningún proyecto creado."}
 				</div>
