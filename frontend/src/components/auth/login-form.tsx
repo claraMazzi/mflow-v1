@@ -39,18 +39,6 @@ export const LoginForm = () => {
     mode: "onBlur",
   });
 
-  const parseErrorMessage = () => {
-    if (!errorMessage) return;
-
-    switch (errorMessage) {
-      case "Invalid credentials.":
-        return "Usuario o contraseña no corresponden a un usuario registrado";
-      case "Something went wrong.":
-      default:
-        return "Ocurrio un error inesperado";
-    }
-  };
-
   const handleSubmit = async (data: FormData) => {
     setIsPending(true);
     setErrorMessage(null);
@@ -63,12 +51,12 @@ export const LoginForm = () => {
       });
 
       if (result?.error) {
-        setErrorMessage('Invalid credentials.');
+        setErrorMessage('Usuario o contraseña no corresponden a un usuario registrado.');
       } else if (result?.ok) {
         router.push('/dashboard');
       }
     } catch {
-      setErrorMessage('Something went wrong.');
+      setErrorMessage('Ocurrio un error inesperado.');
     } finally {
       setIsPending(false);
     }
@@ -89,7 +77,7 @@ export const LoginForm = () => {
           placeholder="tu@email.com" 
           {...form.register("email", {
             required: "Email es requerido",
-            pattern: { value: /^\S+@\S+$/i, message: "Invalid email" },
+            pattern: { value: /^\S+@\S+$/i, message: "Email inválido" },
           })}
         />
         {form.formState.errors.email && (
@@ -122,7 +110,7 @@ export const LoginForm = () => {
       </div>
 
       {errorMessage && (
-        <p className="text-sm text-red-600">{parseErrorMessage()}</p>
+        <p className="text-sm text-red-600">{errorMessage}</p>
       )}
 
       <div className="flex flex-nowrap justify-center gap-2">
