@@ -19,17 +19,15 @@ export class DeletionRequestService {
           path: 'project',
           select: 'title description owner collaborators',
           populate: [
-            { path: 'owner', select: 'email name' },
-            { path: 'collaborators', select: 'email name' }
+            { path: 'owner', select: 'email name lastName' },
+            { path: 'collaborators', select: 'email name lastName' }
           ]
         })
-        .populate('requestingUser', 'email name')
-        .populate('reviewer', 'email name')
+        .populate('requestingUser', 'email name lastName')
+        .populate('reviewer', 'email name lastName')
+        .lean()
         .exec();
 
-        console.log(
-          'SERVER ', deletionRequests
-        )
       const deletionRequestEntities = deletionRequests.map((request) =>
         DelitionRequestEntity.fromObject(request)
       );
