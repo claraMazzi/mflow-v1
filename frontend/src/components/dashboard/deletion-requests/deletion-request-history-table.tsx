@@ -118,8 +118,8 @@ export function DeletionRequestHistoryTable({
 							<TableCell className="font-medium">
 								{deletionRequest.project.title}
 							</TableCell>
-							<TableCell>{deletionRequest.requestingUser.name}</TableCell>
-							<TableCell>{deletionRequest.project.owner.name}</TableCell>
+							<TableCell>{deletionRequest.requestingUser.name} {deletionRequest.requestingUser.lastName}</TableCell>
+							<TableCell>{deletionRequest.project.owner.name}  {deletionRequest.project.owner.lastName}</TableCell>
 							<TableCell className="max-w-xs wrap-break-word whitespace-break-spaces break-all">
 								{deletionRequest.motive}
 							</TableCell>
