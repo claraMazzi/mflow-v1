@@ -118,10 +118,14 @@ export function DeletionRequestHistoryTable({
 							<TableCell className="font-medium">
 								{deletionRequest.project.title}
 							</TableCell>
-							<TableCell>{deletionRequest.requestingUser.name} {deletionRequest.requestingUser.lastName}</TableCell>
-							<TableCell>{deletionRequest.project.owner.name}  {deletionRequest.project.owner.lastName}</TableCell>
-							<TableCell className="max-w-xs wrap-break-word whitespace-break-spaces break-all">
-								{deletionRequest.motive}
+							<TableCell>
+								{`${deletionRequest.requestingUser.name} ${deletionRequest.requestingUser.lastName}`}
+							</TableCell>
+							<TableCell>
+								{`${deletionRequest.project.owner.name} ${deletionRequest.project.owner.lastName}`}
+							</TableCell>
+							<TableCell className="max-w-xs">
+								<div className="truncate">{deletionRequest.motive}</div>
 							</TableCell>
 							<TableCell>
 								<Badge color={getStateBadgeVariant(deletionRequest.state)}>
