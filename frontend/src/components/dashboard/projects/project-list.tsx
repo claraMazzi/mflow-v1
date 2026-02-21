@@ -124,9 +124,9 @@ const ProjectList = ({
 										content: (
 											<Button
 												variant={"optionList"}
-												className={cn({
-													hidden: isPendingDeletion,
-												})}
+												// className={cn({
+												// 	hidden: isPendingDeletion,
+												// })}
 												onClick={() => handleModifyProject(project)}
 											>
 												Modificar proyecto
