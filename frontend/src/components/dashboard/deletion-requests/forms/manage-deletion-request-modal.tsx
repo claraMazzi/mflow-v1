@@ -11,6 +11,7 @@ import { approveDeletionRequest } from "../actions/approve-deletion-request";
 import { denyDeletionRequest } from "../actions/deny-deletion-request";
 import { useUI } from "@components/ui/context";
 import Link from "next/link";
+
 interface ManageDeletionRequestModalProps {
 	deletionRequest: DeletionRequest;
 	onSuccess: () => void;
@@ -206,10 +207,6 @@ export function ManageDeletionRequestModal({
 					</Link>
 				</div>
 			</div>
-
-			{/* {action === "deny" && (
-        
-      )} */}
 
 			<div className="flex justify-center space-x-3 pt-4 border-t">
 				<Button
