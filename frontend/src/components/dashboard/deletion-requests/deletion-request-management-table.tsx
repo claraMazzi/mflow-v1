@@ -24,14 +24,8 @@ export function DeletionRequestManagementTable({
 }: DeletionRequestManagementTableProps) {
   const { openModal } = useUI();
 
-  // Filter pending requests and sort by date (oldest to newest)
   const pendingRequests = deletionRequests
-    .filter(request => request.state === "PENDIENTE")
-    .sort((a, b) => {
-      const timeA = new Date(a.registeredAt).getTime();
-      const timeB = new Date(b.registeredAt).getTime();
-      return (Number.isNaN(timeA) ? 0 : timeA) - (Number.isNaN(timeB) ? 0 : timeB);
-    });
+    .filter(request => request.state === "PENDIENTE");
 
   // Format date to dd/MM/yy; accepts string, Date, or { $date: string }. Returns "—" if invalid or missing
   const formatDate = (value: string | Date | undefined | null | { $date?: string }) => {
