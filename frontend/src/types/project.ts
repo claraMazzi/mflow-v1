@@ -1,8 +1,9 @@
+import { VersionEntity } from "./version";
 
 export enum ProjectState {
-  CREATED = "CREADO",
-  PENDING_DELETION = "PENDIENTE DE ELIMINACION",
-  DELETED = "ELIMINADO",
+	CREATED = "CREADO",
+	PENDING_DELETION = "PENDIENTE DE ELIMINACION",
+	DELETED = "ELIMINADO",
 }
 
 export type ProjectEntity = {
@@ -11,12 +12,15 @@ export type ProjectEntity = {
 	description: string;
 	owner: string;
 	state: ProjectState;
-	versions: string[];
+};
+
+export type ProjectWithVersionsEntity = ProjectEntity & {
+	versions: VersionEntity[];
 };
 
 export type ProjectCollaborator = {
 	id: string;
 	email: string;
 	name: string;
-  lastName: string;
+	lastName: string;
 };
