@@ -593,7 +593,7 @@ export class ProjectService {
 			throw CustomError.notFound("El proyecto no existe o fue eliminado.");
 		if (project.state !== ProjectState.CREATED)
 			throw CustomError.notFound(
-				"No se puede crear una solicitud de eliminacón para el proyecto especificado.",
+				"No se puede crear una solicitud de eliminación para el proyecto especificado.",
 			);
 
 		const request = await DeletionRequestModel.findOne({
