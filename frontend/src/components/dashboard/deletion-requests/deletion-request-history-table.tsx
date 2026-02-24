@@ -8,6 +8,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@components/ui/table";
+import { formatDate } from "@src/lib/utils";
 
 interface DeletionRequestHistoryTableProps {
 	deletionRequests: DeletionRequest[];
@@ -26,28 +27,6 @@ export function DeletionRequestHistoryTable({
 			(a, b) =>
 				new Date(b.reviewedAt).getTime() - new Date(a.reviewedAt).getTime(),
 		);
-
-	// Format date to dd/MM/yy; accepts string, Date, or { $date: string }. Returns "—" if invalid or missing
-	const formatDate = (
-		value: string | Date | undefined | null | { $date?: string },
-	) => {
-		if (value == null) return "—";
-		const date =
-			value instanceof Date
-				? value
-				: new Date(
-						typeof value === "string"
-							? value
-							: ((value as { $date?: string })?.$date ?? ""),
-					);
-		if (Number.isNaN(date.getTime())) return "—";
-		const day = date.getDate();
-		const month = date.getMonth() + 1;
-		const year = date.getFullYear();
-		if (Number.isNaN(day) || Number.isNaN(month) || Number.isNaN(year))
-			return "—";
-		return `${day.toString().padStart(2, "0")}/${month.toString().padStart(2, "0")}/${year.toString().slice(-2)}`;
-	};
 
 	const getStateBadgeVariant = (state: string): StaticColor => {
 		switch (state) {

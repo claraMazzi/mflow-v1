@@ -11,6 +11,7 @@ import { approveDeletionRequest } from "../actions/approve-deletion-request";
 import { denyDeletionRequest } from "../actions/deny-deletion-request";
 import { useUI } from "@components/ui/context";
 import Link from "next/link";
+import { formatDate } from "@src/lib/utils";
 
 interface ManageDeletionRequestModalProps {
 	deletionRequest: DeletionRequest;
@@ -134,18 +135,28 @@ export function ManageDeletionRequestModal({
 	return (
 		<div className="space-y-6">
 			<div className="space-y-4">
-				<div>
-					<Label htmlFor="project-name" className="text-sm font-bold">
-						Nombre del proyecto <small className="text-red-600">*</small>
-					</Label>
-					<div className="mt-1 text-sm text-gray-900">
-						{deletionRequest.project.title}
-					</div>
-				</div>
 				<div className="grid grid-cols-2 gap-4">
 					<div>
+						<Label htmlFor="project-name" className="text-sm font-bold">
+							Fecha de solicitud
+						</Label>
+						<div className="mt-1 text-sm text-gray-900">
+							{formatDate(deletionRequest.registeredAt)}
+						</div>
+					</div>
+
+					<div>
+						<Label htmlFor="project-name" className="text-sm font-bold">
+							Nombre del proyecto
+						</Label>
+						<div className="mt-1 text-sm text-gray-900">
+							{deletionRequest.project.title}
+						</div>
+					</div>
+
+					<div>
 						<Label htmlFor="requesting-user" className="text-sm font-bold">
-							Usuario Solicitante <small className="text-red-600">*</small>
+							Usuario Solicitante
 						</Label>
 						<div className="mt-1 text-sm text-gray-900">
 							{deletionRequest.requestingUser.name}{" "}
@@ -156,7 +167,7 @@ export function ManageDeletionRequestModal({
 
 					<div>
 						<Label htmlFor="project-owner" className="text-sm font-bold">
-							Dueño del proyecto <small className="text-red-600">*</small>
+							Dueño del proyecto
 						</Label>
 						<div className="mt-1 text-sm text-gray-900">
 							{deletionRequest.project.owner.name}{" "}
@@ -165,11 +176,10 @@ export function ManageDeletionRequestModal({
 						</div>
 					</div>
 				</div>
-				{deletionRequest.project.collaborators.length > 0 && (
+				{deletionRequest.project.collaborators.length > 0 ? (
 					<div>
 						<Label htmlFor="collaborators" className="text-sm font-bold">
 							Colaboradores del proyecto{" "}
-							<small className="text-red-600">*</small>
 						</Label>
 						<div className="mt-1 text-sm text-gray-900">
 							<ul className="list-disc list-inside space-y-1">
@@ -182,12 +192,20 @@ export function ManageDeletionRequestModal({
 							</ul>
 						</div>
 					</div>
+				) : (
+					<div>
+						<Label htmlFor="collaborators" className="text-sm font-bold">
+							Colaboradores del proyecto{" "}
+						</Label>
+						<div className="mt-1 text-sm text-gray-900">
+							Este proyecto no tiene colaboradores
+						</div>
+					</div>
 				)}
 
 				<div>
 					<Label htmlFor="motive" className="text-sm font-bold">
 						Motivo de la solicitud de eliminación{" "}
-						<small className="text-red-600">*</small>
 					</Label>
 					<div className="mt-1 p-3 bg-gray-50 rounded-md">
 						<p className="text-sm text-gray-700 whitespace-pre-wrap">
