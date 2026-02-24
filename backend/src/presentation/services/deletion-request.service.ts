@@ -124,70 +124,73 @@ export class DeletionRequestService {
 
 	// Approve a deletion request
 	async approveDeletionRequest(approveDto: ApproveDeletionRequestDto) {
+		const { deletionRequestId, reviewer, reviewedAt } = approveDto;
+
+		// Find the deletion request
+		const deletionRequest =
+			await DeletionRequestModel.findById(deletionRequestId);
+		if (!deletionRequest) {
+			throw CustomError.notFound(
+				"No se pudo encontrar la solicitud de eliminación.",
+			);
+		}
+
+		// Check if already processed
+		if (deletionRequest.state !== DeletionRequestState.PENDING) {
+			throw CustomError.conflict(
+				"La solicitud de eliminación ya ha sido evaluada.",
+			);
+		}
+
+		let projectTitle = "";
+
 		try {
-			const { deletionRequestId, reviewer, reviewedAt } = approveDto;
-
-			// Find the deletion request
-			const deletionRequest =
-				await DeletionRequestModel.findById(deletionRequestId);
-			if (!deletionRequest) {
-				throw CustomError.badRequest("Deletion request not found");
-			}
-
-			// Check if already processed
-			if (deletionRequest.state !== DeletionRequestState.PENDING) {
-				throw CustomError.badRequest(
-					"Deletion request has already been processed",
-				);
-			}
-
-			// Update the deletion request
+			// Update Deletion Request
 			deletionRequest.state = DeletionRequestState.APPROVED;
 			deletionRequest.reviewer = new Types.ObjectId(reviewer);
 			deletionRequest.reviewedAt = reviewedAt;
 
+			// Save with session
 			await deletionRequest.save();
 
-			// Update the linked project state to ELIMINADO
+			// Update Project
 			const project = await ProjectModel.findById(deletionRequest.project);
-			if (project) {
-				project.state = ProjectState.DELETED;
-				await project.save();
-			}
-
-			// Notify the requesting user about the approval
-			try {
-				const requestingUserId = deletionRequest.requestingUser.toString();
-				const projectTitle = project?.title ?? "el proyecto";
-				await notificationService.createNotification({
-					recipientId: requestingUserId,
-					type: NotificationType.DELETION_REQUEST_APPROVED,
-					title: "Solicitud de eliminación aprobada",
-					message: `Tu solicitud de eliminación del proyecto "${projectTitle}" ha sido aprobada. El proyecto ha sido marcado como eliminado.`,
-					link: "/dashboard/deletion-requests",
-					relatedProjectId: deletionRequest.project.toString(),
-					triggeredById: reviewer,
-				});
-			} catch (notifError) {
-				console.error(
-					"Error notifying requesting user of deletion approval:",
-					notifError,
-				);
-			}
-
-			const deletionRequestEntity =
-				DelitionRequestEntity.fromObject(deletionRequest);
-
-			return {
-				message: "Deletion request approved successfully",
-				deletionRequest: deletionRequestEntity,
-			};
+			projectTitle = project!.title;
+			project!.state = ProjectState.DELETED;
+			await project!.save();
 		} catch (error) {
 			if (error instanceof CustomError) throw error;
+			console.error(`Error approving deletion request: ${error}`);
 			throw CustomError.internalServer(
-				`Error approving deletion request: ${error}`,
+				"Se ha producido un error al aprobar la solicitud de eliminación. Por favor, inténtelo de nuevo más tarde.",
 			);
 		}
+
+		try {
+			const requestingUserId = deletionRequest.requestingUser.toString();
+			await notificationService.createNotification({
+				recipientId: requestingUserId,
+				type: NotificationType.DELETION_REQUEST_APPROVED,
+				title: "Solicitud de eliminación aprobada",
+				message: `Tu solicitud de eliminación del proyecto "${projectTitle}" ha sido aprobada. El proyecto ha sido marcado como eliminado.`,
+				// link: "/dashboard/",
+				relatedProjectId: deletionRequest.project.toString(),
+				triggeredById: reviewer,
+			});
+		} catch (notifError) {
+			console.error(
+				"Error notifying requesting user of deletion approval:",
+				notifError,
+			);
+		}
+
+		const deletionRequestEntity =
+			DelitionRequestEntity.fromObject(deletionRequest);
+
+		return {
+			message: "La solicitud de eliminación se ha aprobado exitosamente.",
+			deletionRequest: deletionRequestEntity,
+		};
 	}
 
 	// Deny a deletion request

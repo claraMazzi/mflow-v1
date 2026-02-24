@@ -6,7 +6,7 @@ export type DeletionRequest = {
     description: string;
     owner: { id: string; name: string; lastName: string; email: string };
     collaborators: {
-      id: string;
+      _id: string;
       name: string;
       lastName: string;
       email: string;
@@ -37,7 +37,6 @@ export type DeletionRequestResponse = {
 
 export type ApproveDeletionRequestData = {
   deletionRequestId: string;
-  reviewer: string;
 };
 
 export type DenyDeletionRequestData = {
