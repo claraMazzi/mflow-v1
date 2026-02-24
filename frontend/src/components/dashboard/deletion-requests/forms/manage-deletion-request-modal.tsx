@@ -98,10 +98,10 @@ export function ManageDeletionRequestModal({
 						onClick={() => setAction(null)}
 						disabled={isLoading}
 					>
-						Cancelar
+						CANCELAR
 					</Button>
 					<Button size="sm" onClick={handleDeny} disabled={isLoading}>
-						{isLoading ? "Denegando..." : "Confirmar"}
+						{isLoading ? "DENEGANDO..." : "CONFIRMAR"}
 					</Button>
 				</div>
 			</div>
@@ -122,10 +122,10 @@ export function ManageDeletionRequestModal({
 						onClick={() => setAction(null)}
 						disabled={isLoading}
 					>
-						Cancelar
+						CANCELAR
 					</Button>
 					<Button size="sm" onClick={handleApprove} disabled={isLoading}>
-						{isLoading ? "Aprobando..." : "Confirmar"}
+						{isLoading ? "APROBANDO..." : "CONFIRMAR"}
 					</Button>
 				</div>
 			</div>
