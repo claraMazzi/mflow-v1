@@ -28,7 +28,7 @@ export class DeletionRequestController {
   getDeletionRequestById = (req: Request, res: Response) => {
     const { deletionRequestId } = req.params;
     if (!deletionRequestId) {
-      return res.status(400).json({ error: "Deletion request ID is required" });
+      return res.status(400).json({ error: "El identificador de la soicitud de elimincación es obligatorio." });
     }
 
     this.deletionRequestService
@@ -41,7 +41,7 @@ export class DeletionRequestController {
   getDeletionRequestsByProject = (req: Request, res: Response) => {
     const { projectId } = req.params;
     if (!projectId) {
-      return res.status(400).json({ error: "Project ID is required" });
+      return res.status(400).json({ error: "El identificador del proyecto es obligatorio." });
     }
 
     this.deletionRequestService
@@ -54,7 +54,7 @@ export class DeletionRequestController {
   getDeletionRequestsByState = (req: Request, res: Response) => {
     const { state } = req.params;
     if (!state) {
-      return res.status(400).json({ error: "State is required" });
+      return res.status(400).json({ error: "El estado de la solicitudes es obligatorio." });
     }
 
     this.deletionRequestService
@@ -86,21 +86,11 @@ export class DeletionRequestController {
   // Deny a deletion request
   denyDeletionRequest = (req: Request, res: Response) => {
     const { deletionRequestId } = req.params;
-    const reviewer = req.session?.userId ?? "";
-    const { reason } = req.body;
+    const reviewer = req.session!.userId;
     
-    if (!reviewer) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    if (!deletionRequestId) {
-      return res.status(400).json({ error: "Deletion request ID is required" });
-    }
-
     const [error, denyDto] = DenyDeletionRequestDto.create({
       deletionRequestId,
       reviewer,
-      reason,
     });
 
     if (error || !denyDto) {

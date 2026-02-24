@@ -25,17 +25,17 @@ export function ManageDeletionRequestModal({
 	const { data: session } = useSession();
 	const { closeModal } = useUI();
 	const [isLoading, setIsLoading] = useState(false);
-	const [denyReason, setDenyReason] = useState("");
-	const [action, setAction] = useState<"approve" | "deny" | null>(null);
+	const [error, setError] = useState<string | null>(null);
+	const [action, setAction] = useState<"approve" | null>(null);
 
 	const handleApprove = async () => {
 		if (!session?.user?.id) return;
 
 		setIsLoading(true);
+		setError(null);
 		try {
 			const result = await approveDeletionRequest({
 				deletionRequestId: deletionRequest.id,
-				reviewer: session.user.id,
 			});
 
 			if (result.success) {
@@ -43,10 +43,15 @@ export function ManageDeletionRequestModal({
 				closeModal();
 			} else {
 				console.error("Error approving deletion request:", result.error);
+				setError(result.error!);
 			}
 		} catch (error) {
 			console.error("Error approving deletion request:", error);
+			setError(
+				"Ha ocurrido un error al aprobar la solicitud. Por favor, inténtelo de nuevo más tarde.",
+			);
 		} finally {
+			setAction(null);
 			setIsLoading(false);
 		}
 	};
@@ -55,11 +60,10 @@ export function ManageDeletionRequestModal({
 		if (!session?.user?.id) return;
 
 		setIsLoading(true);
+		setError(null);
 		try {
 			const result = await denyDeletionRequest({
 				deletionRequestId: deletionRequest.id,
-				reviewer: session.user.id,
-				reason: denyReason,
 			});
 
 			if (result.success) {
@@ -67,46 +71,17 @@ export function ManageDeletionRequestModal({
 				closeModal();
 			} else {
 				console.error("Error denying deletion request:", result.error);
+				setError(result.error!);
 			}
 		} catch (error) {
 			console.error("Error denying deletion request:", error);
+			setError(
+				"Ha ocurrido un error al denegar la solicitud. Por favor, inténtelo de nuevo más tarde.",
+			);
 		} finally {
 			setIsLoading(false);
 		}
 	};
-	if (action === "deny") {
-		return (
-			<div className="flex flex-col justify-start gap-4 p-4">
-				<p className="text-base font-bold">Denegar solicitud de eliminación</p>
-				<div className="space-y-2">
-					<Label htmlFor="deny-reason" className="text-sm font-medium">
-						Motivo de la denegación
-					</Label>
-					<Textarea
-						id="deny-reason"
-						placeholder="Ingrese el motivo de la denegación..."
-						value={denyReason}
-						onChange={(e) => setDenyReason(e.target.value)}
-						rows={3}
-					/>
-				</div>
-
-				<div className="flex justify-center space-x-3 mt-3">
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => setAction(null)}
-						disabled={isLoading}
-					>
-						CANCELAR
-					</Button>
-					<Button size="sm" onClick={handleDeny} disabled={isLoading}>
-						{isLoading ? "DENEGANDO..." : "CONFIRMAR"}
-					</Button>
-				</div>
-			</div>
-		);
-	}
 
 	if (action === "approve") {
 		return (
@@ -134,6 +109,8 @@ export function ManageDeletionRequestModal({
 
 	return (
 		<div className="space-y-6">
+			<h2 className="text-3xl font-medium text-center">Gestionar solicitud</h2>
+
 			<div className="space-y-4">
 				<div className="grid grid-cols-2 gap-4">
 					<div>
@@ -184,7 +161,7 @@ export function ManageDeletionRequestModal({
 						<div className="mt-1 text-sm text-gray-900">
 							<ul className="list-disc list-inside space-y-1">
 								{deletionRequest.project.collaborators.map((collaborator) => (
-									<li key={collaborator.id}>
+									<li key={collaborator._id}>
 										{collaborator.name} {collaborator.lastName} -{" "}
 										{collaborator.email}
 									</li>
@@ -226,11 +203,14 @@ export function ManageDeletionRequestModal({
 				</div>
 			</div>
 
+			{error && (
+				<p className="text-sm text-red-600" role="alert">
+					{error}
+				</p>
+			)}
+
 			<div className="flex justify-center space-x-3 pt-4 border-t">
-				<Button
-					onClick={() => setAction("deny")}
-					disabled={isLoading || action === "deny"}
-				>
+				<Button onClick={handleDeny} disabled={isLoading || action === "deny"}>
 					DENEGAR
 				</Button>
 

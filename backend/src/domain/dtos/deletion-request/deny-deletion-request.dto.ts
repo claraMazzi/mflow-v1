@@ -3,19 +3,18 @@ export class DenyDeletionRequestDto {
     public readonly deletionRequestId: string,
     public readonly reviewer: string,
     public readonly reviewedAt: Date,
-    public readonly reason?: string
   ) {}
 
   static create(object: { [key: string]: any }): [string?, DenyDeletionRequestDto?] {
-    const { deletionRequestId, reviewer, reason } = object;
+    const { deletionRequestId, reviewer } = object;
     const reviewedAt = new Date();
 
-    if (!deletionRequestId) return ['Deletion request ID is required'];
-    if (!reviewer) return ['Reviewer is required'];
+    if (!deletionRequestId) return ['El identificador de la solicitud de eliminación es obligatorio.'];
+    if (!reviewer) return ['El identificador del usuario que está evaluando la solicitud es obligatorio.'];
 
     return [
       undefined,
-      new DenyDeletionRequestDto(deletionRequestId, reviewer, reviewedAt, reason),
+      new DenyDeletionRequestDto(deletionRequestId, reviewer, reviewedAt),
     ];
   }
 }

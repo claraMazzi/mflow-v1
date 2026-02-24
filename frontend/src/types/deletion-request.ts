@@ -41,6 +41,4 @@ export type ApproveDeletionRequestData = {
 
 export type DenyDeletionRequestData = {
   deletionRequestId: string;
-  reviewer: string;
-  reason?: string;
 };

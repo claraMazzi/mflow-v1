@@ -33,14 +33,6 @@ export const approveDeletionRequest = async (
 			};
 		}
 
-		if (!data.deletionRequestId) {
-			return {
-				success: false,
-				error:
-					"El identificador del usuario que evalua la solicitud es obligatorio.",
-			};
-		}
-
 		// 3. API Request
 		const response = await fetch(
 			`${process.env.API_URL}/api/deletion-requests/${data.deletionRequestId}/approve`,
@@ -60,7 +52,7 @@ export const approveDeletionRequest = async (
 				success: false,
 				error:
 					errorData.error ||
-					"Error al aprobar la solicitud. Por favor, inténtelo de nuevo.",
+					"Error al aprobar la solicitud. Por favor, inténtelo de nuevo más tarde.",
 			};
 		}
 
