@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { VersionModel, VerifierRequestModel, RevisionModel, ProjectModel, NotificationType } from "../../data";
+import { VersionModel, VerifierRequestModel, RevisionModel, ProjectModel, NotificationType, VersionState } from "../../data";
 import { CustomError } from "../../domain";
 import { RequestRevisionDto } from "../../domain/dtos/revision/request-revision.dto";
 import { AssignVerifierDto } from "../../domain/dtos/revision/assign-verifier.dto";
@@ -367,7 +367,7 @@ export class RevisionService {
 			}
 
 			// Update version state to "PENDIENTE DE REVISION"
-			version.state = "PENDIENTE DE REVISION";
+			version.state = VersionState.PENDING_REVIEW;
 			await version.save();
 
 			return {
