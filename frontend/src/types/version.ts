@@ -9,7 +9,6 @@ export type VersionEntity = {
 };
 
 export type SharedVersionEntity = VersionEntity & {
-	parentVersion: { id: string; title: string } | null;
 	projectId: string;
 	projectTitle: string;
 };
