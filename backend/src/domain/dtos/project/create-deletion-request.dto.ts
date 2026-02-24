@@ -8,9 +8,9 @@ export class CreateDeletionRequestDto {
     static create(object: { [key: string]: any }): [string?, CreateDeletionRequestDto?] {
       const { motive, requestingUser, project } = object;
   
-      if (!motive) return ['El motivo es requerido.'];
+      if (!motive) return ['El motivo es obligatorio.'];
       if (!requestingUser) return ['Se debe especificar el usuario que solcitó la eliminación.'];
-      if (!project) return ["El identificador del proyecto es requerido."]
+      if (!project) return ["El identificador del proyecto es obligatorio."]
     
       return [
         undefined,

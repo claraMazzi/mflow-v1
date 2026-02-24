@@ -135,7 +135,7 @@ export const InviteUserForm = ({ onSuccess }: InviteUserFormProps) => {
               </label>
               <Input
                 {...form.register("email", {
-                  required: "Email es requerido.",
+                  required: "Email es obligatorio.",
                   pattern: {
                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
                     message: "Email con formato inválido.",

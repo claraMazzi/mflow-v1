@@ -115,7 +115,7 @@ export default function PasswordRecovery({
             <Input 
               type="password" 
               {...form.register("password", {
-                required: "Contraseña es requerida",
+                required: "Contraseña es obligatoria",
                 pattern: {
                   value: passwordRegex,
                   message:
@@ -140,7 +140,7 @@ export default function PasswordRecovery({
             <Input 
               type="password" 
               {...form.register("confirmPassword", {
-                required: "Contraseña es requerida",
+                required: "Contraseña es obligatoria",
                 pattern: {
                   value: passwordRegex,
                   message:

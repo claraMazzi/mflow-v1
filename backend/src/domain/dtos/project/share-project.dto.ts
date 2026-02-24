@@ -8,7 +8,7 @@ export class ShareProjectDto {
   static create(object: { [key: string]: any }): [string?, ShareProjectDto?] {
     const { projectId, senderId, collaborators: emails } = object;
 
-    if (!projectId) return ['El identificador del proyecto es requerido.'];
+    if (!projectId) return ['El identificador del proyecto es obligatorio.'];
     if (!senderId) return ['Debe haber iniciado sesión para realizar esta acción.'];
     if (!emails || !Array.isArray(emails) || emails.length === 0) return ['Se requiere de al menos un email para enviar las invitaciones.'];
   

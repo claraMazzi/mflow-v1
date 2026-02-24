@@ -56,7 +56,7 @@ export class ProjectEntity {
 			);
 		if (includeVersions && !versions)
 			throw CustomError.badRequest(
-				"Las versiones de modelos del proyecto son requeridas."
+				"Las versiones de modelos del proyecto son obligatorias."
 			);
 
 		return new ProjectEntity(

@@ -103,7 +103,7 @@ export const DeletionRequestForm = ({
         <Textarea
           placeholder="Razon de para solicitar eliminación de proyecto"
           {...form.register("motive", {
-            required: "El motivo es requerido",
+            required: "El motivo es obligatorio",
             maxLength: {
               value: 200,
               message: "Máximo 200 caracteres"

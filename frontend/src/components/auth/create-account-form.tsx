@@ -102,7 +102,7 @@ export default function CreateAccountForm({
 								<Input
 									placeholder="Tu nombre"
 									{...form.register("name", {
-										required: "Nombre es requerido.",
+										required: "Nombre es obligatorio.",
 										maxLength: {
 											value: 100,
 											message:
@@ -125,7 +125,7 @@ export default function CreateAccountForm({
 								<Input
 									placeholder="Tu apellido"
 									{...form.register("lastName", {
-										required: "Apellido es requerido.",
+										required: "Apellido es obligatorio.",
 										maxLength: {
 											value: 100,
 											message:
@@ -149,7 +149,7 @@ export default function CreateAccountForm({
 								<Input
 									placeholder="tu@email.com"
 									{...form.register("email", {
-										required: "Correo electrónico es requerido.",
+										required: "Correo electrónico es obligatorio.",
 										maxLength: {
 											value: 100,
 											message:
@@ -177,7 +177,7 @@ export default function CreateAccountForm({
 									type="password"
 									placeholder="Tu contraseña"
 									{...form.register("password", {
-										required: "Contraseña es requerida.",
+										required: "Contraseña es obligatoria.",
 										pattern: {
 											value: passwordRegex,
 											message:

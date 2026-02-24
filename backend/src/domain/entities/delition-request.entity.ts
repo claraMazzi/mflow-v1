@@ -25,12 +25,12 @@ export class DelitionRequestEntity {
       registeredAt,
     } = object;
 
-    if (!_id && !id) throw CustomError.badRequest("El identificador de la solicitud es requerido.");
-    if (!project) throw CustomError.badRequest("El identificador del proyecto es requerido.");
-    if (!motive) throw CustomError.badRequest("El motivo de la solictud es requerido.");
-    if (!requestingUser) throw CustomError.badRequest("El identificador del usuario solicitante es requerido.");
-    if (!state) throw CustomError.badRequest("El estado del usuario es requerido.");
-    if (!registeredAt) throw CustomError.badRequest("La fecha de registro de la solicitud es requerida.");
+    if (!_id && !id) throw CustomError.badRequest("El identificador de la solicitud es obligatorio.");
+    if (!project) throw CustomError.badRequest("El identificador del proyecto es obligatorio.");
+    if (!motive) throw CustomError.badRequest("El motivo de la solictud es obligatorio.");
+    if (!requestingUser) throw CustomError.badRequest("El identificador del usuario solicitante es obligatorio.");
+    if (!state) throw CustomError.badRequest("El estado del usuario es obligatorio.");
+    if (!registeredAt) throw CustomError.badRequest("La fecha de registro de la solicitud es obligatoria.");
 
     return new DelitionRequestEntity(
       _id || id,
