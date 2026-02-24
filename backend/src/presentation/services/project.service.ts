@@ -583,10 +583,10 @@ export class ProjectService {
 	}
 
 	async requestProjectDeletion(
-		createDelitionRequestDto: CreateDeletionRequestDto,
+		createDeletionRequestDto: CreateDeletionRequestDto,
 	) {
 		const project = await ProjectModel.findOne({
-			_id: createDelitionRequestDto.project,
+			_id: createDeletionRequestDto.project,
 			state: { $ne: ProjectState.DELETED },
 		});
 		if (!project)
@@ -597,7 +597,7 @@ export class ProjectService {
 			);
 
 		const request = await DeletionRequestModel.findOne({
-			project: createDelitionRequestDto.project,
+			project: createDeletionRequestDto.project,
 			state: DeletionRequestState.PENDING,
 		});
 		if (request)
@@ -607,7 +607,7 @@ export class ProjectService {
 
 		try {
 			const delitionRequest = new DeletionRequestModel(
-				createDelitionRequestDto,
+				createDeletionRequestDto,
 			);
 			await delitionRequest.save();
 			const delitionRequestEntity =
