@@ -481,7 +481,7 @@ export class VersionService {
 	}: {
 		versionId: string;
 		userId: string;
-	}): Promise<boolean> {
+	}): Promise<{ canRead: boolean, canWrite: boolean }> {
 		const pipeline: mongoose.PipelineStage[] = [
 			{
 				$match: { _id: new mongoose.Types.ObjectId(versionId) },
@@ -547,68 +547,44 @@ export class VersionService {
 				verifier: mongoose.Types.ObjectId;
 			}[];
 		};
+		let canRead = false;
+		let canWrite = false;
 
 		const isOwner = usersWithAccess.project.owner.equals(userId);
 		if (isOwner) {
-			return true;
+			canRead = true;
+			canWrite = true;
 		}
 
 		const isCollaborator = usersWithAccess.project.collaborators.some((c) =>
 			c.equals(userId),
 		);
 		if (isCollaborator) {
-			return true;
+			canRead = true;
+			canWrite = true;
 		}
 
 		const isReader = usersWithAccess.sharedWithReaders.some((r) =>
 			r.equals(userId),
 		);
 		if (isReader) {
-			return true;
+			canRead = true;
+			canWrite = false;
 		}
 
-		const isVerifier = usersWithAccess.revisions.some((r) =>
-			r.verifier.equals(userId),
-		);
-		if (isVerifier) {
-			return true;
-		}
-
-		return false;
+		return { canRead, canWrite };
 	}
 
-	async hasUserWriteAccessToVersion({
-		versionId,
-		userId,
-	}: {
-		versionId: string;
-		userId: string;
-	}): Promise<boolean> {
-		const project = await ProjectModel.findOne({
-			versions: new mongoose.Types.ObjectId(versionId),
-		})
-			.select("owner collaborators")
-			.lean()
-			.exec();
-
-		if (!project) throw CustomError.notFound("Version does not exist.");
-
-		const ownerId =
-			typeof project.owner === "object" && (project.owner as any)._id
-				? (project.owner as any)._id.toString()
-				: (project.owner as any).toString();
-		if (ownerId === userId) {
-			return true;
-		}
-
-		const collabIds = (project.collaborators || []).map((c: any) =>
-			typeof c === "object" && c._id ? c._id.toString() : c.toString(),
-		);
-		if (collabIds.includes(userId)) {
-			return true;
-		}
-
-		return false;
+	async checkVersionAccess(
+		versionId: string,
+		userId: string
+	): Promise<{ canRead: boolean, canWrite: boolean }> {
+		const accessCheck = await this.hasUserReadAccessToVersion({
+			versionId,
+			userId,
+		});
+	
+		return accessCheck;
 	}
 
 	async deleteVersion({
@@ -1025,10 +1001,6 @@ export class VersionService {
 				);
 			}
 
-			// Only owner/collaborator can export and request revision; shared readers cannot
-			const canExportAndRequestRevision =
-				await this.hasUserWriteAccessToVersion({ versionId, userId });
-
 			// Get image infos for this version
 			const imageInfos = await VersionImageModel.find({
 				version: new mongoose.Types.ObjectId(versionId),
@@ -1067,7 +1039,7 @@ export class VersionService {
 					};
 				}
 			}
-
+			//usersRightsForVersions - userCanWrite userCanRead  true/false
 			return {
 				version: {
 					id: (version._id as any).toString(),
@@ -1083,7 +1055,6 @@ export class VersionService {
 						name: `${(project.owner as any).name} ${(project.owner as any).lastName}`,
 					},
 				},
-				canExportAndRequestRevision: !!canExportAndRequestRevision,
 				revision: revisionData,
 				imageInfos: imageInfos.map((img: any) => ({
 					id: img._id.toString(),
