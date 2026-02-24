@@ -1,12 +1,22 @@
 import mongoose from "mongoose";
-import { ProjectModel, RevisionModel, UserModel, Version, VersionModel } from "../../data";
+import {
+	ProjectModel,
+	RevisionModel,
+	UserModel,
+	Version,
+	VersionModel,
+	VersionState,
+} from "../../data";
 import {
 	CreateVersionDto,
 	CustomError,
 	ShareVersionDto,
 	ShareVersionLinkDto,
 } from "../../domain";
-import { VersionImage, VersionImageModel } from "../../data/mongo/models/version-image.model";
+import {
+	VersionImage,
+	VersionImageModel,
+} from "../../data/mongo/models/version-image.model";
 import { jwtAdapter } from "../../config";
 import { VersionShareTokenPayload } from "../../types/tokens";
 import { EmailService } from "./email.service";
@@ -26,19 +36,22 @@ import path from "path";
 
 const plantumlEncoder = require("plantuml-encoder");
 
-// Valid states for parent versions
-const VALID_PARENT_VERSION_STATES = [
-	"FINALIZADA",
-	"PENDIENTE DE REVISION",
-	"REVISADA",
+const VALID_PARENT_VERSION_STATES: readonly VersionState[] = [
+	VersionState.FINALIZED,
+	VersionState.PENDING_REVIEW,
+	VersionState.REVIEWED,
 ];
 
-const VERSION_SHAREABLE_STATES = ["FINALIZADA", "PENDIENTE DE REVISION", "REVISADA"];
+const VERSION_SHAREABLE_STATES: readonly VersionState[] = [
+	VersionState.FINALIZED,
+	VersionState.PENDING_REVIEW,
+	VersionState.REVIEWED,
+];
 
 export class VersionService {
 	constructor(
 		private readonly frontEndUrl?: string,
-		private readonly emailService?: EmailService
+		private readonly emailService?: EmailService,
 	) {}
 
 	async createVersion(createDto: CreateVersionDto) {
@@ -133,7 +146,7 @@ export class VersionService {
 				await this.copyImagesAndRegenerateTokens(
 					createDto.parentVersionId,
 					newVersion._id.toString(),
-					newVersion.conceptualModel
+					newVersion.conceptualModel,
 				);
 				// Save again after updating image references
 				await newVersion.save();
@@ -230,7 +243,7 @@ export class VersionService {
 	private async copyImagesAndRegenerateTokens(
 		parentVersionId: string,
 		newVersionId: string,
-		conceptualModel: any
+		conceptualModel: any,
 	): Promise<void> {
 		try {
 			// Get all images from parent version
@@ -245,7 +258,7 @@ export class VersionService {
 			for (const parentImage of parentImages) {
 				const newImageId = await this.copyVersionImage(
 					parentImage as any,
-					newVersionId
+					newVersionId,
 				);
 				if (newImageId) {
 					imageIdMap.set(parentImage._id.toString(), newImageId);
@@ -253,10 +266,7 @@ export class VersionService {
 			}
 
 			// Update imageFileId references in the conceptual model and regenerate tokens
-			this.updateDiagramReferencesAndTokens(
-				conceptualModel,
-				imageIdMap
-			);
+			this.updateDiagramReferencesAndTokens(conceptualModel, imageIdMap);
 		} catch (error) {
 			console.error("Error copying images and regenerating tokens:", error);
 			// Don't throw - version creation should still succeed even if image copying fails
@@ -268,7 +278,7 @@ export class VersionService {
 	 */
 	private async copyVersionImage(
 		parentImage: any,
-		newVersionId: string
+		newVersionId: string,
 	): Promise<string | null> {
 		try {
 			// Check if source file exists
@@ -320,7 +330,7 @@ export class VersionService {
 	 */
 	private updateDiagramReferencesAndTokens(
 		conceptualModel: any,
-		imageIdMap: Map<string, string>
+		imageIdMap: Map<string, string>,
 	): void {
 		// Helper to process a single diagram
 		const processDiagram = (diagram: any) => {
@@ -581,8 +591,7 @@ export class VersionService {
 			.lean()
 			.exec();
 
-		if (!project)
-			throw CustomError.notFound("Version does not exist.");
+		if (!project) throw CustomError.notFound("Version does not exist.");
 
 		const ownerId =
 			typeof project.owner === "object" && (project.owner as any)._id
@@ -647,7 +656,7 @@ export class VersionService {
 
 		try {
 			// Soft delete: update state to "ELIMINADA"
-			version.state = "ELIMINADA";
+			version.state = VersionState.DELETED;
 			await version.save();
 
 			return {
@@ -1001,9 +1010,7 @@ export class VersionService {
 				userId,
 			});
 			if (!hasAccess) {
-				throw CustomError.forbidden(
-					"No tiene permisos para ver esta versión."
-				);
+				throw CustomError.forbidden("No tiene permisos para ver esta versión.");
 			}
 
 			const project = await ProjectModel.findOne({
@@ -1014,7 +1021,7 @@ export class VersionService {
 
 			if (!project) {
 				throw CustomError.notFound(
-					"No se encontró el proyecto asociado a esta versión."
+					"No se encontró el proyecto asociado a esta versión.",
 				);
 			}
 
@@ -1045,7 +1052,7 @@ export class VersionService {
 							? {
 									id: (revision.verifier as any)._id.toString(),
 									name: `${(revision.verifier as any).name} ${(revision.verifier as any).lastName}`,
-							  }
+								}
 							: null,
 						corrections: (revision.corrections || []).map((c: any) => ({
 							_id: c._id?.toString(),
@@ -1093,7 +1100,7 @@ export class VersionService {
 			}
 			console.error("Error getting version for read-only view:", error);
 			throw CustomError.internalServer(
-				"Se ha producido un error al obtener la versión."
+				"Se ha producido un error al obtener la versión.",
 			);
 		}
 	}
@@ -1101,17 +1108,17 @@ export class VersionService {
 	// -------- Share version (read-only) --------
 
 	private async generateVersionShareLink(
-		payload: VersionShareTokenPayload
+		payload: VersionShareTokenPayload,
 	): Promise<string> {
 		if (!this.frontEndUrl) {
 			throw CustomError.internalServer(
-				"Configuración de compartir versión no disponible."
+				"Configuración de compartir versión no disponible.",
 			);
 		}
 		const token = await jwtAdapter.generateToken(payload, "7d");
 		if (!token) {
 			throw CustomError.internalServer(
-				"Se produjo un error al generar el link para compartir la versión."
+				"Se produjo un error al generar el link para compartir la versión.",
 			);
 		}
 		return `${this.frontEndUrl}/share/versions/?token=${token}`;
@@ -1119,17 +1126,17 @@ export class VersionService {
 
 	/** Returns { fullLink, token } for use in emails and in-app notification links. */
 	private async generateVersionShareLinkAndToken(
-		payload: VersionShareTokenPayload
+		payload: VersionShareTokenPayload,
 	): Promise<{ fullLink: string; token: string }> {
 		if (!this.frontEndUrl) {
 			throw CustomError.internalServer(
-				"Configuración de compartir versión no disponible."
+				"Configuración de compartir versión no disponible.",
 			);
 		}
 		const raw = await jwtAdapter.generateToken(payload, "7d");
 		if (typeof raw !== "string") {
 			throw CustomError.internalServer(
-				"Se produjo un error al generar el link para compartir la versión."
+				"Se produjo un error al generar el link para compartir la versión.",
 			);
 		}
 		const token: string = raw;
@@ -1149,7 +1156,7 @@ export class VersionService {
 		}
 		if (!VERSION_SHAREABLE_STATES.includes(version.state)) {
 			throw CustomError.badRequest(
-				"Solo se puede compartir una versión que no esté en estado 'EN EDICION'."
+				"Solo se puede compartir una versión que no esté en estado 'EN EDICION'.",
 			);
 		}
 		const project = await ProjectModel.findOne({
@@ -1160,7 +1167,7 @@ export class VersionService {
 		}
 		if (!project.owner.equals(dto.requestingUser)) {
 			throw CustomError.unauthorized(
-				"Solo el propietario del proyecto puede compartir la versión."
+				"Solo el propietario del proyecto puede compartir la versión.",
 			);
 		}
 		const link = await this.generateVersionShareLink({
@@ -1183,7 +1190,7 @@ export class VersionService {
 		}
 		if (!VERSION_SHAREABLE_STATES.includes(version.state)) {
 			throw CustomError.badRequest(
-				"Solo se puede compartir una versión que no esté en estado 'EN EDICION'."
+				"Solo se puede compartir una versión que no esté en estado 'EN EDICION'.",
 			);
 		}
 		const project = await ProjectModel.findOne({
@@ -1194,12 +1201,12 @@ export class VersionService {
 		}
 		if (!project.owner.equals(dto.senderId)) {
 			throw CustomError.unauthorized(
-				"Solo el propietario del proyecto puede compartir la versión."
+				"Solo el propietario del proyecto puede compartir la versión.",
 			);
 		}
 		if (!this.emailService) {
 			throw CustomError.internalServer(
-				"El envío de invitaciones por email no está configurado."
+				"El envío de invitaciones por email no está configurado.",
 			);
 		}
 		const uniqueEmails = new Set<string>(dto.emails);
@@ -1228,8 +1235,7 @@ export class VersionService {
 				if (!user) continue;
 				if (project.owner.equals(user._id)) continue;
 				if (project.collaborators.some((c) => c.equals(user._id))) continue;
-				if (version.sharedWithReaders.some((r) => r.equals(user._id)))
-					continue;
+				if (version.sharedWithReaders.some((r) => r.equals(user._id))) continue;
 				await notificationService.createNotification({
 					recipientId: user._id.toString(),
 					type: NotificationType.VERSION_SHARED,
@@ -1241,7 +1247,11 @@ export class VersionService {
 					triggeredById: dto.senderId,
 				});
 			} catch (notifError) {
-				console.error("Error creating version-share notification for", email, notifError);
+				console.error(
+					"Error creating version-share notification for",
+					email,
+					notifError,
+				);
 			}
 		}
 		return {
@@ -1262,7 +1272,7 @@ export class VersionService {
 		const version = await VersionModel.findById(versionId).exec();
 		if (!version) {
 			throw CustomError.notFound(
-				"La versión asociada a la invitación no existe o fue eliminada."
+				"La versión asociada a la invitación no existe o fue eliminada.",
 			);
 		}
 		if (version.state === "ELIMINADA") {
@@ -1274,26 +1284,28 @@ export class VersionService {
 		});
 		if (!user) {
 			throw CustomError.unauthorized(
-				"El usuario debe encontrarse registrado en la plataforma."
+				"El usuario debe encontrarse registrado en la plataforma.",
 			);
 		}
-		const project = await ProjectModel.findOne({ versions: version._id }).exec();
+		const project = await ProjectModel.findOne({
+			versions: version._id,
+		}).exec();
 		if (!project) {
 			throw CustomError.notFound("No se encontró el proyecto de la versión.");
 		}
 		if (project.owner.equals(user._id)) {
 			throw CustomError.badRequest(
-				"El dueño del proyecto ya tiene acceso a la versión."
+				"El dueño del proyecto ya tiene acceso a la versión.",
 			);
 		}
 		if (project.collaborators.some((c) => c.equals(user._id))) {
 			throw CustomError.badRequest(
-				"El colaborador del proyecto ya tiene acceso a la versión."
+				"El colaborador del proyecto ya tiene acceso a la versión.",
 			);
 		}
 		if (version.sharedWithReaders.some((r) => r.equals(user._id))) {
 			throw CustomError.badRequest(
-				"El usuario ya tiene acceso de lectura a esta versión."
+				"El usuario ya tiene acceso de lectura a esta versión.",
 			);
 		}
 		version.sharedWithReaders.push(user._id);
@@ -1334,7 +1346,7 @@ export class VersionService {
 			.lean();
 		if (!version) {
 			throw CustomError.notFound(
-				"La versión asociada a la invitación no existe o fue eliminada."
+				"La versión asociada a la invitación no existe o fue eliminada.",
 			);
 		}
 		if (version.state === "ELIMINADA") {
@@ -1357,7 +1369,7 @@ export class VersionService {
 					? {
 							id: (version.parentVersion as any)._id.toString(),
 							title: (version.parentVersion as any).title,
-					  }
+						}
 					: null,
 			},
 			project: {
@@ -1387,7 +1399,7 @@ export class VersionService {
 		}
 		if (!project.owner.equals(requestingUserId)) {
 			throw CustomError.unauthorized(
-				"Solo el propietario del proyecto puede ver y gestionar los lectores."
+				"Solo el propietario del proyecto puede ver y gestionar los lectores.",
 			);
 		}
 		const readers = (version.sharedWithReaders || []).map((r: any) => ({
@@ -1405,7 +1417,7 @@ export class VersionService {
 					? {
 							id: (version.parentVersion as any)._id.toString(),
 							title: (version.parentVersion as any).title,
-					  }
+						}
 					: null,
 			},
 			readers,
@@ -1433,12 +1445,12 @@ export class VersionService {
 		}
 		if (!project.owner.equals(requestingUserId)) {
 			throw CustomError.unauthorized(
-				"Solo el propietario del proyecto puede remover lectores."
+				"Solo el propietario del proyecto puede remover lectores.",
 			);
 		}
 		await VersionModel.updateOne(
 			{ _id: versionId },
-			{ $pull: { sharedWithReaders: new mongoose.Types.ObjectId(readerId) } }
+			{ $pull: { sharedWithReaders: new mongoose.Types.ObjectId(readerId) } },
 		).exec();
 		return { message: "Lector removido correctamente." };
 	}
@@ -1473,7 +1485,7 @@ export class VersionService {
 						? {
 								id: (v as any).parentVersion._id.toString(),
 								title: (v as any).parentVersion.title,
-						  }
+							}
 						: null,
 					projectId: (project as any)._id.toString(),
 					projectTitle: (project as any).title,

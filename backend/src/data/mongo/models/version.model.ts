@@ -1,6 +1,16 @@
 import { InferSchemaType, Schema, model } from "mongoose";
 import { conceptualModelSchema, todoItemSchema } from "./subdocuments-schemas";
 
+export enum VersionState {
+    EDITABLE = "EN EDICION",
+    FINALIZED = "FINALIZADA",
+    PENDING_REVIEW = "PENDIENTE DE REVISION",
+    REVIEWED = "REVISADA",
+    DELETED = "ELIMINADA",
+}
+
+export const VERSION_STATES : readonly VersionState[] = Object.values(VersionState);
+
 const versionSchema = new Schema(
 	{
 		title: {
@@ -9,8 +19,8 @@ const versionSchema = new Schema(
 		},
 		state: {
 			type: String,
-			enum: ["EN EDICION", "FINALIZADA", "PENDIENTE DE REVISION", "REVISADA", "ELIMINADA"],
-			default: "EN EDICION",
+			enum: VERSION_STATES,
+			default: VersionState.EDITABLE,
 		},
 		parentVersion: {
 			type: Schema.Types.ObjectId,
