@@ -125,7 +125,7 @@ export const ModifyUserForm = ({
 					</label>
 					<Input
 						{...form.register("name", {
-							required: "Nombre es requerido",
+							required: "Nombre es obligatorio",
 							maxLength: {
 								value: 100,
 								message:
@@ -150,7 +150,7 @@ export const ModifyUserForm = ({
 					</label>
 					<Input
 						{...form.register("lastName", {
-							required: "Apellido es requerido",
+							required: "Apellido es obligatorio",
 							maxLength: {
 								value: 100,
 								message:
@@ -174,7 +174,7 @@ export const ModifyUserForm = ({
 					</label>
 					<Input
 						{...form.register("email", {
-							required: "Email es requerido",
+							required: "Email es obligatorio",
 							pattern: {
 								value: emailRegex,
 								message: "Email inválido",

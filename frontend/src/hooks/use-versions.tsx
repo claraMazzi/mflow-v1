@@ -1,10 +1,7 @@
 import { useSession } from "@node_modules/next-auth/react";
-import { VersionEntity } from "@src/types/version";
+import { SharedVersionEntity, VersionEntity } from "@src/types/version";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-	getSharedVersions,
-	type SharedVersionItem,
-} from "@components/dashboard/versions/actions/share-version";
+import { ProjectWithVersionsEntity } from "@src/types/project";
 
 // Minimum time between automatic refetches (5 seconds)
 const REFETCH_COOLDOWN = 5000;
@@ -18,19 +15,21 @@ export type DeleteVersionResult = {
 	error?: string;
 };
 
-export const useVersionsOfProject = ({
+export const useProjectWithVersions = ({
 	projectId,
 }: UseVersionsOfProjectProps) => {
 	const { data: session } = useSession();
-	const [versions, setVersions] = useState<VersionEntity[]>([]);
+	const [project, setProject] = useState<ProjectWithVersionsEntity | null>(
+		null,
+	);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const lastFetchTimeRef = useRef<number>(0);
 
-	const fetchVersions = useCallback(async () => {
+	const refreshProject = useCallback(async () => {
 		if (!session?.auth) {
 			setError(
-				"Debe estar logueado para poder obtener las versiones del projecto."
+				"Debe estar logueado para poder obtener las versiones del projecto.",
 			);
 			setIsLoading(false);
 			return;
@@ -38,15 +37,15 @@ export const useVersionsOfProject = ({
 		try {
 			setIsLoading(true);
 			setError(null);
-			const response = await getVersionsOfPoject({
+			const response = await getProjectWithVersions({
 				sessionToken: session.auth,
 				projectId,
 			});
 			if (response.success) {
-				setVersions(response.data!.project.versions);
+				setProject(response.data!.project);
 			} else {
 				setError(response.error);
-				setVersions([]);
+				setProject(null);
 			}
 			lastFetchTimeRef.current = Date.now();
 		} catch (err) {
@@ -73,19 +72,19 @@ export const useVersionsOfProject = ({
 
 			if (response.success) {
 				// Refresh the versions list after successful deletion
-				await fetchVersions();
+				await refreshProject();
 			}
 
 			return response;
 		},
-		[session?.auth, fetchVersions]
+		[session?.auth, refreshProject],
 	);
 
 	useEffect(() => {
 		if (session?.auth) {
-			fetchVersions();
+			refreshProject();
 		}
-	}, [fetchVersions, session?.auth]);
+	}, [refreshProject, session?.auth]);
 
 	// Refetch when window gains focus (e.g., after navigating from notification)
 	// Uses cooldown to prevent excessive fetches
@@ -93,7 +92,7 @@ export const useVersionsOfProject = ({
 		const handleFocus = () => {
 			const timeSinceLastFetch = Date.now() - lastFetchTimeRef.current;
 			if (session?.auth && timeSinceLastFetch > REFETCH_COOLDOWN) {
-				fetchVersions();
+				refreshProject();
 			}
 		};
 
@@ -101,7 +100,7 @@ export const useVersionsOfProject = ({
 		return () => {
 			window.removeEventListener("focus", handleFocus);
 		};
-	}, [fetchVersions, session?.auth]);
+	}, [refreshProject, session?.auth]);
 
 	// Refetch when page becomes visible
 	// Uses cooldown to prevent excessive fetches
@@ -113,7 +112,7 @@ export const useVersionsOfProject = ({
 				session?.auth &&
 				timeSinceLastFetch > REFETCH_COOLDOWN
 			) {
-				fetchVersions();
+				refreshProject();
 			}
 		};
 
@@ -121,37 +120,47 @@ export const useVersionsOfProject = ({
 		return () => {
 			document.removeEventListener("visibilitychange", handleVisibilityChange);
 		};
-	}, [fetchVersions, session?.auth]);
+	}, [refreshProject, session?.auth]);
 
 	return {
-		versions,
+		project,
 		isLoading,
 		error,
-		refreshVersions: fetchVersions,
+		refreshProject,
 		deleteVersion,
 	};
 };
 
 export const useSharedVersions = () => {
 	const { data: session } = useSession();
-	const [versions, setVersions] = useState<SharedVersionItem[]>([]);
+	const [versions, setVersions] = useState<SharedVersionEntity[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
 	const fetchVersions = useCallback(async () => {
 		if (!session?.auth) {
+			setError(
+				"Debe estar logueado para obtener las versiones compartidas con el usuario.",
+			);
 			setVersions([]);
 			setIsLoading(false);
 			return;
 		}
+
 		try {
 			setIsLoading(true);
 			setError(null);
-			const result = await getSharedVersions();
-			if (result.data) {
+
+			const result = await getSharedVersionsRequest({
+				sessionToken: session.auth as string,
+			});
+
+			if (result.success && result.data) {
 				setVersions(result.data.versions);
 			} else {
-				setError(result.error ?? null);
+				setError(
+					result.error ?? "No fue posible obtener las versiones compartidas.",
+				);
 				setVersions([]);
 			}
 		} catch (err) {
@@ -177,7 +186,48 @@ export const useSharedVersions = () => {
 	};
 };
 
-async function getVersionsOfPoject({
+async function getSharedVersionsRequest({
+	sessionToken,
+}: {
+	sessionToken: string;
+}) {
+	try {
+		const response = await fetch(
+			`${process.env.NEXT_PUBLIC_API_URL}/api/versions/shared`,
+			{
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${sessionToken}`,
+				},
+			},
+		);
+
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			return {
+				success: false,
+				error:
+					errorData.error ||
+					"Se ha producido un error al obtener las versiones compartidas.",
+			};
+		}
+
+		const data = await response.json();
+		return {
+			success: true,
+			data: { versions: data.versions || [] },
+		};
+	} catch (error) {
+		console.error("Get shared versions error:", error);
+		return {
+			success: false,
+			error: "Se ha producido un error al obtener las versiones compartidas.",
+		};
+	}
+}
+
+async function getProjectWithVersions({
 	projectId,
 	sessionToken,
 }: {
@@ -192,7 +242,7 @@ async function getVersionsOfPoject({
 				headers: {
 					Authorization: `Bearer ${sessionToken}`,
 				},
-			}
+			},
 		);
 
 		if (!response.ok) {
@@ -205,14 +255,12 @@ async function getVersionsOfPoject({
 			};
 		}
 
-		const data: { project: { versions: VersionEntity[] } } =
-			await response.json();
-
+		const data: { project: ProjectWithVersionsEntity } = await response.json();
 		return { success: true, data };
 	} catch (error) {
 		console.error(
 			`Unexpected error during fething of versios for project: ${projectId}`,
-			error
+			error,
 		);
 		return {
 			success: false,
@@ -236,7 +284,7 @@ async function deleteVersionRequest({
 				headers: {
 					Authorization: `Bearer ${sessionToken}`,
 				},
-			}
+			},
 		);
 
 		if (!response.ok) {
@@ -251,10 +299,14 @@ async function deleteVersionRequest({
 
 		return { success: true };
 	} catch (error) {
-		console.error(`Unexpected error during version deletion: ${versionId}`, error);
+		console.error(
+			`Unexpected error during version deletion: ${versionId}`,
+			error,
+		);
 		return {
 			success: false,
-			error: "Se ha producido un error, por favor inténtelo de nuevo más tarde.",
+			error:
+				"Se ha producido un error, por favor inténtelo de nuevo más tarde.",
 		};
 	}
 }

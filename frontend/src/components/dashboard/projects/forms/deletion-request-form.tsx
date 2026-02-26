@@ -1,6 +1,5 @@
 "use client";
 
-import { type ActionState } from "../actions/create-project";
 import { startTransition, useActionState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@components/ui/common/button";
@@ -8,14 +7,14 @@ import { Input } from "@components/ui/common/input";
 import { Textarea } from "@components/ui/common/textarea";
 import { useUI } from "@components/ui/context";
 import { ProjectEntity } from "#types/project";
-import { requestProjectDelition } from "../actions/request-project-delition";
+import { ActionState, requestProjectDeletion } from "../actions/request-project-deletion";
 
-export type ModifyProjectFormData = {
+type DeletionRequestFormData = {
   id: string;
   motive?: string;
 };
 
-interface ModifyProjectFormProps {
+interface DeletionRequestFormProps {
   onSuccess?: () => void;
   project: ProjectEntity;
 }
@@ -25,17 +24,17 @@ const initialState: ActionState = {
   success: false,
 };
 
-export const DelitionRequestForm = ({
+export const DeletionRequestForm = ({
   onSuccess,
   project,
-}: ModifyProjectFormProps) => {
+}: DeletionRequestFormProps) => {
   const [state, formAction, isPending] = useActionState(
-    requestProjectDelition,
+    requestProjectDeletion,
     initialState
   );
   const { closeModal } = useUI();
 
-  const form = useForm<ModifyProjectFormData>({
+  const form = useForm<DeletionRequestFormData>({
     defaultValues: {
       id: project.id,
       motive: "",
@@ -50,21 +49,7 @@ export const DelitionRequestForm = ({
     }
   }, [state?.success, onSuccess]);
 
-  const parseErrorMessage = (error: string) => {
-    switch (error) {
-      case "Invalid credentials.":
-        return "Usuario o contraseña no corresponden a un usuario registrado";
-      case "Not authenticated":
-        return "Debes iniciar sesión para solicitar eliminación de proyecto";
-      case "Data not updated":
-        return "Debe proporcionar un motivo para la solicitud";
-      case "Something went wrong.":
-      default:
-        return "Ocurrió un error inesperado";
-    }
-  };
-
-  const onSubmit = (data: ModifyProjectFormData) => {
+  const onSubmit = (data: DeletionRequestFormData) => {
     const formData = new FormData();
     formData.append("id", data.id);
     formData.append("motive", data.motive || "");
@@ -72,8 +57,6 @@ export const DelitionRequestForm = ({
       formAction(formData);
     });
   };
-
-  if (!project) return <></>;
 
   if (state?.success && onSuccess) {
     return (
@@ -120,13 +103,13 @@ export const DelitionRequestForm = ({
         <Textarea
           placeholder="Razon de para solicitar eliminación de proyecto"
           {...form.register("motive", {
-            required: "El motivo es requerido",
+            required: "El motivo es obligatorio",
             maxLength: {
-              value: 300,
-              message: "Máximo 300 caracteres"
+              value: 200,
+              message: "Máximo 200 caracteres"
             }
           })}
-          maxLength={300}
+          maxLength={200}
           disabled={isPending}
         />
         {form.formState.errors.motive && (
@@ -136,7 +119,7 @@ export const DelitionRequestForm = ({
 
       {state?.error && (
         <p className="text-sm text-red-600">
-          {parseErrorMessage(state.error)}
+          {state.error}
         </p>
       )}
 

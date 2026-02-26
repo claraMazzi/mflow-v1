@@ -1,24 +1,27 @@
 export type DeletionRequest = {
   id: string;
   project: {
-    id: string;
+    _id: string;
     title: string;
     description: string;
-    owner: { id: string; name: string; email: string };
+    owner: { id: string; name: string; lastName: string; email: string };
     collaborators: {
-      id: string;
+      _id: string;
       name: string;
+      lastName: string;
       email: string;
     }[];
   };
   requestingUser: {
     id: string;
     name: string;
+    lastName: string;
     email: string;
   };
   reviewer?: {
     id: string;
     name: string;
+    lastName: string;
     email: string;
   };
   motive: string;
@@ -34,11 +37,8 @@ export type DeletionRequestResponse = {
 
 export type ApproveDeletionRequestData = {
   deletionRequestId: string;
-  reviewer: string;
 };
 
 export type DenyDeletionRequestData = {
   deletionRequestId: string;
-  reviewer: string;
-  reason?: string;
 };

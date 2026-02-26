@@ -244,52 +244,6 @@ export const getVersionWithReaders = async (
 	}
 };
 
-export type SharedVersionItem = {
-	id: string;
-	title: string;
-	state: string;
-	parentVersion: { id: string; title: string } | null;
-	projectId: string;
-	projectTitle: string;
-};
-
-export const getSharedVersions = async (): Promise<{
-	data?: { versions: SharedVersionItem[] };
-	error?: string;
-}> => {
-	try {
-		const session = await auth();
-		if (!session?.user) {
-			return { error: "Tu sesión ha expirado. Por favor, inicie sesión nuevamente." };
-		}
-		const response = await fetch(
-			`${process.env.API_URL}/api/versions/shared`,
-			{
-				method: "GET",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${session.auth}`,
-				},
-			}
-		);
-		if (!response.ok) {
-			const errorData = await response.json().catch(() => ({}));
-			return {
-				error:
-					errorData.error ||
-					"Se ha producido un error al obtener las versiones compartidas.",
-			};
-		}
-		const data = await response.json();
-		return { data: { versions: data.versions || [] } };
-	} catch (error) {
-		console.error("Get shared versions error:", error);
-		return {
-			error: "Se ha producido un error al obtener las versiones compartidas.",
-		};
-	}
-};
-
 export const getVersionFromShareRequest = async (
 	token: string
 ): Promise<ShareVersionActionState & { version?: unknown; project?: unknown }> => {

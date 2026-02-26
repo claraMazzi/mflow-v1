@@ -1,15 +1,14 @@
 "use server";
 import { auth } from "@lib/auth"; // or wherever your auth config is
-import type { ModifyProjectFormData } from "../forms/modify-project-form";
 
 // Define the state type
 export type ActionState = {
 	error?: string;
-	success?: boolean;
+	success: boolean;
 	data?: any;
 };
 
-export const modifyProject = async (
+export const requestProjectDeletion = async (
 	prevState: ActionState,
 	formData: FormData,
 ): Promise<ActionState> => {
@@ -24,31 +23,14 @@ export const modifyProject = async (
 		}
 		const accessToken = session.auth;
 
-		// Extract data from FormData
 		const projectData = {
-			title: formData.get("title") as string,
-			description: formData.get("description") as string,
+			motive: formData.get("motive") as string,
 		};
 
-		// Validate required fields
-		if (!formData.get("id")) {
-			return {
-				success: false,
-				error: "El identificador del proyecto es obligatorio.",
-			};
-		}
-
-		if (!projectData.title?.trim()) {
-			return {
-				success: false,
-				error: "El título del proyecto es obligatorio.",
-			};
-		}
-
 		const response = await fetch(
-			`${process.env.API_URL}/api/projects/${formData.get("id")}`,
+			`${process.env.API_URL}/api/projects/${formData.get("id")}/deletion`,
 			{
-				method: "PUT",
+				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
 					Authorization: `Bearer ${accessToken}`,
@@ -71,7 +53,7 @@ export const modifyProject = async (
 
 		return { success: true, data };
 	} catch (error) {
-		console.error("Modify project error:", error);
+		console.error("Deleion Request for project error:", error);
 		return {
 			success: false,
 			error:

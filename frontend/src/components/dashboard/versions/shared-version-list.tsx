@@ -4,9 +4,9 @@ import React, { ReactNode } from "react";
 import ContentCard from "@components/ui/Cards/ContentCard";
 import { DashboardPageSkeleton } from "@components/dashboard/dashboard-page-skeleton";
 import { useRouter } from "next/navigation";
-import type { SharedVersionItem } from "./actions/share-version";
+import { SharedVersionEntity } from "@src/types/version";
 
-const getSharedVersionDecorators = (version: SharedVersionItem): ReactNode[] => {
+const getSharedVersionDecorators = (version: SharedVersionEntity): ReactNode[] => {
 	const decorators: ReactNode[] = [
 		<div className="font-bold text-xs flex gap-1" key="state">
 			Estado:
@@ -32,7 +32,7 @@ const getSharedVersionDecorators = (version: SharedVersionItem): ReactNode[] => 
 };
 
 interface SharedVersionListProps {
-	versions: SharedVersionItem[];
+	versions: SharedVersionEntity[];
 	refreshVersions: () => void;
 	isLoading: boolean;
 }
@@ -63,7 +63,7 @@ export const SharedVersionList = ({
 				</div>
 			) : (
 				<div className="text-gray-600">
-					No tenés versiones compartidas con vos para solo lectura.
+					No tiene versiones compartidas contigo para solo lectura.
 				</div>
 			)}
 		</div>

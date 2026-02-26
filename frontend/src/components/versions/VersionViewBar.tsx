@@ -160,9 +160,12 @@ const VersionViewBar = ({
 						{showExportAndRevision && (
 							<>
 								<Button onClick={handleExport}>EXPORTAR</Button>
-								<Button onClick={handleRequestRevision} disabled={versionState === "PENDIENTE DE REVISION"}>
+								{
+									versionState !== "PENDIENTE DE REVISION" && versionState !== "REVISADA" && (
+								<Button onClick={handleRequestRevision}>
 									SOLICITAR REVISIÓN
 								</Button>
+								)}
 							</>
 						)}
 

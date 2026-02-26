@@ -2,7 +2,7 @@ import { Schema, model } from "mongoose";
 
 export enum ProjectState {
   CREATED = "CREADO",
-  PENDING = "PENDIENTE DE ELIMINACION",
+  PENDING_DELETION = "PENDIENTE DE ELIMINACION",
   DELETED = "ELIMINADO",
 }
 

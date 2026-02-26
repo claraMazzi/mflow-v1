@@ -28,7 +28,7 @@ export async function modifyUserData(
 		// Basic validation
 		if (!id) {
 			return {
-				error: "ID de usuario requerido",
+				error: "El identificador del usuario obligatorio.",
 				success: false,
 			};
 		}

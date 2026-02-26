@@ -16,7 +16,7 @@ const Page = () => {
 				projects={projects}
 				isLoading={isLoading}
 				refreshProjects={refreshProjects}
-				isSharing
+				areSharedProjects
 			/>
 		</div>
 	);

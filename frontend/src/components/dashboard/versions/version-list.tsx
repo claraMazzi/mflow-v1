@@ -34,7 +34,12 @@ const DeleteVersionModalContent = ({
 			</p>
 
 			<div className="flex justify-center space-x-3 mt-3 w-full">
-				<Button variant="outline" size="sm" onClick={onCancel} disabled={isDeleting}>
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={onCancel}
+					disabled={isDeleting}
+				>
 					Cancelar
 				</Button>
 				<Button size="sm" onClick={onConfirm} disabled={isDeleting}>
@@ -52,7 +57,7 @@ const getVersionDecorators = (version: VersionEntity) => {
 		<div className="font-bold text-xs flex gap-1">
 			Estado:
 			<span className="font-normal">{version.state}</span>
-		</div>
+		</div>,
 	);
 
 	if (version.parentVersion) {
@@ -60,14 +65,14 @@ const getVersionDecorators = (version: VersionEntity) => {
 			<div className="font-bold text-xs flex gap-1">
 				Versión Padre:
 				<span className="font-normal">{version.parentVersion.title}</span>
-			</div>
+			</div>,
 		);
 	} else {
 		decorators.push(
 			<div className="font-bold text-xs flex gap-1">
 				Versión Padre:
 				<span className="font-normal">N/A</span>
-			</div>
+			</div>,
 		);
 	}
 
@@ -161,7 +166,9 @@ const VersionList = ({
 	const handleDeleteVersion = (version: VersionEntity) => {
 		// Check if version state allows deletion
 		if (version.state !== "EN EDICION") {
-			showErrorModal(`Sólo se puede eliminar una versión que se encuentra en estado "EN EDICIÓN"`);
+			showErrorModal(
+				`Sólo se puede eliminar una versión que se encuentra en estado "EN EDICIÓN"`,
+			);
 			return;
 		}
 
@@ -186,13 +193,23 @@ const VersionList = ({
 							// Show error modal with the specific error or generic message
 							showErrorModal(
 								result.error ||
-									"Se ha producido un error, por favor inténtelo de nuevo más tarde."
+									"Se ha producido un error, por favor inténtelo de nuevo más tarde.",
 							);
 						}
 					}}
 					isDeleting={isDeleting}
 				/>
 			),
+		});
+	};
+
+	const handleShareVersion = (v: VersionEntity) => {
+		openModal({
+			name: "fullscreen-modal",
+			title: "Compartir versión (solo lectura)",
+			size: "md",
+			showCloseButton: false,
+			content: <ShareVersionForm version={v} />,
 		});
 	};
 
@@ -203,99 +220,84 @@ const VersionList = ({
 			{versions && versions.length > 0 ? (
 				<div className="w-full grid md:grid-cols-2 lg:grid-cols-3 gap-2">
 					{versions.map((version) => {
-						const canCreateFromVersion = 
-							version.state === "FINALIZADA" || 
-							version.state === "PENDIENTE DE REVISION" || 
+						const canCreateFromVersion =
+							version.state === "FINALIZADA" ||
+							version.state === "PENDIENTE DE REVISION" ||
 							version.state === "REVISADA";
 
-					// Only show "Solicitar Revisión" button if version state is "FINALIZADA"
-					const canRequestRevision = version.state === "FINALIZADA";
+						const canRequestRevision = version.state === "FINALIZADA";
 
-					// Share (read-only) for versions not in "EN EDICION"
-					const canShareVersion = version.state !== "EN EDICION" && version.state !== "ELIMINADA";
+						const canExportVersion = version.state !== "EN EDICION";
 
-					const handleShareVersion = (v: VersionEntity) => {
-						openModal({
-							name: "fullscreen-modal",
-							title: "Compartir versión (solo lectura)",
-							size: "md",
-							showCloseButton: false,
-							content: (
-								<ShareVersionForm
-									version={v}
-								/>
-							),
-						});
-					};
+						const canDeleteVersion = version.state === "EN EDICION" && isOwner;
 
-					const popoverOptions = [
-						{
-							content: (
-								<Button
-									variant={"optionList"}
-									onClick={() => handleCreateNewVersion(version)}
-									className={cn({ hidden: !canCreateFromVersion })}
-								>
-									Crear Nueva Versión
-								</Button>
-							),
-						},
-						{
-							content: (
-								<Button
-									variant={"optionList"}
-									onClick={() => handleExportVersion(version)}
-								>
-									Exportar Versión
-								</Button>
-							),
-						},
-						{
-							content: (
-								<Button
-									variant={"optionList"}
-									onClick={() => handleRequestVerification(version)}
-									className={cn({ hidden: !canRequestRevision })}
-								>
-									Solicitar Revisión
-								</Button>
-							),
-						},
-						{
-							content: (
-								<Button
-									variant={"optionList"}
-									onClick={() => handleShareVersion(version)}
-									className={cn({ hidden: !canShareVersion })}
-								>
-									Compartir
-								</Button>
-							),
-						},
-						// Only show delete option if user is the project owner
-						...(isOwner
-							? [
-									{
-										content: (
-											<Button
-												variant={"optionList"}
-												onClick={() => handleDeleteVersion(version)}
-											>
-												Eliminar Versión
-											</Button>
-										),
-									},
-							  ]
-							: []),
-					];
+						const canShareVersion =
+							version.state !== "EN EDICION" && version.state !== "ELIMINADA";
+
+						const popoverOptions = [
+							{
+								content: (
+									<Button
+										variant={"optionList"}
+										onClick={() => handleCreateNewVersion(version)}
+										className={cn({ hidden: !canCreateFromVersion })}
+									>
+										Crear Nueva Versión
+									</Button>
+								),
+							},
+							{
+								content: (
+									<Button
+										variant={"optionList"}
+										onClick={() => handleExportVersion(version)}
+										className={cn({ hidden: !canExportVersion })}
+									>
+										Exportar Versión
+									</Button>
+								),
+							},
+							{
+								content: (
+									<Button
+										variant={"optionList"}
+										onClick={() => handleRequestVerification(version)}
+										className={cn({ hidden: !canRequestRevision })}
+									>
+										Solicitar Revisión
+									</Button>
+								),
+							},
+							{
+								content: (
+									<Button
+										variant={"optionList"}
+										onClick={() => handleShareVersion(version)}
+										className={cn({ hidden: !canShareVersion })}
+									>
+										Compartir
+									</Button>
+								),
+							},
+							{
+								content: (
+									<Button
+										variant={"optionList"}
+										onClick={() => handleDeleteVersion(version)}
+										className={cn({ hidden: !canDeleteVersion })}
+									>
+										Eliminar Versión
+									</Button>
+								),
+							},
+						];
 
 						// Determine the route based on version state
-						const isReadOnly = 
-							version.state === "FINALIZADA" || 
-							version.state === "PENDIENTE DE REVISION" || 
+						const isReadOnly =
+							version.state === "FINALIZADA" ||
+							version.state === "PENDIENTE DE REVISION" ||
 							version.state === "REVISADA";
 
-						
 						const versionRoute = isReadOnly
 							? `/versions/${version.id}/view`
 							: `/versions/${version.id}`;
@@ -322,4 +324,3 @@ const VersionList = ({
 };
 
 export default VersionList;
-

@@ -13,7 +13,10 @@ import React from "react";
 import { toast } from "sonner";
 import { Correction, REVISION_TAB_PAGES, RevisionTabKey } from "#types/revision";
 import { VersionViewData } from "#types/version-view";
-import { getVersionForReadOnlyView } from "@components/dashboard/versions/actions/get-version-view";
+import {
+	checkVersionAccess,
+	getVersionForReadOnlyView,
+} from "@components/dashboard/versions/actions/get-version-view";
 import VersionViewBar from "@components/versions/VersionViewBar";
 import { ReadOnlyCorrectionBubble } from "@components/versions/ReadOnlyCorrectionBubble";
 import { Loader2 } from "lucide-react";
@@ -56,14 +59,31 @@ export default function Page({
 		);
 	}, [versionData?.revision?.corrections, currentPage]);
 
-	// Load version data
+	// Same access check as editing view: verify read access first, then load full details
 	useEffect(() => {
 		async function loadVersion() {
 			if (!session?.user) return;
 
 			setIsLoading(true);
-			const result = await getVersionForReadOnlyView(versionId);
 
+			const accessResult = await checkVersionAccess(versionId);
+			if (accessResult.error) {
+				toast.error("Error al cargar la versión", {
+					description: accessResult.error,
+				});
+				setIsLoading(false);
+				return;
+			}
+
+			if (accessResult.data?.canRead === false) {
+				toast.error("No tiene permisos para ver esta versión", {
+					description: "No tiene permisos para ver esta versión",
+				});
+				setIsLoading(false);
+				return;
+			}
+
+			const result = await getVersionForReadOnlyView(versionId);
 			if (result.error) {
 				toast.error("Error al cargar la versión", {
 					description: result.error,
@@ -73,9 +93,8 @@ export default function Page({
 			}
 
 			if (result.data) {
-				setVersionData(result.data);
+				setVersionData({...result.data, canExportAndRequestRevision: accessResult.data?.canWrite});
 
-				// Load image infos - convert server format to client format
 				const newImageInfos = new Map<string, ImageInfo>();
 				result.data.imageInfos?.forEach((serverImg) => {
 					if (serverImg.id) {

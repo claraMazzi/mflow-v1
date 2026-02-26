@@ -8,7 +8,7 @@ export class ShareVersionDto {
 	static create(object: { [key: string]: any }): [string?, ShareVersionDto?] {
 		const { versionId, senderId, collaborators: emails } = object;
 
-		if (!versionId) return ["El identificador de la versión es requerido."];
+		if (!versionId) return ["El identificador de la versión es obligatorio."];
 		if (!senderId) return ["Debe haber iniciado sesión para realizar esta acción."];
 		if (!emails || !Array.isArray(emails) || emails.length === 0)
 			return ["Se requiere de al menos un email para enviar las invitaciones."];

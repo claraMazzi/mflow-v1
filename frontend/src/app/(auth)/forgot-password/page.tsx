@@ -79,7 +79,7 @@ export default function ForgotPassword() {
 									message:
 										"La longitud del correo electrónico no puede exceder los 100 caracteres.",
 								},
-								required: "Correo electrónico es requerido.",
+								required: "Correo electrónico es obligatorio.",
 								pattern: {
 									value: /^\S+@\S+$/i,
 									message: "Correo electrónico inválido.",

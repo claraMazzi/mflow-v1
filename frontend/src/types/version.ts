@@ -5,5 +5,10 @@ export type VersionEntity = {
 	parentVersion: {
 		id: string;
 		title: string;
-	};
+	} | null;
+};
+
+export type SharedVersionEntity = VersionEntity & {
+	projectId: string;
+	projectTitle: string;
 };

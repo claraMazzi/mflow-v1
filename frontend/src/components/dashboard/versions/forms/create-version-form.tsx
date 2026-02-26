@@ -135,7 +135,7 @@ export const CreateVersionForm = ({
 					type="text"
 					placeholder="v1.0.0"
 					{...form.register("title", {
-						required: "El título de la versión es requerido",
+						required: "El título de la versión es obligatorio",
 						maxLength: {
 							value: 100,
 							message: "Máximo 100 caracteres",
