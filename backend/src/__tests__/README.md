@@ -2,6 +2,9 @@
 
 These tests exercise the **public HTTP API** with **real requests** (Supertest) and a **real MongoDB** instance. No mocks are used for persistence so that queries and document relationships behave like in production.
 
+- **Version creation**: `version-create.integration.test.ts` — POST /api/versions (blank and from parent).
+- **Version finalize**: `version-finalize.integration.test.ts` — POST /api/versions/:versionId/finalize (validation and state update).
+
 ## Requirements
 
 - **MongoDB** must be running and reachable (e.g. local or a dedicated test instance).

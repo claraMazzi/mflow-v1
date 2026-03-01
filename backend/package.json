@@ -7,7 +7,7 @@
     "build": "rimraf ./dist && tsc",
     "start": "npm run build && node dist/app.js",
     "test": "npx jest --config jest.config.js",
-    "test:integration": "npx jest --config jest.config.js --testPathPattern=integration"
+    "test:integration": "npx jest --config jest.config.js --testPathPattern=integration --runInBand"
   },
   "keywords": [],
   "author": "",
