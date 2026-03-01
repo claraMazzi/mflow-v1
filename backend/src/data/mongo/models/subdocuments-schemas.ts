@@ -135,9 +135,3 @@ export const correctionSchema = new Schema({
 	},
 	multimediaFilePath: String,
 });
-
-export const todoItemSchema = new Schema({
-	correction: correctionSchema,
-	description: String,
-	completed: Boolean,
-});

@@ -1,5 +1,5 @@
 import { InferSchemaType, Schema, model } from "mongoose";
-import { conceptualModelSchema, todoItemSchema } from "./subdocuments-schemas";
+import { conceptualModelSchema } from "./subdocuments-schemas";
 
 export enum VersionState {
     EDITABLE = "EN EDICION",
@@ -35,7 +35,6 @@ const versionSchema = new Schema(
 			type: Schema.Types.ObjectId,
 			ref: "Revision",
 		},
-		todoItems: [todoItemSchema],
 		conceptualModel: {
 			type: conceptualModelSchema,
 			required: [
@@ -43,11 +42,6 @@ const versionSchema = new Schema(
 				"The conceptual model must be initialized when the version is created.",
 			],
 		},
-		//Uncomment later if needed
-		/*comments : {
-			type: [Schema.Types.ObjectId],
-			ref: "Comment",
-		},*/
 	},
 	{ timestamps: true }
 );

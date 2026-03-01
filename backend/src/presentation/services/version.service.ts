@@ -80,7 +80,6 @@ export class VersionService {
 				state: string;
 				parentVersion: mongoose.Types.ObjectId | null;
 				sharedWithReaders: mongoose.Types.ObjectId[];
-				todoItems: any[];
 				revisions: mongoose.Types.ObjectId[];
 				conceptualModel: any;
 			};
@@ -92,7 +91,6 @@ export class VersionService {
 					state: "EN EDICION",
 					parentVersion: null,
 					sharedWithReaders: [],
-					todoItems: [],
 					revisions: [],
 					conceptualModel: this.createBlankConceptualModel(),
 				};
@@ -121,17 +119,11 @@ export class VersionService {
 					parentVersion.conceptualModel,
 				);
 
-				// Copy todo items if checkbox was checked
-				const todoItems = createDto.migrateTodoItems
-					? this.deepCopyTodoItems(parentVersion.todoItems)
-					: [];
-
 				newVersionData = {
 					title: createDto.title,
 					state: "EN EDICION",
 					parentVersion: new mongoose.Types.ObjectId(createDto.parentVersionId),
 					sharedWithReaders: [],
-					todoItems,
 					revisions: [],
 					conceptualModel: copiedConceptualModel,
 				};
