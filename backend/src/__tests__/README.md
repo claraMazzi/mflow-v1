@@ -6,6 +6,7 @@ These tests exercise the **public HTTP API** with **real requests** (Supertest) 
 - **Version finalize**: `version-finalize.integration.test.ts` — POST /api/versions/:versionId/finalize (validation and state update).
 - **Version delete**: `version-delete.integration.test.ts` — DELETE /api/versions/:versionId (soft delete when state is EN EDICION).
 - **Request revision**: `revision/__tests__/request-revision.integration.test.ts` — POST /api/revisions/request/:versionId (request verification of a finalized version).
+- **Create and start revision**: `revision/__tests__/start-revision.integration.test.ts` — creating a revision (request with selectedVerifierId) and POST /api/revisions/:revisionId/start (PENDIENTE → EN CURSO).
 
 ## Requirements
 
