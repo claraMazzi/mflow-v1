@@ -8,6 +8,7 @@ These tests exercise the **public HTTP API** with **real requests** (Supertest) 
 - **Request revision**: `revision/__tests__/request-revision.integration.test.ts` — POST /api/revisions/request/:versionId (request verification of a finalized version).
 - **Create and start revision**: `revision/__tests__/start-revision.integration.test.ts` — creating a revision (request with selectedVerifierId) and POST /api/revisions/:revisionId/start (PENDIENTE → EN CURSO).
 - **Finalize revision**: `revision/__tests__/finalize-revision.integration.test.ts` — POST /api/revisions/:revisionId/finalize (EN CURSO → FINALIZADA, version → REVISADA).
+- **Save corrections (modify revision in progress)**: `revision/__tests__/save-corrections.integration.test.ts` — PUT /api/revisions/:revisionId/corrections (save/update corrections while EN CURSO).
 
 ## Requirements
 
