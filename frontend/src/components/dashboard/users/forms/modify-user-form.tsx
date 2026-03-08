@@ -10,7 +10,7 @@ import { useUI } from "@components/ui/context";
 import { User } from "#types/user";
 import { Badge } from "@components/ui/common/badge";
 import { getRoleBadgeVariant, getRoleDisplayName } from "@lib/utils";
-import { emailRegex } from "../../../../../../backend/src/config/regular-exp";
+import { emailRegex } from "@lib/utils";
 
 export type ModifyUserFormData = {
 	id: string;
