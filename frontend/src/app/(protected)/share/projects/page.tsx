@@ -6,7 +6,7 @@ import { getProjectFromShareRequest } from "@components/dashboard/projects/actio
 export default async function AcceptInvitation({
   searchParams,
 }: {
-  searchParams: { token: string };
+  searchParams: Promise<{ token: string }>;
 }) {
   const params = await searchParams;
   const token = params.token;

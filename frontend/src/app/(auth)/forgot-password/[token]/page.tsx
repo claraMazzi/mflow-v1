@@ -15,7 +15,7 @@ interface FormData {
 export default function PasswordRecovery({
   params,
 }: {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }) {
   const [isValidToken, setIsValidToken] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);

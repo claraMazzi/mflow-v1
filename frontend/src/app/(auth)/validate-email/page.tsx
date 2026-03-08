@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@components/ui/common/button"
 
-const EmailValidation = () => {
+function EmailValidationContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [isValid, setIsValid] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
@@ -67,5 +67,23 @@ const EmailValidation = () => {
   )
 }
 
-export default EmailValidation
+function ValidateEmailFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-purple-200 p-5">
+      <div className="w-full max-w-2xl bg-white rounded-md shadow-md border border-gray-200 p-8">
+        <div className="flex justify-center items-center h-48">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function ValidateEmailPage() {
+  return (
+    <Suspense fallback={<ValidateEmailFallback />}>
+      <EmailValidationContent />
+    </Suspense>
+  )
+}
 
