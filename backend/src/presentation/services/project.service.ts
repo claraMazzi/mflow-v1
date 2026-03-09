@@ -39,22 +39,30 @@ export class ProjectService {
 		email: string;
 		link: string;
 	}) => {
-		const html = `<h1>Has sido invitado/a a colaborar en un proyecto!</h1>
+		try {
+			const html = `<h1>Has sido invitado/a a colaborar en un proyecto!</h1>
       <p> Hace Click en el siguiente <a href=${link}>link</a> para aceptar la invitación </p>
       <p><strong>Recordá que en caso de no tener cuenta primero deberás registrarte para poder acceder a la invitación</strong></p>`;
 
-		const options = {
-			to: email,
-			subject: "MFLOW - Invitación a colaborar en un proyecto",
-			htmlBody: html,
-		};
+			const options = {
+				to: email,
+				subject: "MFLOW - Invitación a colaborar en un proyecto",
+				htmlBody: html,
+			};
 
-		const isSent = await this.emailService.sendEmail(options);
-
-		if (!isSent)
-			throw CustomError.internalServer(
-				"Ocurrió un error al enviar el email de invitación al proyecto.",
+			const isSent = await this.emailService.sendEmail(options);
+			if (!isSent) {
+				console.error(
+					"[ProjectService] Failed to send project invitation email to:",
+					email
+				);
+			}
+		} catch (error) {
+			console.error(
+				`[ProjectService] Failed to send project invitation email for: ${email}`,
+				error
 			);
+		}
 	};
 
 	async sendProjectCollaborationInvitation(shareProjectDto: ShareProjectDto) {

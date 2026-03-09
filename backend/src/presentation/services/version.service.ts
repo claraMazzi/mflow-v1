@@ -1182,11 +1182,24 @@ export class VersionService {
       <p>Hacé clic en el siguiente <a href="${link}">link</a> para acceder a la versión.</p>
       <p><strong>Recordá que en caso de no tener cuenta primero deberás registrarte para poder acceder.</strong></p>`;
 		for (const email of uniqueEmails) {
-			await this.emailService.sendEmail({
-				to: email,
-				subject: "MFLOW - Versión compartida para lectura",
-				htmlBody: html,
-			});
+			try {
+				const sent = await this.emailService.sendEmail({
+					to: email,
+					subject: "MFLOW - Versión compartida para lectura",
+					htmlBody: html,
+				});
+				if (!sent) {
+					console.error(
+						"[VersionService] Failed to send version share invitation to:",
+						email
+					);
+				}
+			} catch (error) {
+				console.error(
+					`[VersionService] Failed to send version share invitation for: ${email}`,
+					error
+				);
+			}
 		}
 		// In-app notification for recipients who are already platform users
 		for (const email of uniqueEmails) {

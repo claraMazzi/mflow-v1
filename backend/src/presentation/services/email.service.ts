@@ -15,6 +15,8 @@ export interface Attachement {
 export class EmailService {
   private transporter: Transporter;
 
+  private sendEmailEnabled: boolean;
+
   //para evitar la dependencia oculta las pido por el constructor asi no llamo directamente al env.
   constructor(
     mailerService: string,
@@ -22,6 +24,7 @@ export class EmailService {
     mailerSecret: string,
     sendEmail: boolean
   ) {
+    this.sendEmailEnabled = sendEmail;
     this.transporter = nodemailer.createTransport({
       service: mailerService,
       auth: {
@@ -34,9 +37,9 @@ export class EmailService {
   async sendEmail(options: SendMailOptions): Promise<boolean> {
     const { to, subject, htmlBody, attachements = [] } = options;
 
-    if (!this.sendEmail) return true;
+    if (!this.sendEmailEnabled) return true;
     try {
-      const sentInformation = await this.transporter.sendMail({
+      await this.transporter.sendMail({
         to: to,
         subject: subject,
         html: htmlBody,
@@ -45,7 +48,7 @@ export class EmailService {
 
       return true;
     } catch (error) {
-      console.log('Email Service Send error', error)
+      console.error("[EmailService] Send error", error);
       return false;
     }
   }
