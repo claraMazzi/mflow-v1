@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { Button } from "@components/ui/common/button";
 import { Input } from "@components/ui/common/input";
-import { passwordRegex } from "../../../../../../backend/src/config/regular-exp";
 import { Skeleton } from "@components/ui/skeleton";
-
+import { passwordRegex } from "@lib/utils";
 interface FormData {
   password: string;
   confirmPassword: string;
@@ -16,7 +15,7 @@ interface FormData {
 export default function PasswordRecovery({
   params,
 }: {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }) {
   const [isValidToken, setIsValidToken] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);

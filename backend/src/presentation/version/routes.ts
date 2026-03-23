@@ -8,9 +8,8 @@ export class VersionRoutes {
 	static get routes(): Router {
 		const router = Router();
 		const emailService = new EmailService(
-			envs.MAILER_SERVICE,
-			envs.MAILER_EMAIL,
-			envs.MAILER_SECRET_KEY,
+			envs.RESEND_API_KEY,
+			envs.RESEND_FROM_EMAIL,
 			envs.SEND_EMIAL
 		);
 		const service = new VersionService(envs.FRONTEND_URL, emailService);
@@ -23,6 +22,7 @@ export class VersionRoutes {
 
 		// Version CRUD routes
 		router.post("/", controller.createVersion);
+		router.post("/:versionId/finalize", controller.finalizeVersion);
 		router.get("/:versionId/check-access", controller.checkVersionAccess);
 		router.get("/:versionId/view", controller.getVersionForReadOnlyView);
 		router.delete("/:versionId", controller.deleteVersion);

@@ -23,30 +23,41 @@ export class AuthService {
 		userId: string;
 		email: string;
 	}) => {
-		const token = await jwtAdapter.generateToken({ email, userId });
+		try {
+			const token = await jwtAdapter.generateToken({ email, userId });
 
-		if (!token) {
-			throw CustomError.internalServer(
-				"Ocurrió un error al enviar el email de verificación."
-			);
-		}
-		//link de retorno
-		const link = `${this.frontEndUrl}/validate-email/?token=${token}`;
+			if (!token) {
+				console.error(
+					"[AuthService] Failed to generate token for verification email:",
+					email
+				);
+				return;
+			}
+			//link de retorno
+			const link = `${this.frontEndUrl}/validate-email/?token=${token}`;
 
-		const html = `<h1>Validá tu correo electrónico</h1>
+			const html = `<h1>Validá tu correo electrónico</h1>
     <p> Hacé click en el siguiente <a href=${link}>link</a> para validar tu correo electrónico. </p>`;
 
-		const options = {
-			to: email,
-			subject: "MFLOW - Validá tu correo electrónico",
-			htmlBody: html,
-		};
+			const options = {
+				to: email,
+				subject: "MFLOW - Validá tu correo electrónico",
+				htmlBody: html,
+			};
 
-		const isSent = await this.emailService.sendEmail(options);
-		if (!isSent)
-			throw CustomError.internalServer(
-				"Ocurrió un error al enviar el email de verificación."
+			const isSent = await this.emailService.sendEmail(options);
+			if (!isSent) {
+				console.error(
+					"[AuthService] Failed to send verification email to:",
+					email
+				);
+			}
+		} catch (error) {
+			console.error(
+				`[AuthService] Failed to send verification email for: ${email}`,
+				error
 			);
+		}
 	};
 
 	async registerUser(registerUserDto: RegisterUserDto) {
@@ -76,18 +87,11 @@ export class AuthService {
 			);
 		}
 
-		try {
-			//mandar email de confirmacion
-			await this.sendEmailValidationLink({
-				userId: user.id,
-				email: user.email,
-			});
-		} catch (error) {
-			console.error(
-				`Failed to send the verification email for: ${user.email} - `,
-				error
-			);
-		}
+		// Enviar email de confirmación (no bloquea ni falla la petición si falla)
+		await this.sendEmailValidationLink({
+			userId: user.id,
+			email: user.email,
+		});
 
 		const { password, ...userEntity } = UserEntity.fromObject(user);
 
@@ -198,29 +202,41 @@ export class AuthService {
 		email: string;
 		userId: string;
 	}) => {
-		const token = await jwtAdapter.generateToken({ email, userId });
+		try {
+			const token = await jwtAdapter.generateToken({ email, userId });
 
-		if (!token)
-			throw CustomError.internalServer(
-				"Ocurrió un error al generar el token para restablecer la contraseña."
-			);
-		//link de retorno
-		const link = `${this.frontEndUrl}/forgot-password/${token}`;
+			if (!token) {
+				console.error(
+					"[AuthService] Failed to generate token for password recovery:",
+					email
+				);
+				return;
+			}
+			//link de retorno
+			const link = `${this.frontEndUrl}/forgot-password/${token}`;
 
-		const html = `<h1>Actualizá tu contraseña</h1>
+			const html = `<h1>Actualizá tu contraseña</h1>
     <p> Hacé click en el siguiente <a href=${link}>link</a> para actualizar tu contraseña. </p>`;
 
-		const options = {
-			to: email,
-			subject: "MFLOW - Recuperar contraseña",
-			htmlBody: html,
-		};
+			const options = {
+				to: email,
+				subject: "MFLOW - Recuperar contraseña",
+				htmlBody: html,
+			};
 
-		const isSent = await this.emailService.sendEmail(options);
-		if (!isSent)
-			throw CustomError.internalServer(
-				"Ocurrió un error al enviar el correo para restablecer la contraseña."
+			const isSent = await this.emailService.sendEmail(options);
+			if (!isSent) {
+				console.error(
+					"[AuthService] Failed to send password recovery email to:",
+					email
+				);
+			}
+		} catch (error) {
+			console.error(
+				`[AuthService] Failed to send password recovery email for: ${email}`,
+				error
 			);
+		}
 	};
 
 	public passwordRecover = async (email: string) => {
@@ -229,6 +245,7 @@ export class AuthService {
 			deletedAt: null,
 		});
 		if (!registeredUser) return;
+		// No lanzar si falla el envío; solo registrar en logs
 		await this.sendPasswordRecoveryLink({ email, userId: registeredUser.id });
 	};
 

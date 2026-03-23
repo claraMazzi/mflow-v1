@@ -10,7 +10,7 @@ import cn from "clsx";
 import {
 	emailRegex,
 	passwordRegex,
-} from "../../../../backend/src/config/regular-exp";
+} from "@lib/utils";
 
 interface CreateAccountFormProps {
 	defaultValues?: Partial<RegisterUserFormData>;

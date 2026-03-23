@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export async function GET(
 	request: Request,
-	{ params }: { params: { token: string } }
+	{ params }: { params: Promise<{ token: string }> }
 ) {
 	const resolvedParams = await params;
 

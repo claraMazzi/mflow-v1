@@ -23,35 +23,44 @@ export class UserService {
 		senderId: string;
 		user: SendInvitationWithRolesDto;
 	}) => {
-		const token = await jwtAdapter.generateToken(
-			{ senderId: senderId, userEmail: user.email, roles: user.roles },
-			"7d"
-		);
-
-		if (!token) {
-			throw CustomError.internalServer(
-				"Ocurrió un error al generar las invitaciones."
+		try {
+			const token = await jwtAdapter.generateToken(
+				{ senderId: senderId, userEmail: user.email, roles: user.roles },
+				"7d"
 			);
-		}
 
-		const frontendInvitationLink = `${this.frontEndUrl}/share/user/?token=${token}`;
+			if (!token) {
+				console.error(
+					"[UserService] Failed to generate token for platform invitation:",
+					user.email
+				);
+				return;
+			}
 
-		const html = `<h1>Has sido invitado/a a ser ${user.roles.map(
-			(role) => role
-		)}</h1>
+			const frontendInvitationLink = `${this.frontEndUrl}/share/user/?token=${token}`;
+
+			const html = `<h1>Has sido invitado/a a ser ${user.roles.map(
+				(role) => role
+			)}</h1>
         <p> Hacé click en el siguiente <a href=${frontendInvitationLink}>link</a> para aceptar la invitación. </p>`;
 
-		const options = {
-			to: user.email,
-			subject: "MFLOW - Invitación a la plataforma",
-			htmlBody: html,
-		};
+			const options = {
+				to: user.email,
+				subject: "MFLOW - Invitación a la plataforma",
+				htmlBody: html,
+			};
 
-		const isSent = await this.emailService.sendEmail(options);
-
-		if (!isSent) {
-			throw CustomError.internalServer(
-				"Ocurrió un error al enviar las invitaciones."
+			const isSent = await this.emailService.sendEmail(options);
+			if (!isSent) {
+				console.error(
+					"[UserService] Failed to send platform invitation email to:",
+					user.email
+				);
+			}
+		} catch (error) {
+			console.error(
+				`[UserService] Failed to send platform invitation email for: ${user.email}`,
+				error
 			);
 		}
 	};

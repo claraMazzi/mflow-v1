@@ -5,7 +5,7 @@ import CreateAccountForm from "@components/auth/create-account-form";
 export default async function AcceptInvitation({
   searchParams,
 }: {
-  searchParams: { token: string };
+  searchParams: Promise<{ token: string }>;
 }) {
   const params = await searchParams;
   const token = params.token;

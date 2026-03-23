@@ -109,3 +109,7 @@ export const getUserInitials = (name: string, lastName: string): string => {
   const lastInitial = lastName?.[0]?.toUpperCase() || "";
   return `${firstInitial}${lastInitial}` || "?";
 }
+
+export const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,25}$/;
+
+export const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;

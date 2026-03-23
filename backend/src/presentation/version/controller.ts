@@ -70,6 +70,30 @@ export class VersionController {
 	};
 
 	/**
+	 * POST /api/versions/:versionId/finalize
+	 * Validates the version's conceptual model and, if valid, sets version state to FINALIZADA.
+	 * Same logic as socket finalize-version-confirm; exposed for integration tests and API consumers.
+	 */
+	finalizeVersion = async (req: Request, res: Response) => {
+		try {
+			const userId = req.session?.userId;
+			if (!userId) {
+				return res.status(401).json({ error: "Debe iniciar sesión para finalizar una versión." });
+			}
+
+			const { versionId } = req.params;
+			if (!versionId) {
+				return res.status(400).json({ error: "El identificador de la versión es obligatorio." });
+			}
+
+			const result = await this.versionService.validateAndFinalizeVersion(versionId);
+			return res.status(200).json(result);
+		} catch (error) {
+			return this.handleError(error, res);
+		}
+	};
+
+	/**
 	 * GET /api/versions/:versionId/check-access
 	 * Returns whether the user can export and request revision (owner/collaborator).
 	 * Shared readers get false. Use for safeguards without loading full version data.

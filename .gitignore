@@ -2,4 +2,5 @@ backend/node_modules/
 backend/dist/
 backend/uploads/
 backend/mongo/
+backend/.env.production
 .env
