@@ -6,7 +6,7 @@
     "dev": "tsnd --respawn --clear src/app.ts",
     "build": "rimraf ./dist && tsc",
     "start": "npm run build && node dist/app.js",
-    "test": "npx jest --config jest.config.js",
+    "test": "npx jest --config jest.config.js --runInBand",
     "test:integration": "npx jest --config jest.config.js --testPathPattern=integration --runInBand"
   },
   "keywords": [],
