@@ -6,9 +6,15 @@ export const envs = {
   PORT: env.get('PORT').required().asPortNumber(),
   
   SEND_EMIAL: env.get('SEND_EMAIL').required().asBool(),
-  MAILER_SERVICE: env.get('MAILER_SERVICE').required().asString(),
-  MAILER_EMAIL: env.get('MAILER_EMAIL').required().asEmailString(),
-  MAILER_SECRET_KEY: env.get('MAILER_SECRET_KEY').required().asString(),
+  /** Resend API key (https://resend.com/api-keys). Can be empty when SEND_EMAIL=false. */
+  RESEND_API_KEY: env.get('RESEND_API_KEY').default('').asString(),
+  /**
+   * Verified sender, e.g. `MFLOW <noreply@yourdomain.com>` or `onboarding@resend.dev` (testing).
+   */
+  RESEND_FROM_EMAIL: env
+    .get('RESEND_FROM_EMAIL')
+    .default('onboarding@resend.dev')
+    .asString(),
   WEBSERVICE_URL: env.get('WEBSERVICE_URL').required().asString(),
   FRONTEND_URL: env.get('FRONTEND_URL').required().asString(),
 
