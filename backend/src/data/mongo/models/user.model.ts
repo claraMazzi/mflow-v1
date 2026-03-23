@@ -35,8 +35,6 @@ const userSchema = new Schema(
 			enum: USER_ROLES,
 			default: ["MODELADOR"],
 		},
-		sharedProjects: [{ type: Schema.Types.ObjectId, ref: "Project" }],
-		sharedArtifacts: [{ type: Schema.Types.ObjectId, ref: "Version" }],
 		deletedAt: {
 			type: Date,
 			default: null,
