@@ -1,4 +1,4 @@
-import nodemailer, { Transporter } from "nodemailer";
+import { Resend } from "resend";
 
 export interface SendMailOptions {
   to: string | string[];
@@ -12,39 +12,66 @@ export interface Attachement {
   path: string;
 }
 
+/**
+ * Email delivery via [Resend](https://resend.com).
+ * Same public API as before (sendEmail → boolean) so auth, project, user, and version services stay unchanged.
+ */
 export class EmailService {
-  private transporter: Transporter;
+  private readonly resend: Resend | null;
+  private readonly sendEmailEnabled: boolean;
+  private readonly fromEmail: string;
 
-  private sendEmailEnabled: boolean;
-
-  //para evitar la dependencia oculta las pido por el constructor asi no llamo directamente al env.
   constructor(
-    mailerService: string,
-    mailerEmail: string,
-    mailerSecret: string,
-    sendEmail: boolean
+    resendApiKey: string,
+    fromEmail: string,
+    sendEmailEnabled: boolean
   ) {
-    this.sendEmailEnabled = sendEmail;
-    this.transporter = nodemailer.createTransport({
-      service: mailerService,
-      auth: {
-        user: mailerEmail,
-        pass: mailerSecret,
-      },
-    });
+    this.sendEmailEnabled = sendEmailEnabled;
+    this.fromEmail = fromEmail.trim();
+    const key = resendApiKey.trim();
+    this.resend = key.length > 0 ? new Resend(key) : null;
   }
 
   async sendEmail(options: SendMailOptions): Promise<boolean> {
     const { to, subject, htmlBody, attachements = [] } = options;
 
     if (!this.sendEmailEnabled) return true;
+
+    if (!this.resend) {
+      console.error(
+        "[EmailService] SEND_EMAIL is enabled but RESEND_API_KEY is empty."
+      );
+      return false;
+    }
+
+    if (!this.fromEmail) {
+      console.error("[EmailService] RESEND_FROM_EMAIL is not configured.");
+      return false;
+    }
+
     try {
-      await this.transporter.sendMail({
-        to: to,
-        subject: subject,
+      const recipients = Array.isArray(to) ? to : [to];
+
+      const attachments =
+        attachements.length > 0
+          ? attachements.map((a) => ({
+              filename: a.filename,
+              path: a.path,
+            }))
+          : undefined;
+
+      const { error } = await this.resend.emails.send({
+        from: this.fromEmail,
+        to: recipients,
+        subject,
         html: htmlBody,
-        attachments: attachements,
+        ...(attachments ? { attachments } : {}),
       });
+
+      if (error) {
+        console.error("[EmailService] Resend API error:", error);
+        return false;
+      }
 
       return true;
     } catch (error) {

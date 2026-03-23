@@ -9,9 +9,8 @@ export class ProjectRoutes {
   static get routes(): Router {
     const router = Router();
     const emailService = new EmailService(
-      envs.MAILER_SERVICE,
-      envs.MAILER_EMAIL,
-      envs.MAILER_SECRET_KEY,
+      envs.RESEND_API_KEY,
+      envs.RESEND_FROM_EMAIL,
       envs.SEND_EMIAL
     );
 

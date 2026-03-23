@@ -12,8 +12,8 @@ node v ```22.13.0```
 5. correr ```npm run dev```
 
 
-## Nota:
-Para probar la funcionalidad de envio de mail cuado se realiza el registro para validar el email se tiene que activar con la flag ```SEND_EMAIL``` en el archivo ```.env```.
+## Nota (email con Resend)
+Para enviar correos (registro, invitaciones, recuperación de contraseña, etc.) activá `SEND_EMAIL=true` en `.env` y configurá [Resend](https://resend.com): `RESEND_API_KEY` y un remitente verificado en `RESEND_FROM_EMAIL` (por ejemplo `MFLOW <noreply@tudominio.com>`, o `onboarding@resend.dev` solo para pruebas).
 
 
 
