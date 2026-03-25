@@ -23,7 +23,7 @@ export class UploadRoutes {
 
 		const service = new UploadService({
 			baseUploadDirectory,
-			uploadServiceBaseUrl: envs.WEBSERVICE_URL + "/uploads",
+			uploadServiceBaseUrl: envs.WEBSERVICE_URL + "/api/uploads",
 			socketServer: this.socketServer,
 		});
 		const controller = new UploadController(service);
