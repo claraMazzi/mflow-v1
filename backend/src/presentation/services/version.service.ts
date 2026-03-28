@@ -305,7 +305,7 @@ export class VersionService {
 			});
 
 			// Generate URL (using the same base URL pattern as UploadService)
-			const uploadServiceBaseUrl = `${process.env.WEBSERVICE_URL || "http://localhost:3000"}/uploads`;
+			const uploadServiceBaseUrl = `${process.env.WEBSERVICE_URL || "http://localhost:3000"}/api/uploads`;
 			newVersionImage.url = `${uploadServiceBaseUrl}/${newVersionImage._id}`;
 
 			await newVersionImage.save();
