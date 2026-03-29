@@ -68,7 +68,7 @@ const Page = () => {
 		openModal({
 			name: "fullscreen-modal",
 			title: "Crear versión",
-			size: "md",
+			size: "lg",
 			showCloseButton: false,
 			content: (
 				<CreateVersionForm
