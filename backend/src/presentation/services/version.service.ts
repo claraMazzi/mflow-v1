@@ -876,7 +876,7 @@ export class VersionService {
 					)
 				) {
 					errors.push(
-						"Debe tener al menos una entidad incluída en el alcance del modelo.",
+						"Debe tener al menos una entidad incluida en el alcance del modelo.",
 					);
 				}
 
@@ -884,9 +884,19 @@ export class VersionService {
 					// If include is false, shouldn't have properties
 					if (entity.properties && entity.properties.length > 0) {
 						warnings.push(
-							`La entidad "${entityName}" no se encuentra incluída en el alcance por lo que no puede tener propiedades asignadas.`,
+							`La entidad "${entityName}" no se encuentra incluida en el alcance por lo que no puede tener propiedades asignadas.`,
 						);
 					}
+
+					if (
+						entity.scopeDecision.argumentType !== "NO VINCULADO A OBJETIVOS" &&
+						entity.scopeDecision.argumentType !== "SIMPLIFICACION"
+					) {
+						errors.push(
+							`La entidad "${entityName}" no se encuentra incluida en el alcance por lo que no puede tener como tipo de argumento los valores "ENTRADA" ni "SALIDA".`,
+						);
+					}
+
 				} else if (entity.scopeDecision?.include === true) {
 					// If include is true, validate argumentType
 					if (
@@ -894,7 +904,7 @@ export class VersionService {
 						entity.scopeDecision.argumentType === "SIMPLIFICACION"
 					) {
 						errors.push(
-							`La entidad "${entityName}" se encuentra incluída en el alcance por lo que no puede tener como tipo de argumento los valores "NO VINCULADO A OBJETIVOS" ni "SIMPLIFICACION".`,
+							`La entidad "${entityName}" se encuentra incluida en el alcance por lo que no puede tener como tipo de argumento los valores "NO VINCULADO A OBJETIVOS" ni "SIMPLIFICACION".`,
 						);
 					}
 
@@ -929,7 +939,15 @@ export class VersionService {
 									property.detailLevelDecision.argumentType === "SIMPLIFICACION"
 								) {
 									errors.push(
-										`La propiedad ${propIndex + 1} de la entidad "${entityName}" está incluída en el alcance por lo que no puede tener como tipo de argumento el valor "SIMPLIFICACION".`,
+										`La propiedad ${propIndex + 1} de la entidad "${entityName}" está incluida en el nivel de detalle por lo que no puede tener como tipo de argumento el valor "SIMPLIFICACION".`,
+									);
+								}
+							} else {
+								if (
+									property.detailLevelDecision?.argumentType !== "SIMPLIFICACION"
+								) {
+									errors.push(
+										`La propiedad ${propIndex + 1} de la entidad "${entityName}" no se encuentra incluida en el nivel de detalle por lo que sólo puede tener como tipo de argumento el valor "SIMPLIFICACION".`,
 									);
 								}
 							}
