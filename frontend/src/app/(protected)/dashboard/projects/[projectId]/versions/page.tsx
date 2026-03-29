@@ -111,9 +111,9 @@ const Page = () => {
 
 	return (
 		<div className="w-full flex flex-col gap-4">
-			<div className="flex w-full justify-between border-b border-accent-100 py-2">
+			<div className="flex w-full gap-4 flex-wrap justify-between border-b border-accent-100 py-2">
 				<h1 className="text-2xl font-bold">
-					Versiones del proyecto {project!.title}
+					Versiones del proyecto "{project!.title}"
 				</h1>
 				<Button
 					variant="tertiary"

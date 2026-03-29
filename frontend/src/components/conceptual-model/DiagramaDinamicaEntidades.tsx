@@ -240,18 +240,27 @@ const DiagramaDinamicaEntidadesComponent = ({
 
 							return (
 								<div key={field.id} className="bg-gray-50 rounded-lg border">
-									{/* Collapsible Header */}
+									{/* Collapsible Header — chevron is the only toggle; input must not live inside a <button> (Space would activate it). */}
 									<div className="flex items-center gap-2">
-										<button
-											onClick={() => toggleEntityCollapse(field._id)}
-											className="flex-1 flex items-center gap-3 p-3 text-left hover:bg-gray-100 transition-colors duration-200 rounded-l-lg"
-										>
-											{isCollapsed ? (
-												<ChevronRight className="w-5 h-5 text-gray-500 flex-shrink-0" />
-											) : (
-												<ChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0" />
-											)}
-											<div className="flex-1 space-y-2">
+										<div className="flex flex-1 items-center gap-3 p-3 rounded-l-lg min-w-0">
+											<button
+												type="button"
+												onClick={() => toggleEntityCollapse(field._id)}
+												className="flex-shrink-0 rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2"
+												aria-expanded={!isCollapsed}
+												aria-label={
+													isCollapsed
+														? "Expandir sección de la entidad"
+														: "Colapsar sección de la entidad"
+												}
+											>
+												{isCollapsed ? (
+													<ChevronRight className="w-5 h-5" />
+												) : (
+													<ChevronDown className="w-5 h-5" />
+												)}
+											</button>
+											<div className="flex-1 space-y-2 min-w-0">
 												<label className="block text-sm font-medium text-gray-700">
 													{index + 1}. Nombre de la entidad
 												</label>
@@ -262,10 +271,9 @@ const DiagramaDinamicaEntidadesComponent = ({
 													})}
 													placeholder="Nombre de la entidad..."
 													className="border-2 border-gray-200 focus:border-purple-400"
-													onClick={(e) => e.stopPropagation()}
 												/>
 											</div>
-										</button>
+										</div>
 
 										{/* Delete button */}
 										<div className="pr-3">
