@@ -104,7 +104,7 @@ const VersionList = ({
 		openModal({
 			name: "fullscreen-modal",
 			title: "Crear nueva versión",
-			size: "md",
+			size: "lg",
 			showCloseButton: false,
 			content: (
 				<CreateVersionForm
