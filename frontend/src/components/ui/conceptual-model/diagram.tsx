@@ -460,7 +460,7 @@ const DiagramImageUploadComponent = ({
 										<Upload className="mx-auto h-12 w-12 text-muted-foreground" />
 										<div className="space-y-2">
 											<p className="text-base font-medium">
-												Drop image here or click to upload
+												Arrastra una imagen aquí o haz clic para subir
 											</p>
 											<p className="text-sm text-muted-foreground">
 												PNG, JPG, JPEG up to 5MB
@@ -495,8 +495,7 @@ const DiagramImageUploadComponent = ({
 									}}
 									className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
 								>
-									<Upload className="w-4 h-4 mr-2" />
-									Select Image
+									<Upload className="w-4 h-4 mr-2" />									Seleccionar imagen
 								</button>
 							)}
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, type ChangeEvent } from "react";
 import { useForm } from "react-hook-form";
 import { Input } from "@components/ui/common/input";
 import { Button } from "@components/ui/common/button";
@@ -10,10 +10,19 @@ import cn from "clsx";
 import {
 	emailRegex,
 	passwordRegex,
+	personNameRegex,
 } from "@lib/utils";
 
+type CreateAccountFormValues = RegisterUserFormData & {
+	confirmPassword: string;
+};
+
+function filterPersonNameInput(value: string) {
+	return value.replace(/[^\p{L}\s']/gu, "");
+}
+
 interface CreateAccountFormProps {
-	defaultValues?: Partial<RegisterUserFormData>;
+	defaultValues?: Partial<CreateAccountFormValues>;
 	successMessage?: string;
 	title?: string;
 	submitButtonText?: string;
@@ -30,6 +39,7 @@ export default function CreateAccountForm({
 		lastName: "",
 		email: "",
 		password: "",
+		confirmPassword: "",
 		roles: ["MODELADOR"],
 	},
 	successMessage = "¡Te registraste correctamente! Por favor revisa tu casilla de correo. Recibirás un email con un link para validar el correo electronico ingresado.",
@@ -45,12 +55,35 @@ export default function CreateAccountForm({
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [isSubmitted, setIsSubmitted] = useState(false);
 
-	const form = useForm<RegisterUserFormData>({
-		defaultValues: { ...defaultValues },
+	const form = useForm<CreateAccountFormValues>({
+		defaultValues: {
+			name: "",
+			lastName: "",
+			email: "",
+			password: "",
+			confirmPassword: "",
+			roles: ["MODELADOR"],
+			...defaultValues,
+		},
 		mode: "onBlur",
 	});
 
-	const handleSubmit = async (data: RegisterUserFormData) => {
+	const passwordValue = form.watch("password");
+
+	useEffect(() => {
+		const confirm = form.getValues("confirmPassword");
+		if (
+			confirm.length > 0 ||
+			form.formState.touchedFields.confirmPassword
+		) {
+			void form.trigger("confirmPassword");
+		}
+	}, [passwordValue]);
+
+	const handleSubmit = async ({
+		confirmPassword: _confirm,
+		...data
+	}: CreateAccountFormValues) => {
 		setIsLoading(true);
 		setErrorMessage(null);
 
@@ -68,6 +101,54 @@ export default function CreateAccountForm({
 
 		setIsLoading(false);
 	};
+
+	const { onChange: onNameChange, ...nameFieldReg } = form.register("name", {
+		required: "Nombre es obligatorio.",
+		maxLength: {
+			value: 100,
+			message:
+				"La longitud del nombre no puede exceder los 100 caracteres.",
+		},
+		pattern: {
+			value: personNameRegex,
+			message:
+				"Solo se permiten letras, espacios y el apóstrofo (') (sin números ni otros símbolos).",
+		},
+	});
+
+	const { onChange: onLastNameChange, ...lastNameFieldReg } = form.register(
+		"lastName",
+		{
+			required: "Apellido es obligatorio.",
+			maxLength: {
+				value: 100,
+				message:
+					"La longitud del apellido no puede exceder los 100 caracteres.",
+			},
+			pattern: {
+				value: personNameRegex,
+				message:
+					"Solo se permiten letras, espacios y el apóstrofo (') (sin números ni otros símbolos).",
+			},
+		}
+	);
+
+	const handlePersonNameChange =
+		(
+			field: "name" | "lastName",
+			onChange: (e: ChangeEvent<HTMLInputElement>) => void
+		) =>
+		(e: ChangeEvent<HTMLInputElement>) => {
+			const filtered = filterPersonNameInput(e.target.value);
+			form.setValue(field, filtered, {
+				shouldValidate: true,
+				shouldDirty: true,
+			});
+			void onChange({
+				...e,
+				target: { ...e.target, value: filtered },
+			});
+		};
 
 	return (
 		<div
@@ -101,14 +182,8 @@ export default function CreateAccountForm({
 								</label>
 								<Input
 									placeholder="Tu nombre"
-									{...form.register("name", {
-										required: "Nombre es obligatorio.",
-										maxLength: {
-											value: 100,
-											message:
-												"La longitud del nombre no puede exceder los 100 caracteres.",
-										},
-									})}
+									{...nameFieldReg}
+									onChange={handlePersonNameChange("name", onNameChange)}
 									value={form.watch("name") || ""}
 								/>
 								{form.formState.errors.name && (
@@ -124,14 +199,11 @@ export default function CreateAccountForm({
 								</label>
 								<Input
 									placeholder="Tu apellido"
-									{...form.register("lastName", {
-										required: "Apellido es obligatorio.",
-										maxLength: {
-											value: 100,
-											message:
-												"La longitud del apellido no puede exceder los 100 caracteres.",
-										},
-									})}
+									{...lastNameFieldReg}
+									onChange={handlePersonNameChange(
+										"lastName",
+										onLastNameChange
+									)}
 									value={form.watch("lastName") || ""}
 								/>
 								{form.formState.errors.lastName && (
@@ -189,6 +261,29 @@ export default function CreateAccountForm({
 								{form.formState.errors.password && (
 									<p className="text-sm text-red-600">
 										{form.formState.errors.password.message}
+									</p>
+								)}
+							</div>
+
+							<div className="space-y-2">
+								<label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+									Confirmar contraseña
+									<span className="text-red-500">*</span>
+								</label>
+								<Input
+									type="password"
+									placeholder="Repetí tu contraseña"
+									{...form.register("confirmPassword", {
+										required: "Confirmá tu contraseña.",
+										validate: (value) =>
+											value === form.getValues("password") ||
+											"Las contraseñas no coinciden.",
+									})}
+									value={form.watch("confirmPassword") || ""}
+								/>
+								{form.formState.errors.confirmPassword && (
+									<p className="text-sm text-red-600">
+										{form.formState.errors.confirmPassword.message}
 									</p>
 								)}
 							</div>

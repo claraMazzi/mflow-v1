@@ -113,3 +113,6 @@ export const getUserInitials = (name: string, lastName: string): string => {
 export const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,25}$/;
 
 export const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+/** Unicode letters, spaces, and apostrophe only (no other digits or punctuation). */
+export const personNameRegex = /^[\p{L}\s']+$/u;

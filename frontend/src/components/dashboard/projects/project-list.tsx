@@ -98,16 +98,16 @@ const ProjectList = ({
 				<div className="w-full grid md:grid-cols-2 lg:grid-cols-3 gap-2">
 					{projects.map((project, index) => {
 						const isPendingDeletion = project.state === ProjectState.PENDING_DELETION;
-						const popoverOptionsBase = [
-							{
-								content: (
-									<Button variant={"optionList"}>Exportar proyecto</Button>
-								),
-							},
-						];
+						// const popoverOptionsBase = [
+						// 	// {
+						// 	// 	content: (
+						// 	// 		<Button variant={"optionList"}>Exportar proyecto</Button>
+						// 	// 	),
+						// 	// },
+						// ];
 
 						const popoverOptions = areSharedProjects
-							? popoverOptionsBase
+							? []
 							: [
 									{
 										content: (
@@ -119,7 +119,7 @@ const ProjectList = ({
 											</Button>
 										),
 									},
-									...popoverOptionsBase,
+									// ...popoverOptionsBase,
 									{
 										content: (
 											<Button
