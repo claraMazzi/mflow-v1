@@ -35,6 +35,28 @@ export class UploadService {
 		this.socketServer = socketServer;
 	}
 
+	/** Multer stores an absolute path at upload time; if cwd or host differs at read time, fall back to the known layout. */
+	private resolveStoredImagePath(imageInfo: InstanceType<typeof VersionImageModel>): string {
+		const stored = imageInfo.path;
+		if (existsSync(stored)) {
+			return path.resolve(stored);
+		}
+		const versionId = String(imageInfo.version);
+		const byConvention = path.join(
+			this.baseUploadDirectory,
+			versionId,
+			"conceptual-model",
+			imageInfo.filename
+		);
+		if (existsSync(byConvention)) {
+			return path.resolve(byConvention);
+		}
+		console.warn(
+			`Image ${imageInfo.id}: file missing at stored path "${stored}" and convention path "${byConvention}"`
+		);
+		throw CustomError.notFound("Image file not found on server");
+	}
+
 	async uploadImageToVersion(versionId: string, diagramPropertyPath: any, file: Express.Multer.File) {
 		
 		const version = await VersionModel.findById(versionId).exec();
@@ -111,13 +133,12 @@ export class UploadService {
 				throw CustomError.notFound("Image not found on server.");
 			}
 
-			if (!existsSync(imageInfo.path)) {
-				throw CustomError.notFound("Image file not found on server");
-			}
+			const resolvedFilePath = this.resolveStoredImagePath(imageInfo);
 
 			return {
-				imageInfo: imageInfo,
-			}
+				imageInfo,
+				resolvedFilePath,
+			};
 		} catch (error) {
 			if (error instanceof CustomError) {
 				throw error;

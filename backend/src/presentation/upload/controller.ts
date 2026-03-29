@@ -18,13 +18,17 @@ export class UploadController {
 	getImageById = (req: Request, res: Response) => {
 		const imageId = req.params.imageId;
 		if (!imageId) {
-			throw CustomError.badRequest("No image id provided.");
+			return this.handleError(
+				CustomError.badRequest("No image id provided."),
+				res
+			);
 		}
 
 		this.uploadService
 		  .getImageById(imageId)
 		  .then((image) => {
-				const ext = path.extname(image.imageInfo.path).toLowerCase();
+				const filePath = image.resolvedFilePath;
+				const ext = path.extname(filePath).toLowerCase();
 				const mimeFromExt =
 					ext === ".png"
 						? "image/png"
@@ -35,7 +39,7 @@ export class UploadController {
 					image.imageInfo.mimeType?.trim() || mimeFromExt || "image/png";
 				res.setHeader("Content-Type", contentType);
 				res.setHeader("Cache-Control", "public, max-age=3600, immutable");
-				res.status(200).sendFile(path.resolve(image.imageInfo.path), (err) => {
+				res.status(200).sendFile(filePath, (err) => {
 					if (err) {
 						console.error("sendFile failed for image", imageId, err);
 						if (!res.headersSent) {
