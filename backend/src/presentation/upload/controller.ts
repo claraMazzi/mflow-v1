@@ -1,3 +1,4 @@
+import path from "node:path";
 import { Request, Response } from "express";
 import { UploadService } from "../services";
 import { CustomError } from "../../domain";
@@ -23,10 +24,28 @@ export class UploadController {
 		this.uploadService
 		  .getImageById(imageId)
 		  .then((image) => {
-			// Serve the actual image file bytes so <Image/> can render it
-			res.setHeader("Content-Type", image.imageInfo.mimeType);
-			res.setHeader("Cache-Control", "public, max-age=3600, immutable");
-			return res.status(200).sendFile(image.imageInfo.path);
+				const ext = path.extname(image.imageInfo.path).toLowerCase();
+				const mimeFromExt =
+					ext === ".png"
+						? "image/png"
+						: ext === ".jpg" || ext === ".jpeg"
+							? "image/jpeg"
+							: null;
+				const contentType =
+					image.imageInfo.mimeType?.trim() || mimeFromExt || "image/png";
+				res.setHeader("Content-Type", contentType);
+				res.setHeader("Cache-Control", "public, max-age=3600, immutable");
+				res.status(200).sendFile(path.resolve(image.imageInfo.path), (err) => {
+					if (err) {
+						console.error("sendFile failed for image", imageId, err);
+						if (!res.headersSent) {
+							this.handleError(
+								CustomError.internalServer("Failed to send image file."),
+								res
+							);
+						}
+					}
+				});
 		  })
 		  .catch((error) => this.handleError(error, res));
 	};

@@ -3,7 +3,6 @@
 import { ImageInfo } from "#types/conceptual-model";
 import { useMemo } from "react";
 import { Download, ImageIcon, ExternalLink } from "lucide-react";
-import Image from "next/image";
 import { Button } from "@components/ui/common/button";
 
 interface RevisionDiagramImageProps {
@@ -104,15 +103,13 @@ export function RevisionDiagramImage({
         )}
       </div>
 
-      {/* Image Display */}
+      {/* Image Display — use <img> for API URLs so the browser loads them directly; next/image would proxy via /_next/image and can fail on upstream errors. */}
       {hasImage ? (
-        <div className="relative overflow-hidden rounded-lg border bg-white min-h-[400px] max-h-[600px]">
-          <Image
+        <div className="overflow-hidden rounded-lg border bg-white min-h-[400px] max-h-[600px] flex items-center justify-center p-2">
+          <img
             src={plantTextImageUrl || imageFileInfo?.url || ""}
             alt={title}
-            fill
-            className="object-contain"
-            unoptimized={!!plantTextImageUrl}
+            className="max-h-[580px] w-full object-contain"
           />
         </div>
       ) : (

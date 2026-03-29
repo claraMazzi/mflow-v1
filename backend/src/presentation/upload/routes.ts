@@ -62,19 +62,19 @@ export class UploadRoutes {
 			limits: {
 				fileSize: 5 * 1024 * 1024, //5 MB
 			},
-			fileFilter: (req: Request, file: File, cb: FileFilterCallback) => {
-				const allowedMIMETypes = ["image/png", "image/jpeg"];
+			fileFilter: (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+				const allowedMIMETypes = ["image/png", "image/jpeg", "image/jpg"];
 				const versionId = req.params.versionId;
 
 				if (!versionId) {
-					cb(new Error("The version id is missing."));
+					return cb(new Error("The version id is missing."));
 				}
 
-				if (!allowedMIMETypes.includes(file.type)) {
-					return cb(null, true);
-				} else {
-					cb(new Error("Solo está permitida la subida de imágenes."));
+				const mime = file.mimetype?.toLowerCase() || "";
+				if (!allowedMIMETypes.includes(mime)) {
+					return cb(new Error("Solo está permitida la subida de imágenes."));
 				}
+				return cb(null, true);
 			},
 		});
 

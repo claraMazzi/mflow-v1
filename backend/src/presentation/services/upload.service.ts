@@ -119,9 +119,10 @@ export class UploadService {
 				imageInfo: imageInfo,
 			}
 		} catch (error) {
-			//errores no controlados
-			console.error("middleware error", error);
-
+			if (error instanceof CustomError) {
+				throw error;
+			}
+			console.error("getImageById error", error);
 			throw CustomError.internalServer("Internal server error");
 		}
 	}
