@@ -510,7 +510,7 @@ const DiagramImageUploadComponent = ({
 									className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-background border border-border text-foreground rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
 								>
 									<Upload className="w-4 h-4 mr-2" />
-									Replace Image
+									Reemplazar imagen
 								</button>
 							)}
 						</div>
