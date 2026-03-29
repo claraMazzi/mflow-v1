@@ -40,20 +40,28 @@ const ContentCard = ({
 	decorators,
 }: ContentCardProps) => {
 	return (
-		<div className="bg-white flex flex-col justify-between rounded-lg h-full">
-			<div className="p-3 flex flex-col gap-2">
-				<div className="flex justify-between ">
-					<h3 className="text-base font-bold">{title}</h3>
-					{options && <OptionsPopover options={options} />}
+		<div className="bg-white flex h-full min-h-0 flex-col justify-between rounded-lg">
+			<div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 p-3">
+				<div className="flex min-w-0 items-start justify-between gap-2">
+					<h3 className="min-w-0 flex-1 text-base font-bold break-words">
+						{title}
+					</h3>
+					{options && (
+						<div className="shrink-0 pt-0.5">
+							<OptionsPopover options={options} />
+						</div>
+					)}
 				</div>
 				{decorators && (
-					<div className="flex flex-col gap-1">
+					<div className="flex min-w-0 flex-col gap-1">
 						{decorators.map((decorator, index) => (
 							<Fragment key={`card-decorator-${index}`}>{decorator}</Fragment>
 						))}
 					</div>
 				)}
-				{type === "project" && <div className="text-sm">{description}</div>}
+				{type === "project" && (
+					<div className="min-w-0 text-sm break-words">{description}</div>
+				)}
 			</div>
 			<div className={`flex w-full justify-end ${colorVariants[type].actionBarBackgroundColor} p-2 rounded-b-lg`}>
 				{action && (

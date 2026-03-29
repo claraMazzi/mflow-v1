@@ -57,6 +57,9 @@ interface PropertyEditorProps {
 	propIndex: number;
 	entityIndex: number;
 	entityId: string;
+	control: Control<ConceptualModel>;
+	isCollapsed: boolean;
+	onToggleCollapse: () => void;
 	hasEditingRights: boolean;
 	customRegisterField: CustomRegisterFieldFn;
 	handleRemoveItemFromList: HandleRemoveItemFromListFn;
@@ -67,17 +70,75 @@ function PropertyEditor({
 	propIndex,
 	entityIndex,
 	entityId,
+	control,
+	isCollapsed,
+	onToggleCollapse,
 	hasEditingRights,
 	customRegisterField,
 	handleRemoveItemFromList,
 }: PropertyEditorProps) {
+	const propertyName = useWatch({
+		control,
+		name: `entities.${entityIndex}.properties.${propIndex}.name` as Path<ConceptualModel>,
+	});
+
+	const displayName =
+		typeof propertyName === "string" && propertyName.trim()
+			? propertyName.trim()
+			: "Propiedad sin nombre";
+
 	return (
-		<div className="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg border">
-			<div className="flex items-end gap-3">
-				<div className="flex-1 space-y-2">
-					<label className="block text-sm font-medium text-gray-700">
-						Nombre de la propiedad
-					</label>
+		<div className="flex flex-col bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+			<div className="flex items-stretch gap-1">
+				<button
+					type="button"
+					onClick={onToggleCollapse}
+					className="flex flex-1 min-w-0 items-center gap-3 p-3 text-left hover:bg-gray-100/80 transition-colors rounded-none"
+				>
+					{isCollapsed ? (
+						<ChevronRight className="w-4 h-4 shrink-0 text-gray-500" />
+					) : (
+						<ChevronDown className="w-4 h-4 shrink-0 text-gray-500" />
+					)}
+					{isCollapsed ? (
+						<span className="text-sm font-medium text-gray-900 truncate">
+							{displayName}
+						</span>
+					) : (
+						<span className="text-sm font-medium text-gray-700">
+							Nombre de la propiedad
+						</span>
+					)}
+				</button>
+				<div className="flex items-center pr-2">
+					<Button
+						variant="ghost"
+						size="sm"
+						disabled={!hasEditingRights}
+						onClick={(e) => {
+							e.stopPropagation();
+							handleRemoveItemFromList({
+								e: e,
+								listPropertyPath: `entities.${entityIndex}.properties`,
+								itemId: field._id,
+							});
+						}}
+						className="text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
+					>
+						<X size={16} />
+					</Button>
+				</div>
+			</div>
+
+			<div
+				className={cn(
+					"transition-all duration-300 ease-in-out px-3",
+					isCollapsed
+						? "max-h-0 opacity-0 overflow-hidden py-0"
+						: "max-h-[2000px] opacity-100 overflow-y-auto pb-3 space-y-3",
+				)}
+			>
+				<div className="space-y-2">
 					<Input
 						{...customRegisterField({
 							name: `entities.${entityIndex}.properties.${propIndex}.name` as Path<ConceptualModel>,
@@ -87,22 +148,6 @@ function PropertyEditor({
 						className="border-2 border-gray-200 focus:border-purple-400"
 					/>
 				</div>
-				<Button
-					variant="ghost"
-					size="sm"
-					disabled={!hasEditingRights}
-					onClick={(e) =>
-						handleRemoveItemFromList({
-							e: e,
-							listPropertyPath: `entities.${entityIndex}.properties`,
-							itemId: field._id,
-						})
-					}
-					className="text-red-500 hover:text-red-700 hover:bg-red-50"
-				>
-					<X size={16} />
-				</Button>
-			</div>
 
 			<div className="grid grid-cols-1 gap-3">
 				<div className="space-y-2">
@@ -157,6 +202,7 @@ function PropertyEditor({
 					</select>
 				</div>
 			</div>
+			</div>
 		</div>
 	);
 }
@@ -186,6 +232,24 @@ function EntityPropertiesEditor({
 		name: `entities.${entityIndex}.properties` as const,
 		control,
 	});
+
+	// Use domain Property._id, not RHF field.id — internal ids reset when the form
+	// re-syncs after socket "add property", which was expanding collapsed rows.
+	const [collapsedPropertyIds, setCollapsedPropertyIds] = useState<Set<string>>(
+		new Set(),
+	);
+
+	const togglePropertyCollapse = (propertyId: string) => {
+		setCollapsedPropertyIds((prev) => {
+			const next = new Set(prev);
+			if (next.has(propertyId)) {
+				next.delete(propertyId);
+			} else {
+				next.add(propertyId);
+			}
+			return next;
+		});
+	};
 
 	const previousPropertiesLength = useRef(propertiesList.fields.length);
 
@@ -233,11 +297,16 @@ function EntityPropertiesEditor({
 				<div className="space-y-3">
 					{propertiesList.fields.map((propertyField, propIndex) => (
 						<PropertyEditor
-							key={propertyField.id}
+							key={propertyField._id}
 							entityId={entityId}
 							field={propertyField}
 							propIndex={propIndex}
 							entityIndex={entityIndex}
+							control={control}
+							isCollapsed={collapsedPropertyIds.has(propertyField._id)}
+							onToggleCollapse={() =>
+								togglePropertyCollapse(propertyField._id)
+							}
 							hasEditingRights={hasEditingRights}
 							customRegisterField={customRegisterField}
 							handleRemoveItemFromList={handleRemoveItemFromList}

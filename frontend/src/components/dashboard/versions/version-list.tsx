@@ -104,7 +104,7 @@ const VersionList = ({
 		openModal({
 			name: "fullscreen-modal",
 			title: "Crear nueva versión",
-			size: "md",
+			size: "lg",
 			showCloseButton: false,
 			content: (
 				<CreateVersionForm
@@ -246,17 +246,17 @@ const VersionList = ({
 									</Button>
 								),
 							},
-							{
-								content: (
-									<Button
-										variant={"optionList"}
-										onClick={() => handleExportVersion(version)}
-										className={cn({ hidden: !canExportVersion })}
-									>
-										Exportar Versión
-									</Button>
-								),
-							},
+							// {
+							// 	content: (
+							// 		<Button
+							// 			variant={"optionList"}
+							// 			onClick={() => handleExportVersion(version)}
+							// 			className={cn({ hidden: !canExportVersion })}
+							// 		>
+							// 			Exportar Versión
+							// 		</Button>
+							// 	),
+							// },
 							{
 								content: (
 									<Button
